@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'https://contentforge-production-6e13.up.railway.app',
         changeOrigin: true,
       },
     },
