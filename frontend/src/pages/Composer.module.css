@@ -1,0 +1,104 @@
+.composer {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 12px 17px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: 'DM Sans', sans-serif;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab:hover:not(.activeTab) { color: var(--text); background: var(--bg3); }
+.activeTab { color: var(--accent); border-bottom-color: var(--accent); background: rgba(124,107,255,.04); }
+
+.body { padding: 18px; }
+
+.platRow { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.platBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: var(--rs);
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.on_facebook { border-color: var(--fb); background: rgba(24,119,242,.1); color: var(--fb); }
+.on_instagram { border-color: var(--ig); background: rgba(225,48,108,.1); color: var(--ig); }
+.on_reddit { border-color: var(--rd); background: rgba(255,69,0,.1); color: var(--rd); }
+
+.generateBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 10px 13px;
+  gap: 10px;
+}
+
+.toggleRow { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text2); cursor: pointer; }
+.toggle { position: relative; display: inline-block; width: 32px; height: 17px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.slider { position: absolute; inset: 0; background: var(--bg4); border-radius: 9px; cursor: pointer; transition: 0.2s; }
+.slider::before { content: ''; position: absolute; width: 11px; height: 11px; left: 3px; top: 3px; background: var(--text3); border-radius: 50%; transition: 0.2s; }
+.toggle input:checked ~ .slider { background: var(--accent); }
+.toggle input:checked ~ .slider::before { transform: translateX(15px); background: #fff; }
+
+/* Generation loading */
+.genBox {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 26px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.steps { display: flex; flex-direction: column; gap: 7px; min-width: 220px; }
+.step { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.done { color: var(--ok); }
+.stepActive { color: var(--accent); }
+.wait { color: var(--text3); }
+
+.errorBox {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.25);
+  border-radius: var(--rs);
+  padding: 13px 15px;
+  font-size: 13px;
+  color: var(--err);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* Output */
+.outHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.postGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.postCard { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); display: flex; flex-direction: column; }
+.cardHeader { padding: 10px 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; }
+.cardBody { padding: 13px; font-size: 12.5px; line-height: 1.65; color: var(--text2); flex: 1; white-space: pre-wrap; word-break: break-word; min-height: 90px; }
+.cardFooter { padding: 9px 13px; border-top: 1px solid var(--border); display: flex; gap: 7px; align-items: center; }
+.copyBtn {
+  font-size: 11px; color: var(--text3); cursor: pointer; background: none; border: none;
+  font-family: 'DM Sans', sans-serif; padding: 2px 8px; border-radius: 4px; transition: all 0.15s;
+}
+.copyBtn:hover { background: var(--bg3); color: var(--text); }
