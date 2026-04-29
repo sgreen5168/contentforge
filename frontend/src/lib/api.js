@@ -1,4 +1,4 @@
-const BASE = '/api';
+const BASE = 'https://contentforge-production-6e13.up.railway.app/api';
 
 export async function generatePosts({ inputMode, topic, url, style, platforms, affiliate }) {
   const res = await fetch(`${BASE}/generate`, {
