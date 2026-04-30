@@ -9,12 +9,28 @@ export async function generatePosts({ inputMode, topic, url, style, platforms, a
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data.posts;
+    // Return both posts and the shortened URL if one was generated
+    return { posts: data.posts, shortUrl: data.shortUrl || null };
   } catch (err) {
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      throw new Error('Cannot reach the server. Please check your internet connection and try again.');
+      throw new Error('Cannot reach the server. Please check your internet connection.');
     }
     throw err;
+  }
+}
+
+export async function shortenUrl(url) {
+  try {
+    const res = await fetch(`${BASE}/shorten`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Shortening failed');
+    return data.shortened;
+  } catch (err) {
+    throw new Error('Could not shorten URL: ' + err.message);
   }
 }
 
@@ -30,7 +46,7 @@ export async function learnBrandVoice(post) {
     return data;
   } catch (err) {
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      throw new Error('Cannot reach the server. Please check your internet connection and try again.');
+      throw new Error('Cannot reach the server. Please check your internet connection.');
     }
     throw err;
   }
