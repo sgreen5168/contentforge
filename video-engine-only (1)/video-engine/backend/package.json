@@ -1,0 +1,25 @@
+{
+  "name": "contentforge-video-engine",
+  "version": "1.0.0",
+  "description": "ContentForge AI Video Engine — Phase 1 MVP",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "worker": "node --watch queues/worker.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "axios": "^1.7.2",
+    "bull": "^4.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "fluent-ffmpeg": "^2.1.3",
+    "form-data": "^4.0.0",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
+    "uuid": "^10.0.0"
+  }
+}
