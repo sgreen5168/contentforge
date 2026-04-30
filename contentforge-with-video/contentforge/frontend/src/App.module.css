@@ -1,0 +1,73 @@
+.app {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  min-height: 100vh;
+}
+
+.main {
+  overflow-y: auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 26px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.topbarTitle { font-size: 14px; font-weight: 500; }
+
+.topbarRight { display: flex; align-items: center; gap: 10px; }
+
+.statusPill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(34,201,138,.1);
+  border: 1px solid rgba(34,201,138,.25);
+  border-radius: 20px;
+  padding: 3px 11px;
+  font-size: 11px;
+  color: var(--ok);
+}
+
+.dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.liveBadge {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--ag);
+  border: 1px solid rgba(124,107,255,.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+@keyframes bup {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+
+.videoBadge {
+  font-size: 11px;
+  color: #0F6E56;
+  background: #E1F5EE;
+  border: 1px solid rgba(15,110,86,.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
