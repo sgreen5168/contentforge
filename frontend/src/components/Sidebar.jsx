@@ -2,12 +2,15 @@ import React from 'react';
 import styles from './Sidebar.module.css';
 
 const NAV = [
-  { id: 'composer',   label: 'AI Composer',    icon: '✦' },
-  { id: 'scheduler',  label: 'Auto-Scheduler', icon: '◷' },
-  { id: 'brand',      label: 'Brand Voice',    icon: '◈' },
-  { id: 'analytics',  label: 'Analytics',      icon: '◎' },
-  { id: 'compliance', label: 'Compliance',     icon: '◉' },
+  { id: 'composer',   label: 'AI Composer',      icon: '✦', section: 'Content' },
+  { id: 'video',      label: 'AI Video Engine',   icon: '▶', section: 'Content', badge: 'New' },
+  { id: 'scheduler',  label: 'Auto-Scheduler',    icon: '◷', section: 'Content' },
+  { id: 'brand',      label: 'Brand Voice',       icon: '◈', section: 'Content' },
+  { id: 'analytics',  label: 'Analytics',         icon: '◎', section: 'Insights' },
+  { id: 'compliance', label: 'Compliance',        icon: '◉', section: 'Insights' },
 ];
+
+const SECTIONS = ['Content', 'Insights'];
 
 const PLATS = {
   facebook:  { label: 'Facebook',  color: 'var(--fb)' },
@@ -27,23 +30,30 @@ export default function Sidebar({ page, setPage, platforms }) {
       </div>
 
       <nav className={styles.nav}>
-        <div className={styles.navSection}>Tools</div>
-        {NAV.map(n => (
-          <button
-            key={n.id}
-            className={`${styles.navItem} ${page === n.id ? styles.active : ''}`}
-            onClick={() => setPage(n.id)}
-          >
-            <span className={styles.navIcon}>{n.icon}</span>
-            {n.label}
-          </button>
+        {SECTIONS.map(section => (
+          <div key={section}>
+            <div className={styles.navSection}>{section}</div>
+            {NAV.filter(n => n.section === section).map(n => (
+              <button
+                key={n.id}
+                className={`${styles.navItem} ${page === n.id ? styles.active : ''} ${n.id === 'video' ? styles.videoItem : ''}`}
+                onClick={() => setPage(n.id)}
+              >
+                <span className={styles.navIcon}>{n.icon}</span>
+                <span className={styles.navLabel}>{n.label}</span>
+                {n.badge && (
+                  <span className={styles.navBadge}>{n.badge}</span>
+                )}
+              </button>
+            ))}
+          </div>
         ))}
 
         <div className={styles.navSection} style={{ marginTop: 16 }}>Platforms</div>
         {Object.entries(PLATS).map(([k, v]) => (
           <div key={k} className={styles.navItem} style={{ color: v.color, cursor: 'default' }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: v.color, display: 'inline-block', flexShrink: 0 }} />
-            {v.label}
+            <span className={styles.navLabel}>{v.label}</span>
             <span style={{ marginLeft: 'auto', fontSize: 10, color: platforms[k] ? 'var(--ok)' : 'var(--text3)' }}>
               {platforms[k] ? 'On' : 'Off'}
             </span>
