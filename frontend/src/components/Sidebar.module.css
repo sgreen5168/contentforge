@@ -31,7 +31,7 @@
 }
 
 .logoText { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
-.logoSub { font-size: 10px; color: var(--text3); }
+.logoSub  { font-size: 10px; color: var(--text3); }
 
 .nav { padding: 12px 10px; flex: 1; overflow-y: auto; }
 
@@ -65,7 +65,27 @@
 .navItem:hover { background: var(--bg3); color: var(--text); }
 .navItem.active { background: var(--ag); color: var(--accent); border: 1px solid rgba(124,107,255,.2); }
 
-.navIcon { font-size: 13px; }
+/* Video Engine special styling */
+.videoItem {
+  border: 1px solid rgba(124,107,255,0.15);
+  background: rgba(124,107,255,0.04);
+}
+.videoItem:hover { background: rgba(124,107,255,0.1); color: var(--accent); border-color: rgba(124,107,255,0.3); }
+.videoItem.active { background: var(--ag); color: var(--accent); border-color: rgba(124,107,255,.3); }
+
+.navIcon  { font-size: 13px; flex-shrink: 0; }
+.navLabel { flex: 1; }
+
+.navBadge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
 
 .footer { padding: 12px 10px; border-top: 1px solid var(--border); }
 
