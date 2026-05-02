@@ -2,10 +2,10 @@
   "name": "contentforge-video-engine",
   "version": "1.0.0",
   "type": "module",
-  "main": "server-standalone.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node server-standalone.js",
-    "dev": "node --watch server-standalone.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
