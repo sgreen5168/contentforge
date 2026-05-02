@@ -1,147 +1,157 @@
-import Anthropic from '@anthropic-ai/sdk';
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const RUNWAY_API = 'https://api.dev.runwayml.com/v1';
+const API_KEY = process.env.RUNWAY_API_KEY;
 
-// ── Generate video script from topic/URL/affiliate ────────────────────────────
-export async function generateVideoScript({
-  inputMode, topic, url, affiliateUrl, persona, duration, style, platforms
-}) {
-  const durationMap = { '15s': 15, '30s': 30, '60s': 60 };
-  const secs = durationMap[duration] || 30;
-  const platList = platforms.join(', ');
+// ── Generate video clip from text prompt using RunwayML Gen-3 ─────────────────
+export async function generateVideoClip({ prompt, duration = 5, ratio = '720:1280' }) {
+  if (!API_KEY) throw new Error('RUNWAY_API_KEY not set');
 
-  const personaInstructions = {
-    testimonial: 'Write as a genuine user sharing their personal experience. First-person, emotional, relatable. Start with a problem you had.',
-    demo: 'Write as a product demonstrator. Clear, step-by-step, focus on features and how to use them. Direct and informative.',
-    influencer: 'Write as a social media influencer. Trendy, energetic, use current slang. Hook immediately, keep energy high throughout.',
-    educator: 'Write as an expert teaching something valuable. Share a tip, insight, or how-to. Authoritative but approachable.',
-    ugc: 'Write as authentic user-generated content. Casual, unscripted feel, honest review tone. Like a friend recommending something.',
+  console.log(`🎬 RunwayML: generating clip — "${prompt.slice(0, 60)}..."`);
+
+  const createRes = await fetch(`${RUNWAY_API}/text_to_video`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'X-Runway-Version': '2024-11-06',
+    },
+    body: JSON.stringify({
+      model: 'gen4_turbo',
+      promptText: prompt,
+      duration: Math.min(duration, 10),
+      ratio: ratio,
+      watermark: false,
+    }),
+  });
+
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
+    // Try fallback to gen3a_turbo if gen4 not available
+    console.warn('Gen4 failed, trying Gen3:', err.message || createRes.status);
+    return await generateWithGen3({ prompt, duration, ratio });
+  }
+
+  const task = await createRes.json();
+  console.log(`⏳ RunwayML task created: ${task.id}`);
+  return await pollTaskCompletion(task.id, 180);
+}
+
+// ── Fallback to Gen3a Turbo ───────────────────────────────────────────────────
+async function generateWithGen3({ prompt, duration, ratio }) {
+  const createRes = await fetch(`${RUNWAY_API}/image_to_video`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'X-Runway-Version': '2024-11-06',
+    },
+    body: JSON.stringify({
+      model: 'gen3a_turbo',
+      promptText: prompt,
+      duration: Math.min(duration, 10),
+      ratio: ratio === '720:1280' ? '9:16' : ratio,
+    }),
+  });
+
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
+    throw new Error(`RunwayML Gen3 error: ${err.message || createRes.status}`);
+  }
+
+  const task = await createRes.json();
+  return await pollTaskCompletion(task.id, 180);
+}
+
+// ── Poll RunwayML task until done ─────────────────────────────────────────────
+async function pollTaskCompletion(taskId, maxSeconds = 180) {
+  const start = Date.now();
+  let attempts = 0;
+
+  while ((Date.now() - start) / 1000 < maxSeconds) {
+    await sleep(4000);
+    attempts++;
+
+    try {
+      const res = await fetch(`${RUNWAY_API}/tasks/${taskId}`, {
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'X-Runway-Version': '2024-11-06',
+        },
+      });
+
+      if (!res.ok) {
+        console.warn(`Poll attempt ${attempts} failed: ${res.status}`);
+        continue;
+      }
+
+      const task = await res.json();
+      console.log(`⏳ Task ${taskId}: ${task.status} (attempt ${attempts})`);
+
+      if (task.status === 'SUCCEEDED') {
+        const videoUrl = task.output?.[0] || task.artifacts?.[0]?.url;
+        if (!videoUrl) throw new Error('No video URL in completed task');
+        console.log(`✅ RunwayML clip ready: ${videoUrl}`);
+        return { videoUrl, taskId, status: 'success' };
+      }
+
+      if (task.status === 'FAILED') {
+        throw new Error(`RunwayML task failed: ${task.failure || task.failureCode || 'Unknown'}`);
+      }
+
+    } catch (err) {
+      if (err.message.includes('FAILED') || err.message.includes('No video URL')) {
+        throw err;
+      }
+      console.warn(`Poll error (attempt ${attempts}):`, err.message);
+    }
+  }
+
+  throw new Error('RunwayML timed out after 3 minutes');
+}
+
+// ── Generate multiple scene clips ─────────────────────────────────────────────
+export async function generateSceneClips(scenes) {
+  const clips = [];
+  for (const scene of scenes) {
+    console.log(`🎬 Generating scene ${scene.scene}/${scenes.length}`);
+    try {
+      const clip = await generateVideoClip({
+        prompt: scene.visual,
+        duration: Math.min(scene.duration || 5, 10),
+        ratio: '720:1280',
+      });
+      clips.push({ ...scene, ...clip });
+      console.log(`✅ Scene ${scene.scene} done`);
+    } catch (err) {
+      console.error(`❌ Scene ${scene.scene} failed:`, err.message);
+      clips.push({ ...scene, status: 'failed', error: err.message });
+    }
+  }
+  return clips;
+}
+
+// ── Build enriched video prompt ───────────────────────────────────────────────
+export function buildVideoPrompt(scene, persona, style) {
+  const styleMap = {
+    cinematic:    'cinematic lighting, professional camera, film quality, dramatic',
+    ugc:          'authentic handheld camera, natural lighting, real person, casual UGC style',
+    studio:       'clean white background, professional studio lighting, product focused',
+    lifestyle:    'bright airy lifestyle setting, natural light, aspirational, warm tones',
+    talking_head: 'person talking directly to camera, eye contact, professional but friendly',
   };
 
-  const subject = inputMode === 'topic'
-    ? `Topic: "${topic}"`
-    : inputMode === 'url'
-    ? `Product/content from this URL: ${url}`
-    : `Affiliate product: ${affiliateUrl}`;
+  const personaMap = {
+    testimonial: 'real person sharing authentic experience, emotional, relatable',
+    demo:        'clear product demonstration, step by step, informative',
+    influencer:  'trendy social media style, high energy, modern aesthetic',
+    educator:    'expert presenter, clean visual, authoritative',
+    ugc:         'authentic everyday person, genuine reaction, unscripted feel',
+  };
 
-  const prompt = `You are an expert short-form video scriptwriter for ${platList}.
-
-${subject}
-Persona style: ${persona} — ${personaInstructions[persona] || personaInstructions.ugc}
-Video duration: ${secs} seconds
-Visual style: ${style}
-
-Write a complete video script optimized for ${secs}-second ${platList} content.
-
-Return ONLY a JSON object:
-{
-  "hook": "Opening line (first 3 seconds — must stop the scroll)",
-  "problem": "Pain point or setup (seconds 3-8)",
-  "solution": "Main content/value/product showcase (seconds 8-${secs-7})",
-  "cta": "Call to action (last 5 seconds)",
-  "fullScript": "Complete word-for-word voiceover script",
-  "sceneDescriptions": [
-    {"scene": 1, "duration": 3, "visual": "What to show on screen", "text": "Overlay text if any"},
-    {"scene": 2, "duration": 5, "visual": "What to show on screen", "text": "Overlay text if any"}
-  ],
-  "hashtags": ["#tag1", "#tag2"],
-  "title": "Video title for upload",
-  "description": "Platform description/caption",
-  "estimatedDuration": ${secs}
-}`;
-
-  const message = await client.messages.create({
-    model: 'claude-opus-4-5',
-    max_tokens: 2000,
-    system: 'You are a short-form video script expert. Reply with valid JSON only.',
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const raw = message.content[0].text.trim()
-    .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-
-  return JSON.parse(raw);
+  return `${scene.visual}. ${styleMap[style] || styleMap.ugc}. ${personaMap[persona] || personaMap.ugc}. Vertical 9:16 mobile format. High quality, engaging, realistic.`.slice(0, 500);
 }
 
-// ── Generate VSL script (Video Sales Letter) ──────────────────────────────────
-export async function generateVSLScript({
-  product, price, audience, pain, solution, duration, affiliateUrl
-}) {
-  const prompt = `You are an expert direct-response copywriter specializing in Video Sales Letters (VSLs).
-
-Product: ${product}
-Price: ${price}
-Target audience: ${audience}
-Main pain point: ${pain}
-Solution offered: ${solution}
-Duration: ${duration} seconds
-${affiliateUrl ? `Affiliate link: ${affiliateUrl}` : ''}
-
-Write a high-converting VSL script using this structure:
-1. Pattern interrupt hook (grabs attention in 3 seconds)
-2. Agitate the problem (emotional pain)
-3. Introduce the solution
-4. Social proof / credibility
-5. Features → Benefits
-6. Urgency / scarcity
-7. Strong CTA
-
-Return ONLY a JSON object:
-{
-  "hook": "Opening pattern interrupt",
-  "problemAgitation": "Emotional problem deepening",
-  "solutionReveal": "Product introduction",
-  "socialProof": "Testimonial or credibility statement",
-  "benefitsList": ["Benefit 1", "Benefit 2", "Benefit 3"],
-  "urgency": "Scarcity or urgency statement",
-  "cta": "Call to action with link",
-  "fullScript": "Complete VSL word-for-word script",
-  "sceneDescriptions": [
-    {"scene": 1, "duration": 5, "visual": "Visual description", "text": "Overlay text"}
-  ],
-  "estimatedDuration": ${duration},
-  "title": "VSL title",
-  "description": "Platform caption"
-}`;
-
-  const message = await client.messages.create({
-    model: 'claude-opus-4-5',
-    max_tokens: 3000,
-    system: 'You are a VSL copywriting expert. Reply with valid JSON only.',
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const raw = message.content[0].text.trim()
-    .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-
-  return JSON.parse(raw);
-}
-
-// ── Generate CTA overlay text ─────────────────────────────────────────────────
-export async function generateCTAOverlays({ script, platform, affiliateUrl }) {
-  const prompt = `Generate CTA overlay text for a ${platform} video.
-
-Script: "${script.hook} ... ${script.cta}"
-${affiliateUrl ? `Affiliate URL: ${affiliateUrl}` : ''}
-
-Return ONLY a JSON array of CTA overlays:
-[
-  {"timestamp": 0, "text": "Hook text", "style": "hook", "duration": 3},
-  {"timestamp": 25, "text": "CTA button text", "style": "cta", "duration": 5},
-  {"timestamp": 28, "text": "Link in bio / swipe up", "style": "link", "duration": 5}
-]`;
-
-  const message = await client.messages.create({
-    model: 'claude-opus-4-5',
-    max_tokens: 500,
-    system: 'Reply with valid JSON only.',
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const raw = message.content[0].text.trim()
-    .replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-
-  return JSON.parse(raw);
-}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
