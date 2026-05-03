@@ -62,7 +62,7 @@ Return ONLY raw JSON:
   "fullScript": "complete voiceover script",
   "cta": "call to action",
   "sceneDescriptions": [
-    {"scene": 1, "duration": 5, "visual": "what to show on screen", "text": "overlay text"}
+  const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
   ],
   "hashtags": ["#tag1", "#tag2"],
   "title": "video title",
