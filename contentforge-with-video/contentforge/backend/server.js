@@ -1,9 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { existsSync, mkdirSync } from 'fs';
-
-dotenv.config();
+image_to_video to text_to_video
+ratio: '9:16' to ratio: '720:1280'
+model: 'gen3a_turbo' to model: 'gen4_turbo';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
