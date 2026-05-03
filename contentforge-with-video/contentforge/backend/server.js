@@ -1,9 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-image_to_video to text_to_video
-ratio: '9:16' to ratio: '720:1280'
-model: 'gen3a_turbo' to model: 'gen4_turbo';
+import { existsSync, mkdirSync } from 'fs';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -62,7 +62,7 @@ Return ONLY raw JSON:
   "fullScript": "complete voiceover script",
   "cta": "call to action",
   "sceneDescriptions": [
-  const res = await fetch('https://api.dev.runwayml.com/v1/image_to_video', {
+    {"scene": 1, "duration": 5, "visual": "what to show on screen", "text": "overlay text"}
   ],
   "hashtags": ["#tag1", "#tag2"],
   "title": "video title",
