@@ -338,3 +338,41 @@ createServer(app).listen(PORT, '0.0.0.0', () => {
   console.log(`☁️  R2 Storage: ${process.env.R2_ACCOUNT_ID ? 'Configured ✅' : 'Not configured'}`);
   console.log(`🗄️  Supabase:   ${process.env.SUPABASE_URL ? 'Configured ✅' : 'Not configured'}`);
 });
+
+// ── Scheduler routes ──────────────────────────────────────────────────────────
+app.post('/api/schedule', async (req, res) => {
+  const { jobId, platforms, scheduledAt, script, videoUrl } = req.body;
+  if (!platforms?.length || !scheduledAt) return res.status(400).json({ error: 'platforms and scheduledAt required' });
+  try {
+    const { schedulePost } = await import('./services/schedulerService.js');
+    const schedule = await schedulePost({ jobId, platforms, scheduledAt, script, videoUrl });
+    res.json({ schedule });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/schedule', async (_req, res) => {
+  try {
+    const { getAllSchedules } = await import('./services/schedulerService.js');
+    res.json({ schedules: await getAllSchedules() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/schedule/:id', async (req, res) => {
+  try {
+    const { cancelSchedule } = await import('./services/schedulerService.js');
+    await cancelSchedule(req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/schedule/optimal/:platform', async (req, res) => {
+  try {
+    const { OPTIMAL_TIMES, getNextOptimalTime } = await import('./services/schedulerService.js');
+    const times = OPTIMAL_TIMES[req.params.platform];
+    if (!times) return res.status(404).json({ error: 'Platform not found' });
+    res.json({ platform: req.params.platform, optimalTimes: Array.isArray(times)?times:[times], nextSlot: getNextOptimalTime(req.params.platform) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Start the scheduler
+import('./services/schedulerService.js').then(({ startScheduler }) => startScheduler()).catch(console.warn);
