@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './VideoEngine.module.css';
 
-const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = 'https://api.contentstudiohub.com';
 
 const VIDEO_TYPES = [
   { id: 'ugc-persona',  name: 'UGC Persona',          desc: 'Influencer-style conversational review',        badge: null },
