@@ -9,8 +9,6 @@ import EmailSettings from './pages/EmailSettings.jsx';
 import { Brand, Analytics, Compliance } from './pages/OtherPages.jsx';
 import styles from './App.module.css';
 
-const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'contentforge2026';
-
 const PAGE_LABELS = {
   composer:  'AI Composer',
   video:     'AI Video Engine',
@@ -24,8 +22,7 @@ const PAGE_LABELS = {
 
 function checkAuth() {
   try {
-    const stored = localStorage.getItem('cf_auth');
-    return stored && atob(stored) === CORRECT_PASSWORD;
+    return localStorage.getItem('cf_auth_v2') === 'true';
   } catch { return false; }
 }
 
@@ -34,34 +31,27 @@ export default function App() {
   const [page, setPage]           = useState('composer');
   const [platforms, setPlatforms] = useState({ facebook:true, instagram:true, reddit:true });
   const [sidebarOpen, setSidebar] = useState(false);
-  const isMobile                  = typeof window !== 'undefined' && window.innerWidth <= 768;
 
-  useEffect(() => {
-    const onFocus = () => setAuthed(checkAuth());
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, []);
-
-  // Close sidebar on page change (mobile)
-  function navigateTo(p) {
-    setPage(p);
-    setSidebar(false);
-  }
+  function navigateTo(p) { setPage(p); setSidebar(false); }
 
   function handleLogout() {
-    localStorage.removeItem('cf_auth');
+    localStorage.removeItem('cf_auth_v2');
+    localStorage.removeItem('cf_pw_hash');
+    localStorage.removeItem('cf_auth'); // clear old key too
     setAuthed(false);
   }
 
-  if (!authed) return <Login onLogin={() => setAuthed(true)} />;
+  function handleLogin() {
+    setAuthed(true);
+  }
+
+  if (!authed) return <Login onLogin={handleLogin} />;
 
   return (
     <div className={styles.app}>
-      {/* Mobile overlay — closes sidebar when tapping outside */}
       {sidebarOpen && (
         <div className={styles.overlay} onClick={() => setSidebar(false)} />
       )}
-
       <Sidebar
         page={page}
         setPage={navigateTo}
@@ -70,17 +60,9 @@ export default function App() {
         isOpen={sidebarOpen}
         onClose={() => setSidebar(false)}
       />
-
       <div className={styles.main}>
         <header className={styles.topbar}>
-          {/* Hamburger — only visible on mobile */}
-          <button
-            className={styles.menuBtn}
-            onClick={() => setSidebar(true)}
-            aria-label="Open menu"
-          >
-            ☰
-          </button>
+          <button className={styles.menuBtn} onClick={() => setSidebar(true)} aria-label="Open menu">☰</button>
           <div className={styles.topbarTitle}>{PAGE_LABELS[page]}</div>
           <div className={styles.topbarRight}>
             <div className={styles.statusPill}><span className={styles.dot} /> Claude Live</div>
