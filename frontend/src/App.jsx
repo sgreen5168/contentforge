@@ -5,6 +5,7 @@ import Composer from './pages/Composer.jsx';
 import VideoEngine from './pages/VideoEngine.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import BulkGenerator from './pages/BulkGenerator.jsx';
+import EmailSettings from './pages/EmailSettings.jsx';
 import { Brand, Analytics, Compliance } from './pages/OtherPages.jsx';
 import styles from './App.module.css';
 
@@ -15,6 +16,7 @@ const PAGE_LABELS = {
   video:     'AI Video Engine',
   scheduler: 'Video Scheduler',
   bulk:      'Bulk Generator',
+  email:     'Email Notifications',
   brand:     'Brand Voice',
   analytics: 'Analytics',
   compliance:'Compliance',
@@ -62,6 +64,7 @@ export default function App() {
           {page === 'video'      && <VideoEngine />}
           {page === 'scheduler'  && <Scheduler />}
           {page === 'bulk'       && <BulkGenerator />}
+          {page === 'email'      && <EmailSettings />}
           {page === 'brand'      && <Brand />}
           {page === 'analytics'  && <Analytics />}
           {page === 'compliance' && <Compliance />}
