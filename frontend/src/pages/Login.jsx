@@ -21,7 +21,7 @@ export default function Login({ onLogin }) {
         localStorage.setItem('cf_pw_hash', password.length.toString());
         onLogin();
       } else {
-        setError('Incorrect password — try ContentForge2026');
+        setError('Incorrect password. Please try again.');
         setPassword('');
       }
       setLoading(false);
