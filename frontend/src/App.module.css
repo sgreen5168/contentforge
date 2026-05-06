@@ -1,3 +1,4 @@
+/* ── Base layout ── */
 .app {
   display: grid;
   grid-template-columns: 210px 1fr;
@@ -21,12 +22,11 @@
   justify-content: space-between;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
   flex-shrink: 0;
 }
 
 .topbarTitle { font-size: 14px; font-weight: 500; }
-
 .topbarRight { display: flex; align-items: center; gap: 10px; }
 
 .statusPill {
@@ -49,16 +49,70 @@
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-.liveBadge {
+.videoBadge {
   font-size: 11px;
-  color: var(--accent);
-  background: var(--ag);
-  border: 1px solid rgba(124,107,255,.3);
+  color: #0F6E56;
+  background: #E1F5EE;
+  border: 1px solid rgba(15,110,86,.25);
   border-radius: 20px;
   padding: 3px 10px;
 }
 
-@keyframes bup {
-  from { transform: scaleY(0); transform-origin: bottom; }
-  to   { transform: scaleY(1); transform-origin: bottom; }
+/* ── Mobile hamburger button ── */
+.menuBtn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ── Mobile overlay ── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+
+/* ── Responsive breakpoints ── */
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .menuBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .topbar {
+    padding: 0 16px;
+    height: 48px;
+  }
+
+  .topbarTitle {
+    font-size: 13px;
+  }
+
+  /* Hide status pills on mobile to save space */
+  .statusPill { display: none; }
+  .videoBadge { display: none; }
+
+  .overlay {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: 0 12px;
+  }
 }
