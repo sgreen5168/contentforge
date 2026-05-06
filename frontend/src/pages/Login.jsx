@@ -58,9 +58,7 @@ export default function Login({ onLogin }) {
           </button>
         </form>
 
-        <div style={S.hint}>
-          Default password: <code style={S.code}>ContentForge2026</code>
-        </div>
+        <div style={S.hint}>Private — not publicly accessible</div>
       </div>
     </div>
   );
