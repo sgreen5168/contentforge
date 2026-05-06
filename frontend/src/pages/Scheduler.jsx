@@ -142,7 +142,7 @@ export default function Scheduler() {
               ))}
             </select>
             {jobs.length === 0 && (
-              <div style={S.hint}>No completed videos yet. Generate one in the AI Video Engine tab first.</div>
+              <div style={{...S.hint, marginTop:0}}>⚠ No completed videos yet — go to <b>AI Video Engine</b> tab to generate your first video, then come back to schedule it.</div>
             )}
 
             <div style={S.fieldLbl}>Publish to</div>
