@@ -270,6 +270,9 @@ export default function VideoEngine() {
               {warnings.length > 0 && (
                 <div className={styles.warnBox}>{warnings.map((w,i)=><div key={i}>⚠ {w}</div>)}</div>
               )}
+              {platforms.length === 0 && (
+                <div className={styles.warnBox}>⚠ Select at least one platform to generate a video</div>
+              )}
 
               <div className={styles.genBar}>
                 <label className={styles.togRow}>
