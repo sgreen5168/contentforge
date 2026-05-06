@@ -33,12 +33,20 @@ export default function App() {
   const [authed, setAuthed]       = useState(checkAuth);
   const [page, setPage]           = useState('composer');
   const [platforms, setPlatforms] = useState({ facebook:true, instagram:true, reddit:true });
+  const [sidebarOpen, setSidebar] = useState(false);
+  const isMobile                  = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   useEffect(() => {
     const onFocus = () => setAuthed(checkAuth());
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
+
+  // Close sidebar on page change (mobile)
+  function navigateTo(p) {
+    setPage(p);
+    setSidebar(false);
+  }
 
   function handleLogout() {
     localStorage.removeItem('cf_auth');
@@ -49,9 +57,30 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      <Sidebar page={page} setPage={setPage} platforms={platforms} onLogout={handleLogout} />
+      {/* Mobile overlay — closes sidebar when tapping outside */}
+      {sidebarOpen && (
+        <div className={styles.overlay} onClick={() => setSidebar(false)} />
+      )}
+
+      <Sidebar
+        page={page}
+        setPage={navigateTo}
+        platforms={platforms}
+        onLogout={handleLogout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebar(false)}
+      />
+
       <div className={styles.main}>
         <header className={styles.topbar}>
+          {/* Hamburger — only visible on mobile */}
+          <button
+            className={styles.menuBtn}
+            onClick={() => setSidebar(true)}
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
           <div className={styles.topbarTitle}>{PAGE_LABELS[page]}</div>
           <div className={styles.topbarRight}>
             <div className={styles.statusPill}><span className={styles.dot} /> Claude Live</div>
