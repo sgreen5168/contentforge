@@ -376,3 +376,105 @@ app.get('/api/schedule/optimal/:platform', async (req, res) => {
 
 // Start the scheduler
 import('./services/schedulerService.js').then(({ startScheduler }) => startScheduler()).catch(console.warn);
+
+// ── Bulk generation routes ────────────────────────────────────────────────────
+
+// Generate topic variations
+app.post('/api/bulk/variations', async (req, res) => {
+  const { baseTopic, count = 10, persona = 'ugc', videoType = 'auto' } = req.body;
+  if (!baseTopic) return res.status(400).json({ error: 'baseTopic required' });
+  try {
+    const { generateTopicVariations } = await import('./services/bulkService.js');
+    const topics = await generateTopicVariations({ baseTopic, count, persona, videoType });
+    res.json({ topics });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Start bulk generation
+app.post('/api/bulk/generate', async (req, res) => {
+  const { topics, persona='ugc', duration='30s', style='ugc', platforms=['tiktok'], videoType='auto', concurrency=2 } = req.body;
+  if (!topics?.length) return res.status(400).json({ error: 'topics array required' });
+  if (topics.length > 10) return res.status(400).json({ error: 'Max 10 videos per batch' });
+
+  const { createBulkJob, updateBulkJob, updateBulkJobItem, getBulkJob } = await import('./services/bulkService.js');
+  const batch = createBulkJob({ topics, persona, duration, style, platforms, videoType });
+
+  res.json({ batchId: batch.batchId, total: batch.total, status: 'queued' });
+
+  // Run with concurrency limit
+  runBulkGeneration(batch.batchId, topics, { persona, duration, style, platforms, videoType, concurrency },
+    { createBulkJob, updateBulkJob, updateBulkJobItem, getBulkJob }).catch(console.error);
+});
+
+// Get bulk job status
+app.get('/api/bulk/:batchId', async (req, res) => {
+  const { getBulkJob } = await import('./services/bulkService.js');
+  const batch = getBulkJob(req.params.batchId);
+  if (!batch) return res.status(404).json({ error: 'Batch not found' });
+  res.json(batch);
+});
+
+// Get all bulk jobs
+app.get('/api/bulk', async (_req, res) => {
+  const { getAllBulkJobs } = await import('./services/bulkService.js');
+  res.json({ batches: getAllBulkJobs().slice(0, 10) });
+});
+
+// ── Bulk generation runner with concurrency ───────────────────────────────────
+async function runBulkGeneration(batchId, topics, settings, store) {
+  const { updateBulkJob, updateBulkJobItem } = store;
+  updateBulkJob(batchId, { status: 'processing' });
+
+  const { concurrency = 2, persona, duration, style, platforms, videoType } = settings;
+
+  // Process in chunks based on concurrency
+  for (let i = 0; i < topics.length; i += concurrency) {
+    const chunk = topics.slice(i, i + concurrency);
+    await Promise.all(chunk.map(async (topic, chunkIdx) => {
+      const index = i + chunkIdx + 1;
+      updateBulkJobItem(batchId, index, { status: 'processing', step: 'Writing script...' });
+      try {
+        // Generate script
+        const script = await generateScript({
+          inputMode: 'topic', topic, persona, duration,
+          style, platforms, videoType,
+        });
+        updateBulkJobItem(batchId, index, { progress: 40, step: 'Generating voiceover...' });
+
+        // Voiceover
+        let audioPath = null;
+        if (process.env.ELEVENLABS_API_KEY) {
+          try {
+            audioPath = await generateVoiceover(script.fullScript, persona, `bulk_${batchId}_${index}`);
+          } catch (e) { console.warn(`Bulk ${index} voiceover failed:`, e.message); }
+        }
+        updateBulkJobItem(batchId, index, { progress: 70, step: 'Generating video clip...' });
+
+        // One scene clip per video (faster for bulk)
+        let clipUrl = null;
+        if (process.env.RUNWAY_API_KEY && script.sceneDescriptions?.[0]) {
+          try {
+            clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5);
+          } catch (e) { console.warn(`Bulk ${index} clip failed:`, e.message); }
+        }
+
+        updateBulkJobItem(batchId, index, {
+          status: 'completed', progress: 100, step: 'Complete!',
+          result: { script, clipUrl, audioPath, topic },
+        });
+      } catch (e) {
+        updateBulkJobItem(batchId, index, {
+          status: 'failed', progress: 0,
+          step: 'Failed', error: e.message,
+        });
+      }
+    }));
+  }
+
+  const final = store.getBulkJob(batchId);
+  updateBulkJob(batchId, {
+    status: 'completed',
+    step: `${final.completed} videos ready · ${final.failed} failed`,
+  });
+  console.log(`✅ Bulk batch ${batchId} complete — ${final.completed}/${final.total} succeeded`);
+}
