@@ -222,3 +222,46 @@
 .credName { font-size: 13px; font-weight: 500; color: var(--ve-text); width: 90px; flex-shrink: 0; }
 .credKey { font-size: 11px; background: var(--ve-raised); padding: 2px 6px; border-radius: 4px; color: var(--ve-accent2); display: block; margin-bottom: 2px; font-family: monospace; }
 .credDesc { font-size: 10px; color: var(--ve-muted); }
+
+/* ── Mobile responsive ── */
+@media (max-width: 768px) {
+  .page { padding: 14px; }
+
+  .header { flex-direction: column; gap: 10px; }
+  .headerRight { flex-wrap: wrap; gap: 6px; }
+
+  .metrics { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .metricVal { font-size: 18px; }
+
+  .grid { grid-template-columns: 1fr; }
+
+  .panelBody { max-height: none; }
+
+  .vtypeGrid { grid-template-columns: 1fr 1fr; }
+
+  .personaGrid { grid-template-columns: 1fr 1fr; }
+
+  .platGrid { grid-template-columns: 1fr; }
+
+  .plat { padding: 10px 12px; }
+
+  .genBtn { width: 100%; justify-content: center; padding: 12px; font-size: 14px; }
+
+  .genBar { flex-direction: column; gap: 10px; }
+
+  .row { flex-direction: column; }
+
+  .rightTabs .rtab { padding: 8px 10px; font-size: 11px; }
+
+  .sliderBig { font-size: 20px; }
+
+  .presets { gap: 3px; }
+  .preset { padding: 3px 7px; font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+  .metrics { grid-template-columns: 1fr 1fr; }
+  .metricVal { font-size: 16px; }
+  .vtypeGrid { grid-template-columns: 1fr; }
+  .vtypeWide { grid-column: span 1; }
+}
