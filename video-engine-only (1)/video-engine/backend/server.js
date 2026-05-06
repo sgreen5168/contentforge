@@ -478,3 +478,50 @@ async function runBulkGeneration(batchId, topics, settings, store) {
   });
   console.log(`✅ Bulk batch ${batchId} complete — ${final.completed}/${final.total} succeeded`);
 }
+
+// ── Email notification hook — fires after every job completes ─────────────────
+const originalUpdateJob = updateJob;
+async function updateJobWithEmail(id, updates) {
+  const result = await originalUpdateJob(id, updates);
+  if (updates.status === 'completed' && process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL) {
+    try {
+      const job = await getJob(id);
+      const { sendVideoCompleteEmail } = await import('./services/emailService.js');
+      await sendVideoCompleteEmail({
+        jobId: id,
+        script:    job?.result?.script,
+        clipUrl:   job?.result?.finalVideoUrl,
+        audioUrl:  job?.result?.audioUrl,
+        topic:     job?.data?.topic || job?.data?.url,
+        persona:   job?.data?.persona,
+        duration:  job?.data?.duration,
+        platforms: job?.data?.platforms,
+      });
+    } catch (e) { console.warn('Email notification failed:', e.message); }
+  }
+  return result;
+}
+
+// Email settings routes
+app.get('/api/email/settings', (_req, res) => {
+  res.json({
+    configured: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
+    notifyEmail: process.env.NOTIFY_EMAIL ? process.env.NOTIFY_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') : null,
+    from: process.env.EMAIL_FROM || 'notifications@contentstudiohub.com',
+  });
+});
+
+app.post('/api/email/test', async (req, res) => {
+  if (!process.env.RESEND_API_KEY || !process.env.NOTIFY_EMAIL) {
+    return res.status(400).json({ error: 'RESEND_API_KEY and NOTIFY_EMAIL required' });
+  }
+  try {
+    const { sendEmail } = await import('./services/emailService.js');
+    await sendEmail({
+      to: process.env.NOTIFY_EMAIL,
+      subject: '✅ ContentForge email notifications are working!',
+      html: `<div style="font-family:sans-serif;background:#0D2137;padding:30px;color:#E8F4F0;border-radius:12px;max-width:500px;margin:0 auto"><h2 style="color:#5DCAA5">✅ Email notifications working!</h2><p style="color:#7BAAA0">ContentForge will now email you when:<br><br>🎬 A video finishes generating<br>⚡ A bulk batch completes<br>📅 A scheduled post is published</p><a href="https://contentstudiohub.com" style="display:inline-block;background:#1D9E75;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;margin-top:16px">Open ContentForge →</a></div>`,
+    });
+    res.json({ success: true, message: `Test email sent to ${process.env.NOTIFY_EMAIL}` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
