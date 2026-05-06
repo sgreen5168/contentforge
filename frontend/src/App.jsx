@@ -6,7 +6,8 @@ import VideoEngine from './pages/VideoEngine.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import BulkGenerator from './pages/BulkGenerator.jsx';
 import EmailSettings from './pages/EmailSettings.jsx';
-import { Brand, Analytics, Compliance } from './pages/OtherPages.jsx';
+import { Brand, Compliance } from './pages/OtherPages.jsx';
+import Analytics from './pages/Analytics.jsx';
 import styles from './App.module.css';
 
 const PAGE_LABELS = {
