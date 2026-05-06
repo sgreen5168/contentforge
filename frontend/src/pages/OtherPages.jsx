@@ -169,7 +169,7 @@ export function Brand() {
 // ─── Analytics ────────────────────────────────────────────────────────────────
 const BARS = [65,80,55,90,72,88,61,95,78,84,70,92];
 
-export function Analytics() {
+function Analytics_Legacy() {
   return (
     <div className="page-content">
       <h1 className="page-title serif">Performance <span>Analytics</span></h1>
