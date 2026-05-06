@@ -2,16 +2,18 @@ import React from 'react';
 import styles from './Sidebar.module.css';
 
 const NAV = [
-  { id:'composer',  label:'AI Composer',     icon:'✦', section:'Content' },
-  { id:'video',     label:'AI Video Engine',  icon:'▶', section:'Content', badge:'New' },
-  { id:'bulk',      label:'Bulk Generator',   icon:'⚡', section:'Content', badge:'New' },
-  { id:'scheduler', label:'Video Scheduler',  icon:'📅', section:'Content' },
-  { id:'brand',     label:'Brand Voice',      icon:'◈', section:'Content' },
-  { id:'analytics', label:'Analytics',        icon:'◎', section:'Insights' },
-  { id:'compliance',label:'Compliance',       icon:'◉', section:'Insights' },
+  { id:'composer',  label:'AI Composer',        icon:'✦',  section:'Content' },
+  { id:'video',     label:'AI Video Engine',     icon:'▶',  section:'Content', badge:'New' },
+  { id:'bulk',      label:'Bulk Generator',      icon:'⚡',  section:'Content', badge:'New' },
+  { id:'scheduler', label:'Video Scheduler',     icon:'📅', section:'Content' },
+  { id:'brand',     label:'Brand Voice',         icon:'◈',  section:'Content' },
+  { id:'analytics', label:'Analytics',           icon:'◎',  section:'Insights' },
+  { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
+  { id:'email',     label:'Email Notifications', icon:'📧', section:'Settings' },
 ];
 
-const SECTIONS = ['Content','Insights'];
+const SECTIONS = ['Content','Insights','Settings'];
+
 const PLATS = {
   facebook:  { label:'Facebook',  color:'var(--fb)' },
   instagram: { label:'Instagram', color:'var(--ig)' },
