@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const API = 'https://api.contentstudiohub.com';
+const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 const PERSONAS  = ['ugc','testimonial','demo','influencer','educator'];
 const DURATIONS = ['15s','30s','45s','60s'];
