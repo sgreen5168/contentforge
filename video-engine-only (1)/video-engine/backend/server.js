@@ -137,6 +137,14 @@ Return ONLY raw JSON:
   return JSON.parse(raw);
 }
 
+// ── Startup environment check ────────────────────────────────────────────────
+console.log('🔑 Environment check on startup:');
+console.log('  ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅ SET (' + process.env.ANTHROPIC_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅ SET (' + process.env.ELEVENLABS_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅ SET (' + process.env.RUNWAY_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ SET' : '❌ MISSING');
+console.log('  R2_BUCKET_NAME:', process.env.R2_BUCKET_NAME ? '✅ SET' : '❌ MISSING');
+
 // ── ElevenLabs voiceover ──────────────────────────────────────────────────────
 async function generateVoiceover(script, persona, jobId) {
   const VOICES = {
@@ -238,6 +246,13 @@ async function runPipeline(jobId, params) {
 
     // Step 3 — RunwayML clips
     const clips = [];
+    // Log what we have for debugging
+    console.log('🎬 RunwayML check:', {
+      hasKey: !!process.env.RUNWAY_API_KEY,
+      keyPrefix: process.env.RUNWAY_API_KEY ? process.env.RUNWAY_API_KEY.slice(0,8) : 'none',
+      hasScenes: !!(script.sceneDescriptions?.length),
+      sceneCount: script.sceneDescriptions?.length || 0,
+    });
     if (process.env.RUNWAY_API_KEY && script.sceneDescriptions?.length) {
       await updateJob(jobId, { progress: 55, step: 'Generating video scenes with RunwayML...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
