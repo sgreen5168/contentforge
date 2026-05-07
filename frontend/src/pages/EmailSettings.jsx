@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API = 'https://api.contentstudiohub.com';
+const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 export default function EmailSettings() {
   const [settings, setSettings] = useState(null);
