@@ -372,32 +372,82 @@ export default function VideoEngine() {
                 {generating && !job && (
                   <div className={styles.genBox}>
                     <span className={styles.spinner} style={{width:20,height:20,borderWidth:3}} />
-                    <span className={styles.genBoxText}>Generating your video…</span>
+                    <span className={styles.genBoxText}>Starting generation…</span>
                   </div>
                 )}
                 {job && (
                   <div className={styles.jobCard}>
+                    {/* Status + step */}
                     <div className={styles.jobCardTop}>
                       <span className={`${styles.badge} ${styles['badge_'+job.status]}`}>{job.status}</span>
                       <span className={styles.jobStep}>{job.step}</span>
                     </div>
-                    <div className={styles.progBar}><div className={styles.progFill} style={{width:job.progress+'%'}} /></div>
-                    <div className={styles.progPct}>{Math.round(job.progress)}%</div>
-                    {job.status==='completed' && job.result?.script && (
+                    {/* Progress bar */}
+                    <div className={styles.progBar}>
+                      <div className={styles.progFill} style={{width:(job.progress||0)+'%'}} />
+                    </div>
+                    <div className={styles.progPct}>{Math.round(job.progress||0)}%</div>
+
+                    {/* Pipeline steps — always visible */}
+                    <div style={{display:'flex',flexDirection:'column',gap:6,margin:'12px 0'}}>
+                      {[
+                        {label:'Script generation',   done:(job.progress||0)>=30, active:(job.progress||0)>0&&(job.progress||0)<30},
+                        {label:'Voiceover creation',  done:(job.progress||0)>=50, active:(job.progress||0)>=30&&(job.progress||0)<50},
+                        {label:'Video clip assembly', done:(job.progress||0)>=90, active:(job.progress||0)>=50&&(job.progress||0)<90},
+                        {label:'Cloud upload',        done:(job.progress||0)>=100,active:(job.progress||0)>=90&&(job.progress||0)<100},
+                      ].map((s,i)=>(
+                        <div key={i} style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
+                          <div style={{width:18,height:18,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:600,
+                            background:s.done?'rgba(29,158,117,.2)':s.active?'rgba(93,202,165,.15)':'rgba(255,255,255,.05)',
+                            color:s.done?'#1D9E75':s.active?'#5DCAA5':'#7BAAA0'}}>
+                            {s.done?'✓':i+1}
+                          </div>
+                          <span style={{color:s.done?'#5DCAA5':s.active?'#E8F4F0':'#7BAAA0'}}>{s.label}</span>
+                          {s.active&&<span className={styles.spinner} style={{width:10,height:10,borderWidth:2,marginLeft:'auto'}}/>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Script — show as soon as available (progress>=30 OR completed) */}
+                    {((job.progress>=30||job.status==='completed') && (job.script||job.result?.script)) && (
                       <div className={styles.scriptCard}>
                         <div className={styles.scriptLbl}>Hook</div>
-                        <div className={styles.scriptTxt}>{job.result.script.hook}</div>
+                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.hook}</div>
                         <div className={styles.scriptLbl} style={{marginTop:8}}>Full script</div>
-                        <div className={styles.scriptTxt}>{job.result.script.fullScript}</div>
+                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.fullScript}</div>
                         <div className={styles.scriptLbl} style={{marginTop:8}}>CTA</div>
-                        <div className={styles.scriptTxt}>{job.result.script.cta}</div>
-                        {job.result.script.hashtags && <div className={styles.hashtags}>{job.result.script.hashtags.join(' ')}</div>}
+                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.cta}</div>
+                        {(job.script||job.result?.script)?.hashtags && (
+                          <div className={styles.hashtags}>{(job.script||job.result?.script).hashtags.join(' ')}</div>
+                        )}
                       </div>
                     )}
+
+                    {/* Download button */}
                     {job.status==='completed' && job.result?.finalVideoUrl && (
-                      <a className={styles.downloadBtn} href={job.result.finalVideoUrl} target="_blank" rel="noreferrer">⬇ Download Video</a>
+                      <a className={styles.downloadBtn} href={job.result.finalVideoUrl} target="_blank" rel="noreferrer">
+                        ⬇ Download Video
+                      </a>
                     )}
-                    {job.status==='failed' && <div className={styles.errorBox}>⚠ {job.error}</div>}
+
+                    {/* No video but completed — explain why */}
+                    {job.status==='completed' && !job.result?.finalVideoUrl && (
+                      <div style={{marginTop:10,padding:'10px 12px',background:'rgba(245,166,35,.08)',border:'0.5px solid rgba(245,166,35,.25)',borderRadius:8,fontSize:12,color:'#FAC775',lineHeight:1.6}}>
+                        ⚠ Script generated successfully — video clips were skipped because RunwayML API key is not configured in Railway.<br/>
+                        <span style={{color:'#7BAAA0'}}>Add RUNWAY_API_KEY to Railway → stellar-achievement → Variables to enable video generation.</span>
+                      </div>
+                    )}
+
+                    {/* Voiceover note */}
+                    {job.status==='completed' && !job.result?.audioUrl && (
+                      <div style={{marginTop:8,fontSize:11,color:'#4A7A72'}}>
+                        💡 No voiceover — add ELEVENLABS_API_KEY to Railway to enable audio.
+                      </div>
+                    )}
+
+                    {job.status==='failed' && (
+                      <div className={styles.errorBox}>⚠ {job.error}</div>
+                    )}
                   </div>
                 )}
                 {!job && !generating && (
