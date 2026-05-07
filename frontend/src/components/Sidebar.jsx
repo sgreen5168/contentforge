@@ -10,6 +10,7 @@ const NAV = [
   { id:'analytics', label:'Analytics',           icon:'◎',  section:'Insights' },
   { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
   { id:'email',     label:'Email Notifications', icon:'📧', section:'Settings' },
+  { id:'tutorial',  label:'Tutorial',            icon:'📖', section:'Settings' },
 ];
 
 const SECTIONS = ['Content', 'Insights', 'Settings'];
@@ -23,7 +24,6 @@ const PLATS = {
 export default function Sidebar({ page, setPage, platforms, onLogout, isOpen, onClose }) {
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
-      {/* Mobile close button */}
       <button className={styles.closeBtn} onClick={onClose} aria-label="Close menu">✕</button>
 
       <div className={styles.logo}>
@@ -65,16 +65,27 @@ export default function Sidebar({ page, setPage, platforms, onLogout, isOpen, on
       </nav>
 
       <div className={styles.footer}>
-        <div className={styles.avatarRow}>
-          <div className={styles.avatar}>AJ</div>
+        <button
+          onClick={onLogout}
+          style={{
+            width:'100%', padding:'9px 11px', background:'var(--bg3)',
+            border:'1px solid var(--border)', borderRadius:'var(--rs)',
+            display:'flex', alignItems:'center', gap:9, cursor:'pointer',
+            fontFamily:'inherit', textAlign:'left',
+          }}
+        >
+          <div style={{
+            width:26, height:26, borderRadius:'50%',
+            background:'linear-gradient(135deg, var(--accent), #C47AFF)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:11, fontWeight:600, color:'white', flexShrink:0,
+          }}>CF</div>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:12, fontWeight:500 }}>Alex Johnson</div>
-            <div style={{ fontSize:10, color:'var(--ok)' }}>Pro Plan ✦</div>
+            <div style={{ fontSize:12, fontWeight:500, color:'var(--text)' }}>ContentForge</div>
+            <div style={{ fontSize:10, color:'var(--ok)' }}>● Active</div>
           </div>
-          <button onClick={onLogout} style={{ fontSize:10, color:'var(--text3)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
-            Sign out
-          </button>
-        </div>
+          <span style={{ fontSize:10, color:'var(--text3)' }}>Sign out</span>
+        </button>
       </div>
     </aside>
   );
