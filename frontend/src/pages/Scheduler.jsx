@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API = 'https://api.contentstudiohub.com';
+const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 const PLATFORMS = [
   { id: 'tiktok',    label: 'TikTok',          color: '#69C9D0', maxSec: 600 },
