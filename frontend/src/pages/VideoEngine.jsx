@@ -433,8 +433,12 @@ export default function VideoEngine() {
                     {/* No video but completed — explain why */}
                     {job.status==='completed' && !job.result?.finalVideoUrl && (
                       <div style={{marginTop:10,padding:'10px 12px',background:'rgba(245,166,35,.08)',border:'0.5px solid rgba(245,166,35,.25)',borderRadius:8,fontSize:12,color:'#FAC775',lineHeight:1.6}}>
-                        ⚠ Script generated successfully — video clips were skipped because RunwayML API key is not configured in Railway.<br/>
-                        <span style={{color:'#7BAAA0'}}>Add RUNWAY_API_KEY to Railway → stellar-achievement → Variables to enable video generation.</span>
+                        ⚠ Script generated — video clips were skipped.<br/>
+                        <span style={{color:'#7BAAA0'}}>
+                          This happens when either: (1) RunwayML credits are empty — check app.runwayml.com, 
+                          or (2) the script did not return scene descriptions. 
+                          The RUNWAY_API_KEY is set in Railway. Try generating again.
+                        </span>
                       </div>
                     )}
 
