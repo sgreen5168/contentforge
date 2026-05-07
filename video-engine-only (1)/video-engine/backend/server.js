@@ -179,32 +179,59 @@ async function generateVoiceover(script, persona, jobId) {
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
   const API_KEY = process.env.RUNWAY_API_KEY;
-  const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
+
+  console.log(`🎬 Calling RunwayML: prompt="${prompt.slice(0,60)}..." duration=${duration}`);
+
+  const body = {
+    model: 'gen3a_turbo',
+    prompt_text: prompt,
+    duration: Math.min(duration || 5, 10),
+    ratio: '9:16',
+  };
+
+  const res = await fetch('https://api.runwayml.com/v1/text_to_video', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json', 'X-Runway-Version': '2024-11-06' },
-    body: JSON.stringify({ model: 'gen4_turbo', promptText: prompt, duration: Math.min(duration || 5, 10), ratio: '720:1280' }),
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'X-Runway-Version': '2024-11-06',
+    },
+    body: JSON.stringify(body),
   });
+
+  const resText = await res.text();
+  console.log(`🎬 RunwayML response ${res.status}:`, resText.slice(0, 300));
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`RunwayML: ${err.message || res.status}`);
+    let errMsg;
+    try { errMsg = JSON.parse(resText)?.message || JSON.parse(resText)?.error || resText; }
+    catch { errMsg = resText; }
+    throw new Error(`RunwayML ${res.status}: ${errMsg}`);
   }
-  const task = await res.json();
-  console.log(`⏳ RunwayML task: ${task.id}`);
+
+  const task = JSON.parse(resText);
+  console.log(`⏳ RunwayML task created: ${task.id}`);
+
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 5000));
-    const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
-      headers: { 'Authorization': `Bearer ${API_KEY}`, 'X-Runway-Version': '2024-11-06' },
+    const poll = await fetch(`https://api.runwayml.com/v1/tasks/${task.id}`, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'X-Runway-Version': '2024-11-06',
+      },
     });
     const t = await poll.json();
-    console.log(`⏳ ${t.status} (${i + 1}/60)`);
+    console.log(`⏳ RunwayML status: ${t.status} (attempt ${i + 1}/60)`);
     if (t.status === 'SUCCEEDED') {
       const url = t.output?.[0] || t.artifacts?.[0]?.url;
       if (url) return url;
-      throw new Error('No video URL in response');
+      throw new Error('RunwayML succeeded but no video URL in response');
     }
-    if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || 'unknown'}`);
+    if (t.status === 'FAILED') {
+      throw new Error(`RunwayML failed: ${t.failure || t.failureCode || 'unknown error'}`);
+    }
   }
-  throw new Error('RunwayML timed out');
+  throw new Error('RunwayML timed out after 5 minutes');
 }
 
 // ── Upload to R2 if configured ────────────────────────────────────────────────
@@ -265,6 +292,8 @@ async function runPipeline(jobId, params) {
         } catch (e) {
           console.error(`Scene ${scene.scene} failed:`, e.message);
           clips.push({ scene: scene.scene, status: 'failed', error: e.message });
+          // Store error so frontend can show it
+          await updateJob(jobId, { step: `Video clip failed: ${e.message}`, clipError: e.message });
         }
       }
     }
