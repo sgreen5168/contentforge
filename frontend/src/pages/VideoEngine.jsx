@@ -449,6 +449,11 @@ export default function VideoEngine() {
                       </div>
                     )}
 
+                    {job.clipError && (
+                      <div className={styles.errorBox} style={{marginTop:8}}>
+                        🎬 RunwayML error: {job.clipError}
+                      </div>
+                    )}
                     {job.status==='failed' && (
                       <div className={styles.errorBox}>⚠ {job.error}</div>
                     )}
