@@ -9,8 +9,8 @@ export async function generatePosts({ inputMode, topic, url, style, platforms, a
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    // Return both posts and the shortened URL if one was generated
-    return { posts: data.posts, shortUrl: data.shortUrl || null };
+    // Return posts directly so Composer can use result[platform]
+    return data.posts;
   } catch (err) {
     if (err.name === 'TypeError' && err.message.includes('fetch')) {
       throw new Error('Cannot reach the server. Please check your internet connection.');
