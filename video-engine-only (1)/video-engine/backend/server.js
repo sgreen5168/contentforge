@@ -189,7 +189,7 @@ async function generateClip(prompt, duration) {
     ratio: '9:16',
   };
 
-  const res = await fetch('https://api.runwayml.com/v1/text_to_video', {
+  const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${API_KEY}`,
@@ -214,7 +214,7 @@ async function generateClip(prompt, duration) {
 
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 5000));
-    const poll = await fetch(`https://api.runwayml.com/v1/tasks/${task.id}`, {
+    const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
         'X-Runway-Version': '2024-11-06',
