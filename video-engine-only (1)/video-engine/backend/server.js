@@ -142,96 +142,139 @@ console.log('🔑 Environment check on startup:');
 console.log('  ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅ SET (' + process.env.ANTHROPIC_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅ SET (' + process.env.ELEVENLABS_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅ SET (' + process.env.RUNWAY_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  FAL_API_KEY:', process.env.FAL_API_KEY ? '✅ SET (' + process.env.FAL_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ SET (' + process.env.OPENAI_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ SET' : '❌ MISSING');
 console.log('  R2_BUCKET_NAME:', process.env.R2_BUCKET_NAME ? '✅ SET' : '❌ MISSING');
 
 // ── ElevenLabs voiceover ──────────────────────────────────────────────────────
 async function generateVoiceover(script, persona, jobId) {
-  const VOICES = {
-    testimonial: 'EXAVITQu4vr4xnSDxMaL',
-    demo: 'VR6AewLTigWG4xSOukaG',
-    influencer: 'pFZP5JQG7iQjIQuC4Bku',
-    educator: 'onwK4e9ZLuTAKqWW03F9',
-    ugc: 'EXAVITQu4vr4xnSDxMaL',
-  };
-  const voiceId = VOICES[persona] || VOICES.ugc;
   const fetch = (await import('node-fetch')).default;
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: 'POST',
-    headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
-    body: JSON.stringify({ text: script, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.8 } }),
-  });
-  if (!res.ok) throw new Error(`ElevenLabs error: ${res.status}`);
-  const { createWriteStream } = await import('fs');
-  const { join } = await import('path');
-  const audioPath = join(OUTPUT_DIR, `voice_${jobId}.mp3`);
-  await new Promise((resolve, reject) => {
-    const stream = createWriteStream(audioPath);
-    res.body.pipe(stream);
-    res.body.on('error', reject);
-    stream.on('finish', resolve);
-  });
-  console.log(`🎙️ Voiceover saved: ${audioPath}`);
-  return audioPath;
+  const fs = (await import('fs')).default;
+  const audioPath = `/tmp/voice_${jobId}_${Date.now()}.mp3`;
+
+  // OpenAI TTS — simple and reliable
+  if (process.env.OPENAI_API_KEY) {
+    const voices = { ugc:'nova', testimonial:'shimmer', demo:'onyx', influencer:'alloy', educator:'echo' };
+    const voice = voices[persona] || 'nova';
+    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'tts-1', input: script.slice(0, 4096), voice }),
+    });
+    if (!res.ok) throw new Error(`OpenAI TTS: ${res.status}`);
+    const buffer = await res.buffer();
+    fs.writeFileSync(audioPath, buffer);
+    console.log(`✅ OpenAI TTS voiceover ready`);
+    return audioPath;
+  }
+
+  // ElevenLabs fallback
+  if (process.env.ELEVENLABS_API_KEY) {
+    const voiceIds = { ugc:'21m00Tcm4TlvDq8ikWAM', testimonial:'AZnzlk1XvdvUeBnXmlld', demo:'EXAVITQu4vr4xnSDxMaL', influencer:'ErXwobaYiN019PkySvjV', educator:'VR6AewLTigWG4xSOukaG' };
+    const voiceId = voiceIds[persona] || '21m00Tcm4TlvDq8ikWAM';
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+      body: JSON.stringify({ text: script.slice(0, 2500), model_id: 'eleven_monolingual_v1', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+    });
+    if (!res.ok) throw new Error(`ElevenLabs: ${res.status}`);
+    const buffer = await res.buffer();
+    fs.writeFileSync(audioPath, buffer);
+    console.log(`✅ ElevenLabs voiceover ready`);
+    return audioPath;
+  }
+
+  throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
 }
 
-// ── RunwayML video clip ───────────────────────────────────────────────────────
+
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
-  const API_KEY = process.env.RUNWAY_API_KEY;
 
-  console.log(`🎬 Calling RunwayML: prompt="${prompt.slice(0,60)}..." duration=${duration}`);
-
-  const body = {
-    model: 'gen3a_turbo',
-    prompt_text: prompt,
-    duration: Math.min(duration || 5, 10),
-    ratio: '9:16',
-  };
-
-  const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${API_KEY}`,
-      'Content-Type': 'application/json',
-      'X-Runway-Version': '2024-11-06',
-    },
-    body: JSON.stringify(body),
-  });
-
-  const resText = await res.text();
-  console.log(`🎬 RunwayML response ${res.status}:`, resText.slice(0, 300));
-
-  if (!res.ok) {
-    let errMsg;
-    try { errMsg = JSON.parse(resText)?.message || JSON.parse(resText)?.error || resText; }
-    catch { errMsg = resText; }
-    throw new Error(`RunwayML ${res.status}: ${errMsg}`);
+  // Try fal.ai first — easiest API, supports multiple video models
+  if (process.env.FAL_API_KEY) {
+    console.log(`🎬 Generating clip with fal.ai: "${prompt.slice(0,60)}..."`);
+    const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${process.env.FAL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        duration: Math.min(duration || 5, 10) <= 5 ? '5' : '10',
+        aspect_ratio: '9:16',
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`fal.ai ${res.status}: ${err.slice(0,200)}`);
+    }
+    const data = await res.json();
+    // fal.ai returns request_id for async jobs
+    const requestId = data.request_id;
+    console.log(`⏳ fal.ai request: ${requestId}`);
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${requestId}`, {
+        headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}` },
+      });
+      const t = await poll.json();
+      console.log(`⏳ fal.ai status: ${t.status} (${i+1}/60)`);
+      if (t.status === 'COMPLETED') {
+        const url = t.output?.video?.url || t.output?.[0]?.url;
+        if (url) { console.log(`✅ fal.ai clip ready: ${url}`); return url; }
+        throw new Error('fal.ai completed but no video URL');
+      }
+      if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error || 'unknown'}`);
+    }
+    throw new Error('fal.ai timed out after 5 minutes');
   }
 
-  const task = JSON.parse(resText);
-  console.log(`⏳ RunwayML task created: ${task.id}`);
-
-  for (let i = 0; i < 60; i++) {
-    await new Promise(r => setTimeout(r, 5000));
-    const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
+  // Try RunwayML as fallback
+  if (process.env.RUNWAY_API_KEY) {
+    console.log(`🎬 Generating clip with RunwayML: "${prompt.slice(0,60)}..."`);
+    const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+        'Content-Type': 'application/json',
         'X-Runway-Version': '2024-11-06',
       },
+      body: JSON.stringify({
+        model: 'gen3a_turbo',
+        promptText: prompt,
+        duration: Math.min(duration || 5, 10),
+        ratio: '720:1280',
+      }),
     });
-    const t = await poll.json();
-    console.log(`⏳ RunwayML status: ${t.status} (attempt ${i + 1}/60)`);
-    if (t.status === 'SUCCEEDED') {
-      const url = t.output?.[0] || t.artifacts?.[0]?.url;
-      if (url) return url;
-      throw new Error('RunwayML succeeded but no video URL in response');
+    const resText = await res.text();
+    console.log(`🎬 RunwayML response ${res.status}:`, resText.slice(0,200));
+    if (!res.ok) {
+      let errMsg;
+      try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
+      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
     }
-    if (t.status === 'FAILED') {
-      throw new Error(`RunwayML failed: ${t.failure || t.failureCode || 'unknown error'}`);
+    const task = JSON.parse(resText);
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
+        headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
+      });
+      const t = await poll.json();
+      console.log(`⏳ RunwayML: ${t.status} (${i+1}/60)`);
+      if (t.status === 'SUCCEEDED') {
+        const url = t.output?.[0] || t.artifacts?.[0]?.url;
+        if (url) return url;
+        throw new Error('No video URL in RunwayML response');
+      }
+      if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || 'unknown'}`);
     }
+    throw new Error('RunwayML timed out');
   }
-  throw new Error('RunwayML timed out after 5 minutes');
+
+  throw new Error('No video API key — add FAL_API_KEY or RUNWAY_API_KEY to Railway');
 }
 
 // ── Upload to R2 if configured ────────────────────────────────────────────────
@@ -259,7 +302,7 @@ async function runPipeline(jobId, params) {
     // Step 2 — Voiceover
     let audioPath = null;
     let audioUrl = null;
-    if (process.env.ELEVENLABS_API_KEY) {
+    if (process.env.ELEVENLABS_API_KEY || process.env.OPENAI_API_KEY) {
       try {
         audioPath = await generateVoiceover(script.fullScript, params.persona, jobId);
         // Upload audio to R2
@@ -280,7 +323,7 @@ async function runPipeline(jobId, params) {
       hasScenes: !!(script.sceneDescriptions?.length),
       sceneCount: script.sceneDescriptions?.length || 0,
     });
-    if (process.env.RUNWAY_API_KEY && script.sceneDescriptions?.length) {
+    if ((process.env.RUNWAY_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.length) {
       await updateJob(jobId, { progress: 55, step: 'Generating video scenes with RunwayML...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
       for (const scene of scenes) {
@@ -487,7 +530,7 @@ async function runBulkGeneration(batchId, topics, settings, store) {
 
         // Voiceover
         let audioPath = null;
-        if (process.env.ELEVENLABS_API_KEY) {
+        if (process.env.ELEVENLABS_API_KEY || process.env.OPENAI_API_KEY) {
           try {
             audioPath = await generateVoiceover(script.fullScript, persona, `bulk_${batchId}_${index}`);
           } catch (e) { console.warn(`Bulk ${index} voiceover failed:`, e.message); }
@@ -496,7 +539,7 @@ async function runBulkGeneration(batchId, topics, settings, store) {
 
         // One scene clip per video (faster for bulk)
         let clipUrl = null;
-        if (process.env.RUNWAY_API_KEY && script.sceneDescriptions?.[0]) {
+        if ((process.env.RUNWAY_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
           try {
             clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5);
           } catch (e) { console.warn(`Bulk ${index} clip failed:`, e.message); }
