@@ -15,19 +15,21 @@ const STEPS = [
 ];
 
 export default function Composer({ onPlatformsChange }) {
-  const [mode, setMode]         = useState('topic');
-  const [topic, setTopic]       = useState('');
-  const [url, setUrl]           = useState('');
-  const [style, setStyle]       = useState('Casual');
-  const [plats, setPlats]       = useState({ facebook: true, instagram: true, reddit: true });
+  const [mode, setMode]       = useState('topic');
+  const [topic, setTopic]     = useState('');
+  const [url, setUrl]         = useState('');
+  const [style, setStyle]     = useState('Casual');
+  const [plats, setPlats]     = useState({ facebook: true, instagram: true, reddit: true });
   const [affiliate, setAffiliate] = useState(false);
-  const [status, setStatus]     = useState('idle'); // idle | loading | done | error
-  const [step, setStep]         = useState(0);
-  const [posts, setPosts]       = useState(null);
-  const [error, setError]       = useState('');
-  const [copied, setCopied]     = useState('');
+  const [status, setStatus]   = useState('idle');
+  const [step, setStep]       = useState(0);
+  const [posts, setPosts]     = useState(null);
+  const [edited, setEdited]   = useState({});
+  const [editing, setEditing] = useState({});
+  const [error, setError]     = useState('');
+  const [copied, setCopied]   = useState('');
 
-  const active = Object.keys(plats).filter(p => plats[p]);
+  const active   = Object.keys(plats).filter(p => plats[p]);
   const hasInput = mode === 'topic' ? topic.trim() : url.trim();
 
   function togglePlat(p) {
@@ -38,7 +40,7 @@ export default function Composer({ onPlatformsChange }) {
 
   async function generate() {
     if (!hasInput || !active.length) return;
-    setStatus('loading'); setPosts(null); setError(''); setStep(0);
+    setStatus('loading'); setPosts(null); setEdited({}); setEditing({}); setError(''); setStep(0);
     const t1 = setTimeout(() => setStep(1), 700);
     const t2 = setTimeout(() => setStep(2), 1600);
     try {
@@ -53,10 +55,30 @@ export default function Composer({ onPlatformsChange }) {
     }
   }
 
-  function copy(key, text) {
+  function copy(key) {
+    const text = edited[key] ?? posts[key]?.text ?? '';
     navigator.clipboard.writeText(text).catch(() => {});
     setCopied(key);
     setTimeout(() => setCopied(''), 2000);
+  }
+
+  function startEdit(key) {
+    setEdited(prev => ({ ...prev, [key]: posts[key]?.text ?? '' }));
+    setEditing(prev => ({ ...prev, [key]: true }));
+  }
+
+  function saveEdit(key) {
+    setEditing(prev => ({ ...prev, [key]: false }));
+  }
+
+  function cancelEdit(key) {
+    setEdited(prev => { const n = { ...prev }; delete n[key]; return n; });
+    setEditing(prev => ({ ...prev, [key]: false }));
+  }
+
+  function resetEdit(key) {
+    setEdited(prev => { const n = { ...prev }; delete n[key]; return n; });
+    setEditing(prev => ({ ...prev, [key]: false }));
   }
 
   return (
@@ -68,7 +90,7 @@ export default function Composer({ onPlatformsChange }) {
       <div className={styles.composer}>
         <div className={styles.tabs}>
           {[['topic','Topic / Keyword'],['url','URL Extractor'],['affiliate','Affiliate Link']].map(([m,l]) => (
-            <button key={m} className={`${styles.tab} ${mode===m ? styles.activeTab:''}`} onClick={() => setMode(m)}>{l}</button>
+            <button key={m} className={`${styles.tab} ${mode===m?styles.activeTab:''}`} onClick={() => setMode(m)}>{l}</button>
           ))}
         </div>
 
@@ -79,16 +101,10 @@ export default function Composer({ onPlatformsChange }) {
               <input className="field-input" style={{marginBottom:13}} placeholder='e.g. "remote work productivity hacks"' value={topic} onChange={e => setTopic(e.target.value)} />
             </div>
           )}
-          {mode === 'url' && (
+          {(mode === 'url' || mode === 'affiliate') && (
             <div>
-              <div className="field-label">Webpage URL</div>
-              <input className="field-input" style={{marginBottom:13}} placeholder="https://example.com/article" value={url} onChange={e => setUrl(e.target.value)} />
-            </div>
-          )}
-          {mode === 'affiliate' && (
-            <div>
-              <div className="field-label">Affiliate product link</div>
-              <input className="field-input" style={{marginBottom:13}} placeholder="https://affiliate.link/product" value={url} onChange={e => setUrl(e.target.value)} />
+              <div className="field-label">{mode === 'affiliate' ? 'Affiliate product link' : 'Webpage URL'}</div>
+              <input className="field-input" style={{marginBottom:13}} placeholder={mode === 'affiliate' ? 'https://affiliate.link/product' : 'https://example.com/article'} value={url} onChange={e => setUrl(e.target.value)} />
             </div>
           )}
 
@@ -102,7 +118,7 @@ export default function Composer({ onPlatformsChange }) {
           <div className="field-label">Publish to</div>
           <div className={styles.platRow}>
             {Object.entries(PLATFORMS).map(([k,v]) => (
-              <button key={k} className={`${styles.platBtn} ${plats[k] ? styles['on_'+k] : ''}`} onClick={() => togglePlat(k)}>
+              <button key={k} className={`${styles.platBtn} ${plats[k]?styles['on_'+k]:''}`} onClick={() => togglePlat(k)}>
                 <span style={{width:7,height:7,borderRadius:'50%',background:plats[k]?v.color:'var(--text3)',display:'inline-block'}} />
                 {v.label}
               </button>
@@ -117,11 +133,7 @@ export default function Composer({ onPlatformsChange }) {
               </div>
               Inject affiliate link naturally
             </label>
-            <button
-              className="btn btn-primary"
-              onClick={generate}
-              disabled={status === 'loading' || !hasInput || !active.length}
-            >
+            <button className="btn btn-primary" onClick={generate} disabled={status==='loading'||!hasInput||!active.length}>
               {status === 'loading' && <span className="spin" />}
               {status === 'loading' ? 'Generating…' : 'Generate Posts ⚡'}
             </button>
@@ -148,37 +160,91 @@ export default function Composer({ onPlatformsChange }) {
 
       {/* ── Error ── */}
       {status === 'error' && (
-        <div className={styles.errorBox}>
-          ⚠ Generation failed — {error}
-        </div>
+        <div className={styles.errorBox}>⚠ Generation failed — {error}</div>
       )}
 
-      {/* ── Output ── */}
+      {/* ── Output with editing ── */}
       {status === 'done' && posts && (
         <div>
           <div className={styles.outHeader}>
             <div style={{fontSize:14,fontWeight:500}}>✦ Generated Posts</div>
-            <button className="btn btn-ghost btn-sm" onClick={generate}>Regenerate ↻</button>
+            <div style={{display:'flex',gap:8'}}>
+              <span style={{fontSize:11,color:'var(--text3)'}}>Click ✎ Edit to refine any post before copying</span>
+              <button className="btn btn-ghost btn-sm" onClick={generate}>Regenerate ↻</button>
+            </div>
           </div>
           <div className={styles.postGrid}>
             {active.filter(p => posts[p]).map(p => {
-              const post = posts[p];
-              const meta = PLATFORMS[p];
-              const ok = post.compliant !== false;
+              const post    = posts[p];
+              const meta    = PLATFORMS[p];
+              const ok      = post.compliant !== false;
+              const isEditing = editing[p];
+              const text    = edited[p] ?? post.text ?? '';
+              const wasEdited = edited[p] !== undefined;
+
               return (
                 <div key={p} className={styles.postCard}>
                   <div className={styles.cardHeader}>
                     <span style={{width:7,height:7,borderRadius:'50%',background:meta.color,display:'inline-block'}} />
                     <span style={{fontSize:12,fontWeight:500,color:meta.color}}>{meta.label}</span>
+                    {wasEdited && !isEditing && (
+                      <span style={{fontSize:10,padding:'1px 6px',borderRadius:8,background:'rgba(124,107,255,.15)',color:'var(--accent)',marginLeft:6}}>Edited</span>
+                    )}
                     <span style={{marginLeft:'auto',fontSize:10,color:'var(--text3)'}}>{style}</span>
                   </div>
-                  <div className={styles.cardBody}>{post.text}</div>
+
+                  {/* Post body — editable textarea or read-only */}
+                  {isEditing ? (
+                    <textarea
+                      className={styles.cardBody}
+                      value={text}
+                      onChange={e => setEdited(prev => ({ ...prev, [p]: e.target.value }))}
+                      style={{
+                        width:'100%', minHeight:120, resize:'vertical',
+                        background:'var(--bg3)', border:'1px solid var(--accent)',
+                        borderRadius:6, padding:'10px 12px', fontSize:13,
+                        fontFamily:'inherit', color:'var(--text)', lineHeight:1.6,
+                        outline:'none', boxSizing:'border-box',
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <div className={styles.cardBody} style={{whiteSpace:'pre-wrap'}}>{text}</div>
+                  )}
+
                   <div className={styles.cardFooter}>
-                    <span style={{fontSize:11,color:'var(--text3)',flex:1}}>{(post.text||'').length} chars</span>
-                    <span style={{fontSize:11,color:ok?'var(--ok)':'var(--warn)'}}>{ok ? '✓ Compliant' : '⚠ '+post.note}</span>
-                    <button className={styles.copyBtn} onClick={() => copy(p, post.text)}>
-                      {copied === p ? 'Copied ✓' : 'Copy'}
-                    </button>
+                    <span style={{fontSize:11,color:'var(--text3)',flex:1}}>{text.length} chars</span>
+                    <span style={{fontSize:11,color:ok?'var(--ok)':'var(--warn)'}}>{ok?'✓ Compliant':'⚠ '+post.note}</span>
+
+                    {/* Edit / Save / Cancel buttons */}
+                    {isEditing ? (
+                      <>
+                        <button onClick={() => saveEdit(p)}
+                          style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid var(--ok)',background:'rgba(34,201,138,.1)',color:'var(--ok)',cursor:'pointer',fontFamily:'inherit'}}>
+                          ✓ Save
+                        </button>
+                        <button onClick={() => cancelEdit(p)}
+                          style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid var(--border)',background:'none',color:'var(--text3)',cursor:'pointer',fontFamily:'inherit'}}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => startEdit(p)}
+                          style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid var(--border)',background:'none',color:'var(--text2)',cursor:'pointer',fontFamily:'inherit'}}>
+                          ✎ Edit
+                        </button>
+                        {wasEdited && (
+                          <button onClick={() => resetEdit(p)}
+                            style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'none',background:'none',color:'var(--text3)',cursor:'pointer',fontFamily:'inherit'}}>
+                            Reset
+                          </button>
+                        )}
+                        <button className={styles.copyBtn} onClick={() => copy(p)}>
+                          {copied === p ? 'Copied ✓' : 'Copy'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
