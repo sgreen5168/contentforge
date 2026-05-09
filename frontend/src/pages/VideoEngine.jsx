@@ -62,6 +62,9 @@ export default function VideoEngine() {
   const [vslForm, setVsl]       = useState({ product:'', price:'', audience:'', pain:'', solution:'' });
   const [vslResult, setVR]      = useState(null);
   const pollRef                 = useRef(null);
+  const [pendingScript, setPendingScript] = useState(null);
+  const [editedScript, setEditedScript]   = useState('');
+  const [reviewMode, setReviewMode]       = useState(false);
 
   const maxDur = platforms.length
     ? Math.min(...platforms.map(id => PLATFORMS.find(p => p.id === id)?.maxSec || 600))
@@ -82,6 +85,46 @@ export default function VideoEngine() {
     if (!hasInput || !platforms.length) return;
     setGen(true); setJob(null); setRTab('result');
     try {
+      // Step 1: Generate script only first for review
+      const scriptRes = await fetch(`${API}/api/video/script`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inputMode, topic, url, affiliateUrl, persona,
+          duration: `${duration}s`, durationSeconds: duration,
+          style, platforms, videoType: smartMode ? 'auto' : videoType,
+        }),
+      });
+
+      // Fallback: if script endpoint doesn't exist, go straight to full generate
+      if (!scriptRes.ok || scriptRes.status === 404) {
+        const res = await fetch(`${API}/api/video/generate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inputMode, topic, url, affiliateUrl, persona,
+            duration: `${duration}s`, durationSeconds: duration,
+            style, platforms, autoUpload,
+            videoType: smartMode ? 'auto' : videoType,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setGen(false);
+        startPolling(data.jobId);
+        return;
+      }
+
+      const scriptData = await scriptRes.json();
+      if (scriptData.script) {
+        // Pause for review
+        setPendingScript({ ...scriptData, inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, autoUpload, videoType: smartMode ? 'auto' : videoType });
+        setEditedScript(scriptData.script.fullScript || '');
+        setReviewMode(true);
+        setGen(false);
+        setRTab('result');
+        return;
+      }
+
+      // No script preview available — full generate
       const res = await fetch(`${API}/api/video/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,18 +136,43 @@ export default function VideoEngine() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      pollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch(`${API}/api/video/job/${data.jobId}`);
-          const j = await r.json();
-          setJob(j);
-          if (j.status === 'completed' || j.status === 'failed') {
-            clearInterval(pollRef.current);
-            setGen(false);
-            loadJobs();
-          }
-        } catch {}
-      }, 2000);
+      startPolling(data.jobId);
+    } catch (e) { setGen(false); alert('Generation failed: ' + e.message); }
+  }
+
+  function startPolling(jobId) {
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/api/video/job/${jobId}`);
+        const j = await r.json();
+        setJob(j);
+        if (j.status === 'completed' || j.status === 'failed') {
+          clearInterval(pollRef.current);
+          setGen(false);
+          loadJobs();
+        }
+      } catch {}
+    }, 2000);
+  }
+
+  async function approveScript() {
+    if (!pendingScript) return;
+    setGen(true); setReviewMode(false);
+    try {
+      const res = await fetch(`${API}/api/video/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...pendingScript,
+          editedScript: editedScript,
+          duration: pendingScript.duration,
+          durationSeconds: parseInt(pendingScript.duration),
+          autoUpload: pendingScript.autoUpload,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPendingScript(null);
+      startPolling(data.jobId);
     } catch (e) { setGen(false); alert('Generation failed: ' + e.message); }
   }
 
@@ -459,7 +527,43 @@ export default function VideoEngine() {
                     )}
                   </div>
                 )}
-                {!job && !generating && (
+                {/* Script review mode */}
+                {reviewMode && pendingScript && !generating && !job && (
+                  <div className={styles.jobCard}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+                      <span style={{fontSize:13,fontWeight:500,color:'var(--color-text-primary,#E8F4F0)'}}>
+                        ✦ Script ready — review and edit before generating
+                      </span>
+                    </div>
+                    <div style={{fontSize:11,color:'rgba(93,202,165,.8)',marginBottom:8}}>
+                      Edit the script below then click Approve to start video generation
+                    </div>
+                    <textarea
+                      value={editedScript}
+                      onChange={e => setEditedScript(e.target.value)}
+                      style={{
+                        width:'100%', minHeight:200, resize:'vertical',
+                        background:'rgba(22,61,106,.6)',
+                        border:'0.5px solid rgba(29,158,117,.3)',
+                        borderRadius:8, padding:'10px 12px', fontSize:13,
+                        fontFamily:'inherit', color:'#E8F4F0', lineHeight:1.6,
+                        outline:'none', boxSizing:'border-box', marginBottom:10,
+                      }}
+                    />
+                    <div style={{display:'flex',gap:8'}}>
+                      <button onClick={approveScript}
+                        style={{flex:1,padding:'9px',borderRadius:8,border:'none',background:'#1D9E75',color:'white',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
+                        ✓ Approve &amp; Generate Video ⚡
+                      </button>
+                      <button onClick={() => { setReviewMode(false); setPendingScript(null); }}
+                        style={{padding:'9px 14px',borderRadius:8,border:'0.5px solid rgba(29,158,117,.2)',background:'transparent',color:'#7BAAA0',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
+                        Discard
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!job && !generating && !reviewMode && (
                   <div className={styles.emptyResult}>
                     <div className={styles.emptyIcon}>▶</div>
                     <div className={styles.emptyText}>Your video will appear here</div>
