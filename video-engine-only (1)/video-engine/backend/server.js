@@ -142,6 +142,7 @@ console.log('🔑 Environment check on startup:');
 console.log('  ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅ SET (' + process.env.ANTHROPIC_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅ SET (' + process.env.ELEVENLABS_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅ SET (' + process.env.RUNWAY_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
+console.log('  LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅ SET (' + process.env.LUMA_API_KEY.slice(0,12) + '...)' : '❌ MISSING');
 console.log('  FAL_API_KEY:', process.env.FAL_API_KEY ? '✅ SET (' + process.env.FAL_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ SET (' + process.env.OPENAI_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
 console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ SET' : '❌ MISSING');
@@ -181,18 +182,68 @@ async function generateVoiceover(script, persona, jobId) {
     if (!res.ok) throw new Error(`ElevenLabs: ${res.status}`);
     const buffer = await res.buffer();
     fs.writeFileSync(audioPath, buffer);
-    console.log(`✅ ElevenLabs voiceover ready`);
-    return audioPath;
-  }
-
-  throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
-}
-
-
-async function generateClip(prompt, duration) {
+    console.log(`✅ ElevenLabs voiceover rasync function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
 
-  // Try fal.ai first — easiest API, supports multiple video models
+  // ── Luma Dream Machine (primary) ─────────────────────────────────────────
+  if (process.env.LUMA_API_KEY) {
+    console.log(`🎬 Generating clip with Luma Dream Machine: "${prompt.slice(0,60)}..."`);
+
+    const genRes = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        model: 'ray-2',
+        resolution: '720p',
+        duration: Math.min(duration || 5, 9) <= 5 ? '5s' : '9s',
+        aspect_ratio: '9:16',
+      }),
+    });
+
+    const genText = await genRes.text();
+    console.log(`🎬 Luma response ${genRes.status}:`, genText.slice(0, 200));
+
+    if (!genRes.ok) {
+      let errMsg;
+      try { errMsg = JSON.parse(genText)?.detail || genText; }
+      catch { errMsg = genText; }
+      throw new Error(`Luma ${genRes.status}: ${errMsg}`);
+    }
+
+    const gen = JSON.parse(genText);
+    const genId = gen.id;
+    console.log(`⏳ Luma generation id: ${genId}`);
+
+    // Poll for completion
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
+          'Accept': 'application/json',
+        },
+      });
+      const t = await pollRes.json();
+      console.log(`⏳ Luma status: ${t.state} (attempt ${i+1}/60)`);
+
+      if (t.state === 'completed') {
+        const url = t.assets?.video;
+        if (url) { console.log(`✅ Luma clip ready: ${url}`); return url; }
+        throw new Error('Luma completed but no video URL in response');
+      }
+      if (t.state === 'failed') {
+        throw new Error(`Luma failed: ${t.failure_reason || 'unknown error'}`);
+      }
+    }
+    throw new Error('Luma timed out after 5 minutes');
+  }
+
+  // ── fal.ai fallback ───────────────────────────────────────────────────────
   if (process.env.FAL_API_KEY) {
     console.log(`🎬 Generating clip with fal.ai: "${prompt.slice(0,60)}..."`);
     const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
@@ -212,7 +263,6 @@ async function generateClip(prompt, duration) {
       throw new Error(`fal.ai ${res.status}: ${err.slice(0,200)}`);
     }
     const data = await res.json();
-    // fal.ai returns request_id for async jobs
     const requestId = data.request_id;
     console.log(`⏳ fal.ai request: ${requestId}`);
     for (let i = 0; i < 60; i++) {
@@ -232,7 +282,7 @@ async function generateClip(prompt, duration) {
     throw new Error('fal.ai timed out after 5 minutes');
   }
 
-  // Try RunwayML as fallback
+  // ── RunwayML fallback ─────────────────────────────────────────────────────
   if (process.env.RUNWAY_API_KEY) {
     console.log(`🎬 Generating clip with RunwayML: "${prompt.slice(0,60)}..."`);
     const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
@@ -274,7 +324,10 @@ async function generateClip(prompt, duration) {
     throw new Error('RunwayML timed out');
   }
 
-  throw new Error('No video API key — add FAL_API_KEY or RUNWAY_API_KEY to Railway');
+  throw new Error('No video API key configured — add LUMA_API_KEY, FAL_API_KEY, or RUNWAY_API_KEY to Railway');
+}
+
+add FAL_API_KEY or RUNWAY_API_KEY to Railway');
 }
 
 // ── Upload to R2 if configured ────────────────────────────────────────────────
@@ -323,7 +376,7 @@ async function runPipeline(jobId, params) {
       hasScenes: !!(script.sceneDescriptions?.length),
       sceneCount: script.sceneDescriptions?.length || 0,
     });
-    if ((process.env.RUNWAY_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.length) {
+    if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.length) {
       await updateJob(jobId, { progress: 55, step: 'Generating video scenes with RunwayML...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
       for (const scene of scenes) {
@@ -539,7 +592,7 @@ async function runBulkGeneration(batchId, topics, settings, store) {
 
         // One scene clip per video (faster for bulk)
         let clipUrl = null;
-        if ((process.env.RUNWAY_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
+        if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.[0]) {
           try {
             clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5);
           } catch (e) { console.warn(`Bulk ${index} clip failed:`, e.message); }
@@ -612,3 +665,44 @@ app.post('/api/email/test', async (req, res) => {
     res.json({ success: true, message: `Test email sent to ${process.env.NOTIFY_EMAIL}` });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── Reddit routes ─────────────────────────────────────────────────────────────
+
+// Verify Reddit credentials
+app.get('/api/reddit/verify', async (_req, res) => {
+  try {
+    const { verifyRedditCredentials } = await import('./services/redditService.js');
+    const result = await verifyRedditCredentials();
+    res.json(result);
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+// Post video to Reddit
+app.post('/api/reddit/post-video', async (req, res) => {
+  const { videoUrl, title, subreddit, description } = req.body;
+  if (!videoUrl || !title) return res.status(400).json({ error: 'videoUrl and title required' });
+  try {
+    const { postVideoToReddit } = await import('./services/redditService.js');
+    const result = await postVideoToReddit({ videoUrl, title, subreddit, description });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Post text to Reddit
+app.post('/api/reddit/post-text', async (req, res) => {
+  const { title, text, subreddit } = req.body;
+  if (!title) return res.status(400).json({ error: 'title required' });
+  try {
+    const { postTextToReddit } = await import('./services/redditService.js');
+    const result = await postTextToReddit({ title, text, subreddit });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Log Reddit status on startup
+if (process.env.REDDIT_CLIENT_ID) {
+  import('./services/redditService.js')
+    .then(({ verifyRedditCredentials }) => verifyRedditCredentials())
+    .then(r => console.log('Reddit:', r.connected ? `✅ Connected as u/${r.username}` : `❌ ${r.error}`))
+    .catch(e => console.warn('Reddit check failed:', e.message));
+}
