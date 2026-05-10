@@ -550,7 +550,7 @@ export default function VideoEngine() {
                         outline:'none', boxSizing:'border-box', marginBottom:10,
                       }}
                     />
-                    <div style={{display:'flex',gap:8'}}>
+                    <div style={{display:'flex',gap:8}}>
                       <button onClick={approveScript}
                         style={{flex:1,padding:'9px',borderRadius:8,border:'none',background:'#1D9E75',color:'white',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
                         ✓ Approve &amp; Generate Video ⚡
