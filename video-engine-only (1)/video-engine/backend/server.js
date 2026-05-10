@@ -182,7 +182,10 @@ async function generateVoiceover(script, persona, jobId) {
     if (!res.ok) throw new Error(`ElevenLabs: ${res.status}`);
     const buffer = await res.buffer();
     fs.writeFileSync(audioPath, buffer);
-    console.log(`✅ ElevenLabs voiceover rasync function generateClip(prompt, duration) {
+    console.log(`✅ ElevenLabs voiceover ready`);
+}
+
+async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
 
   // ── Luma Dream Machine (primary) ─────────────────────────────────────────
