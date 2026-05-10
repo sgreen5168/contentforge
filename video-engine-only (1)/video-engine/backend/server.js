@@ -183,6 +183,10 @@ async function generateVoiceover(script, persona, jobId) {
     const buffer = await res.buffer();
     fs.writeFileSync(audioPath, buffer);
     console.log(`✅ ElevenLabs voiceover ready`);
+    return audioPath;
+  }
+
+  throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
 }
 
 async function generateClip(prompt, duration) {
