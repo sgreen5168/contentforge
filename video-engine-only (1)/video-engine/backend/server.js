@@ -1,162 +1,124 @@
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
-import { createServer } from 'http';
-import { existsSync, mkdirSync } from 'fs';
-
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
-const OUTPUT_DIR = process.env.OUTPUT_DIR || './output';
-if (!existsSync(OUTPUT_DIR)) mkdirSync(OUTPUT_DIR, { recursive: true });
-
-// ── CORS ──────────────────────────────────────────────────────────────────────
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  next();
-});
+app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
-app.use('/output', express.static(OUTPUT_DIR));
 
-// ── In-memory job store (backed by Supabase if configured) ───────────────────
+const PORT = process.env.PORT || 3001;
+
+// ── In-memory job store ───────────────────────────────────────────────────────
 const jobs = new Map();
 
-function makeId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function createJob(data) {
-  const job = {
-    id: makeId(), status: 'queued', progress: 0,
-    step: 'Queued', data, result: null, error: null,
-    createdAt: new Date().toISOString(),
-  };
-  jobs.set(job.id, job);
-  return job;
-}
-
 async function updateJob(id, updates) {
-  const job = jobs.get(id);
-  if (!job) return;
-  Object.assign(job, updates, { updatedAt: new Date().toISOString() });
-  jobs.set(id, job);
-  // Persist to Supabase if configured
+  const job = jobs.get(id) || {};
+  const updated = { ...job, ...updates, updatedAt: new Date().toISOString() };
+  jobs.set(id, updated);
   if (process.env.SUPABASE_URL) {
     try {
-      const { saveJob } = await import('./services/dbService.js');
-      await saveJob(job);
-    } catch (e) { console.warn('DB save failed:', e.message); }
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      await db.from('video_jobs').upsert({ id, ...updates, updated_at: updated.updatedAt });
+    } catch (e) { console.warn('DB update failed:', e.message); }
   }
-  return job;
+  return updated;
 }
 
 async function getJob(id) {
-  // Check memory first
   if (jobs.has(id)) return jobs.get(id);
-  // Fall back to Supabase
   if (process.env.SUPABASE_URL) {
     try {
-      const { getJobFromDb } = await import('./services/dbService.js');
-      const job = await getJobFromDb(id);
-      if (job) { jobs.set(id, job); return job; }
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const { data } = await db.from('video_jobs').select('*').eq('id', id).single();
+      if (data) { jobs.set(id, data); return data; }
     } catch (e) {}
   }
   return null;
 }
 
 async function getAllJobs() {
-  // If Supabase configured use it for persistent history
   if (process.env.SUPABASE_URL) {
     try {
-      const { getAllJobsFromDb } = await import('./services/dbService.js');
-      return await getAllJobsFromDb(20);
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const { data } = await db.from('video_jobs').select('*').order('created_at', { ascending: false }).limit(50);
+      return data || [];
     } catch (e) {}
   }
-  return [...jobs.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
+  return [...jobs.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-// ── Health ────────────────────────────────────────────────────────────────────
-app.get('/', (_req, res) => res.json({
-  status: 'ContentForge Video Engine v2.0',
-  storage: process.env.R2_ACCOUNT_ID ? 'Cloudflare R2 ✅' : 'Local only',
-  database: process.env.SUPABASE_URL ? 'Supabase ✅' : 'In-memory only',
-}));
-app.get('/health', (_req, res) => res.json({
-  status: 'ok', version: '2.0',
-  r2: !!process.env.R2_ACCOUNT_ID,
-  supabase: !!process.env.SUPABASE_URL,
-}));
+// ── Startup log ───────────────────────────────────────────────────────────────
+console.log('ContentForge Video Engine starting...');
+console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
+console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
+console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
+console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 
 // ── Script generation ─────────────────────────────────────────────────────────
 async function generateScript(params) {
-  const { topic, url, affiliateUrl, inputMode, persona, duration, style, platforms, videoType } = params;
+  const { inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, videoType, editedScript } = params;
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const secs = parseInt(duration) || 30;
-  const platList = (platforms || ['tiktok']).join(', ');
-  const subject = inputMode === 'topic' ? `Topic: "${topic}"` :
-    inputMode === 'url' ? `URL content: ${url}` : `Affiliate product: ${affiliateUrl}`;
-  const typeInstructions = {
-    'ugc-persona':  'Write as an authentic UGC creator sharing personal experience. First-person, casual, relatable.',
-    'ai-vsl':       'Write as a direct-response VSL. Hook → Problem → Agitate → Solution → Offer → CTA.',
-    'hybrid-vsl':   'Write for hybrid format: avatar intro, B-roll demo section, product close-up, CTA outro.',
-    'reel-ads':     'Write as a punchy Reel ad. Pattern-interrupt hook in 2 seconds. Fast pacing. Strong CTA.',
-    'product-ads':  'Write as a product ad. Lead with biggest benefit. Show features. Price anchor. Urgency CTA.',
-    'commercial':   'Write as a brand commercial. Emotional story arc. Cinematic pacing. Brand tagline close.',
-    'competitor':   'Analyze competitor structure and write original content with same pacing and flow.',
-    'auto':         'Choose the most effective format based on the input content.',
-  };
-  const prompt = `Write a ${secs}-second ${persona} video script for ${platList}.
-${subject}
-Video type: ${videoType || 'auto'} — ${typeInstructions[videoType] || typeInstructions.auto}
-Visual style: ${style || 'ugc'}
 
-Return ONLY raw JSON:
+  const videoTypes = {
+    'ugc-persona':  'authentic UGC-style first-person review',
+    'ai-vsl':       'Video Sales Letter with Hook-Problem-Solution-CTA structure',
+    'hybrid-vsl':   'Hybrid VSL combining avatar sections with B-roll',
+    'reel-ads':     'short punchy Reel ad under 30 seconds',
+    'product-ads':  'direct-response product ad with price and urgency',
+    'commercial':   'cinematic brand commercial with emotional arc',
+    'competitor':   'competitor-style video with original content',
+  };
+
+  const vType = videoTypes[videoType] || 'engaging short-form video';
+  const inputDesc = inputMode === 'topic' ? `Topic: ${topic}` : inputMode === 'url' ? `URL: ${url}` : `Affiliate link: ${affiliateUrl}`;
+
+  const prompt = `Create a complete ${vType} script for ${platforms?.join(', ') || 'social media'}.
+
+${inputDesc}
+Duration: ${duration || '30s'}
+Persona: ${persona || 'ugc'}
+Style: ${style || 'casual'}
+${editedScript ? `Use this as the base script and improve it:\n${editedScript}` : ''}
+
+Return ONLY valid JSON with this exact structure:
 {
-  "hook": "opening line — stops the scroll in 2 seconds",
-  "fullScript": "complete word-for-word voiceover script",
+  "hook": "opening line that grabs attention",
+  "fullScript": "complete word-for-word script",
   "cta": "call to action",
-  "sceneDescriptions": [
-    {"scene": 1, "duration": 5, "visual": "detailed visual description for video generation", "text": "caption overlay text"}
-  ],
   "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
-  "title": "video title for upload",
-  "description": "platform caption",
-  "estimatedDuration": ${secs}
+  "sceneDescriptions": [
+    {"scene": 1, "visual": "detailed visual description for AI video generation", "duration": 5},
+    {"scene": 2, "visual": "detailed visual description for AI video generation", "duration": 5},
+    {"scene": 3, "visual": "detailed visual description for AI video generation", "duration": 5}
+  ]
 }`;
 
   const msg = await client.messages.create({
-    model: 'claude-opus-4-5', max_tokens: 1500,
-    system: 'You are a short-form video script expert. Reply with valid JSON only.',
+    model: 'claude-opus-4-5',
+    max_tokens: 1500,
+    system: 'You are an expert video script writer. Return only valid JSON, no markdown.',
     messages: [{ role: 'user', content: prompt }],
   });
-  const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+  const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   return JSON.parse(raw);
 }
 
-// ── Startup environment check ────────────────────────────────────────────────
-console.log('🔑 Environment check on startup:');
-console.log('  ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅ SET (' + process.env.ANTHROPIC_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
-console.log('  ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅ SET (' + process.env.ELEVENLABS_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
-console.log('  RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅ SET (' + process.env.RUNWAY_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
-console.log('  LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅ SET (' + process.env.LUMA_API_KEY.slice(0,12) + '...)' : '❌ MISSING');
-console.log('  FAL_API_KEY:', process.env.FAL_API_KEY ? '✅ SET (' + process.env.FAL_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
-console.log('  OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ SET (' + process.env.OPENAI_API_KEY.slice(0,8) + '...)' : '❌ MISSING');
-console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ SET' : '❌ MISSING');
-console.log('  R2_BUCKET_NAME:', process.env.R2_BUCKET_NAME ? '✅ SET' : '❌ MISSING');
-
-// ── ElevenLabs voiceover ──────────────────────────────────────────────────────
+// ── Voiceover generation ──────────────────────────────────────────────────────
 async function generateVoiceover(script, persona, jobId) {
   const fetch = (await import('node-fetch')).default;
   const fs = (await import('fs')).default;
   const audioPath = `/tmp/voice_${jobId}_${Date.now()}.mp3`;
 
-  // OpenAI TTS — simple and reliable
   if (process.env.OPENAI_API_KEY) {
-    const voices = { ugc:'nova', testimonial:'shimmer', demo:'onyx', influencer:'alloy', educator:'echo' };
+    const voices = { ugc: 'nova', testimonial: 'shimmer', demo: 'onyx', influencer: 'alloy', educator: 'echo' };
     const voice = voices[persona] || 'nova';
     const res = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
@@ -166,13 +128,18 @@ async function generateVoiceover(script, persona, jobId) {
     if (!res.ok) throw new Error(`OpenAI TTS: ${res.status}`);
     const buffer = await res.buffer();
     fs.writeFileSync(audioPath, buffer);
-    console.log(`✅ OpenAI TTS voiceover ready`);
+    console.log('✅ OpenAI TTS voiceover ready');
     return audioPath;
   }
 
-  // ElevenLabs fallback
   if (process.env.ELEVENLABS_API_KEY) {
-    const voiceIds = { ugc:'21m00Tcm4TlvDq8ikWAM', testimonial:'AZnzlk1XvdvUeBnXmlld', demo:'EXAVITQu4vr4xnSDxMaL', influencer:'ErXwobaYiN019PkySvjV', educator:'VR6AewLTigWG4xSOukaG' };
+    const voiceIds = {
+      ugc: '21m00Tcm4TlvDq8ikWAM',
+      testimonial: 'AZnzlk1XvdvUeBnXmlld',
+      demo: 'EXAVITQu4vr4xnSDxMaL',
+      influencer: 'ErXwobaYiN019PkySvjV',
+      educator: 'VR6AewLTigWG4xSOukaG',
+    };
     const voiceId = voiceIds[persona] || '21m00Tcm4TlvDq8ikWAM';
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -182,21 +149,20 @@ async function generateVoiceover(script, persona, jobId) {
     if (!res.ok) throw new Error(`ElevenLabs: ${res.status}`);
     const buffer = await res.buffer();
     fs.writeFileSync(audioPath, buffer);
-    console.log(`✅ ElevenLabs voiceover ready`);
+    console.log('✅ ElevenLabs voiceover ready');
     return audioPath;
   }
 
   throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
 }
 
+// ── Video clip generation ─────────────────────────────────────────────────────
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
 
-  // ── Luma Dream Machine (primary) ─────────────────────────────────────────
   if (process.env.LUMA_API_KEY) {
-    console.log(`🎬 Generating clip with Luma Dream Machine: "${prompt.slice(0,60)}..."`);
-
-    const genRes = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+    console.log(`🎬 Luma: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
@@ -207,112 +173,67 @@ async function generateClip(prompt, duration) {
         prompt,
         model: 'ray-2',
         resolution: '720p',
-        duration: Math.min(duration || 5, 9) <= 5 ? '5s' : '9s',
+        duration: duration <= 5 ? '5s' : '9s',
         aspect_ratio: '9:16',
       }),
     });
-
-    const genText = await genRes.text();
-    console.log(`🎬 Luma response ${genRes.status}:`, genText.slice(0, 200));
-
-    if (!genRes.ok) {
-      let errMsg;
-      try { errMsg = JSON.parse(genText)?.detail || genText; }
-      catch { errMsg = genText; }
-      throw new Error(`Luma ${genRes.status}: ${errMsg}`);
-    }
-
-    const gen = JSON.parse(genText);
+    const resText = await res.text();
+    console.log(`Luma ${res.status}:`, resText.slice(0, 150));
+    if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
+    const gen = JSON.parse(resText);
     const genId = gen.id;
-    console.log(`⏳ Luma generation id: ${genId}`);
-
-    // Poll for completion
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 5000));
-      const pollRes = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
-          'Accept': 'application/json',
-        },
+      const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
+        headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
       });
-      const t = await pollRes.json();
-      console.log(`⏳ Luma status: ${t.state} (attempt ${i+1}/60)`);
-
+      const t = await poll.json();
+      console.log(`Luma status: ${t.state} (${i + 1}/60)`);
       if (t.state === 'completed') {
-        const url = t.assets?.video;
-        if (url) { console.log(`✅ Luma clip ready: ${url}`); return url; }
-        throw new Error('Luma completed but no video URL in response');
+        const videoUrl = t.assets?.video;
+        if (videoUrl) return videoUrl;
+        throw new Error('Luma completed but no video URL');
       }
-      if (t.state === 'failed') {
-        throw new Error(`Luma failed: ${t.failure_reason || 'unknown error'}`);
-      }
+      if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
     }
-    throw new Error('Luma timed out after 5 minutes');
+    throw new Error('Luma timed out');
   }
 
-  // ── fal.ai fallback ───────────────────────────────────────────────────────
   if (process.env.FAL_API_KEY) {
-    console.log(`🎬 Generating clip with fal.ai: "${prompt.slice(0,60)}..."`);
+    console.log(`🎬 fal.ai: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
       method: 'POST',
-      headers: {
-        'Authorization': `Key ${process.env.FAL_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        duration: Math.min(duration || 5, 10) <= 5 ? '5' : '10',
-        aspect_ratio: '9:16',
-      }),
+      headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, duration: duration <= 5 ? '5' : '10', aspect_ratio: '9:16' }),
     });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`fal.ai ${res.status}: ${err.slice(0,200)}`);
-    }
+    if (!res.ok) throw new Error(`fal.ai ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
     const requestId = data.request_id;
-    console.log(`⏳ fal.ai request: ${requestId}`);
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 5000));
       const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${requestId}`, {
         headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}` },
       });
       const t = await poll.json();
-      console.log(`⏳ fal.ai status: ${t.status} (${i+1}/60)`);
       if (t.status === 'COMPLETED') {
-        const url = t.output?.video?.url || t.output?.[0]?.url;
-        if (url) { console.log(`✅ fal.ai clip ready: ${url}`); return url; }
-        throw new Error('fal.ai completed but no video URL');
+        const videoUrl = t.output?.video?.url || t.output?.[0]?.url;
+        if (videoUrl) return videoUrl;
+        throw new Error('fal.ai no video URL');
       }
-      if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error || 'unknown'}`);
+      if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error}`);
     }
-    throw new Error('fal.ai timed out after 5 minutes');
+    throw new Error('fal.ai timed out');
   }
 
-  // ── RunwayML fallback ─────────────────────────────────────────────────────
   if (process.env.RUNWAY_API_KEY) {
-    console.log(`🎬 Generating clip with RunwayML: "${prompt.slice(0,60)}..."`);
+    console.log(`🎬 RunwayML: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
-        'Content-Type': 'application/json',
-        'X-Runway-Version': '2024-11-06',
-      },
-      body: JSON.stringify({
-        model: 'gen3a_turbo',
-        promptText: prompt,
-        duration: Math.min(duration || 5, 10),
-        ratio: '720:1280',
-      }),
+      headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'Content-Type': 'application/json', 'X-Runway-Version': '2024-11-06' },
+      body: JSON.stringify({ model: 'gen3a_turbo', promptText: prompt, duration: Math.min(duration || 5, 10), ratio: '720:1280' }),
     });
     const resText = await res.text();
-    console.log(`🎬 RunwayML response ${res.status}:`, resText.slice(0,200));
-    if (!res.ok) {
-      let errMsg;
-      try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
-      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
-    }
+    if (!res.ok) throw new Error(`RunwayML ${res.status}: ${resText.slice(0, 200)}`);
     const task = JSON.parse(resText);
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 5000));
@@ -320,31 +241,28 @@ async function generateClip(prompt, duration) {
         headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
       });
       const t = await poll.json();
-      console.log(`⏳ RunwayML: ${t.status} (${i+1}/60)`);
-      if (t.status === 'SUCCEEDED') {
-        const url = t.output?.[0] || t.artifacts?.[0]?.url;
-        if (url) return url;
-        throw new Error('No video URL in RunwayML response');
-      }
-      if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || 'unknown'}`);
+      if (t.status === 'SUCCEEDED') return t.output?.[0] || t.artifacts?.[0]?.url;
+      if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure}`);
     }
     throw new Error('RunwayML timed out');
   }
 
-  throw new Error('No video API key configured — add LUMA_API_KEY, FAL_API_KEY, or RUNWAY_API_KEY to Railway');
+  throw new Error('No video API key — add LUMA_API_KEY, FAL_API_KEY, or RUNWAY_API_KEY to Railway');
 }
 
-add FAL_API_KEY or RUNWAY_API_KEY to Railway');
-}
-
-// ── Upload to R2 if configured ────────────────────────────────────────────────
+// ── R2 upload ─────────────────────────────────────────────────────────────────
 async function tryUploadToR2(localPath, key) {
-  if (!process.env.R2_ACCOUNT_ID) return null;
   try {
-    const { uploadToR2 } = await import('./services/storageService.js');
-    const url = await uploadToR2(localPath, key);
-    console.log(`☁️ Uploaded to R2: ${key}`);
-    return url;
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const fs = await import('fs');
+    const client = new S3Client({
+      region: 'auto',
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY },
+    });
+    const body = fs.default.readFileSync(localPath);
+    await client.send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key, Body: body, ContentType: 'video/mp4' }));
+    return `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${key}`;
   } catch (e) {
     console.warn('R2 upload failed:', e.message);
     return null;
@@ -353,97 +271,100 @@ async function tryUploadToR2(localPath, key) {
 
 // ── Main pipeline ─────────────────────────────────────────────────────────────
 async function runPipeline(jobId, params) {
+  const { inputMode, topic, url, affiliateUrl, persona, duration, durationSeconds, style, platforms, autoUpload, videoType, editedScript } = params;
+
   try {
-    // Step 1 — Script
-    await updateJob(jobId, { status: 'processing', progress: 10, step: 'Writing video script with AI...' });
-    const script = await generateScript(params);
+    await updateJob(jobId, { status: 'processing', progress: 10, step: 'Writing script with Claude AI...' });
+    const script = await generateScript({ inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, videoType, editedScript });
     await updateJob(jobId, { progress: 30, step: 'Script ready — generating voiceover...', script });
 
-    // Step 2 — Voiceover
     let audioPath = null;
-    let audioUrl = null;
-    if (process.env.ELEVENLABS_API_KEY || process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY) {
       try {
-        audioPath = await generateVoiceover(script.fullScript, params.persona, jobId);
-        // Upload audio to R2
-        audioUrl = await tryUploadToR2(audioPath, `audio/${jobId}/voice.mp3`);
+        audioPath = await generateVoiceover(script.fullScript, persona, jobId);
         await updateJob(jobId, { progress: 50, step: 'Voiceover ready — generating video scenes...' });
       } catch (e) {
-        console.warn('Voiceover failed (continuing):', e.message);
+        console.warn('Voiceover failed:', e.message);
         await updateJob(jobId, { step: 'Voiceover skipped — generating video scenes...' });
       }
     }
 
-    // Step 3 — RunwayML clips
     const clips = [];
-    // Log what we have for debugging
-    console.log('🎬 RunwayML check:', {
-      hasKey: !!process.env.RUNWAY_API_KEY,
-      keyPrefix: process.env.RUNWAY_API_KEY ? process.env.RUNWAY_API_KEY.slice(0,8) : 'none',
-      hasScenes: !!(script.sceneDescriptions?.length),
-      sceneCount: script.sceneDescriptions?.length || 0,
-    });
     if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.length) {
-      await updateJob(jobId, { progress: 55, step: 'Generating video scenes with RunwayML...' });
+      await updateJob(jobId, { progress: 55, step: 'Generating video scenes...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
       for (const scene of scenes) {
         try {
-          const videoUrl = await generateClip(scene.visual, scene.duration);
+          const videoUrl = await generateClip(scene.visual, scene.duration || 5);
           clips.push({ scene: scene.scene, videoUrl, status: 'success' });
           const pct = 55 + Math.round((clips.length / scenes.length) * 30);
-          await updateJob(jobId, { progress: pct, step: `Scene ${scene.scene} of ${scenes.length} ready...` });
+          await updateJob(jobId, { progress: pct, step: `Scene ${clips.length} of ${scenes.length} ready...`, clipError: null });
         } catch (e) {
           console.error(`Scene ${scene.scene} failed:`, e.message);
           clips.push({ scene: scene.scene, status: 'failed', error: e.message });
-          // Store error so frontend can show it
-          await updateJob(jobId, { step: `Video clip failed: ${e.message}`, clipError: e.message });
+          await updateJob(jobId, { clipError: e.message });
         }
       }
     }
 
-    // Step 4 — Upload final video to R2
-    let finalVideoUrl = null;
-    const successClips = clips.filter(c => c.videoUrl);
-    if (successClips.length > 0) {
-      await updateJob(jobId, { progress: 90, step: 'Uploading video to cloud storage...' });
-      // For now store the first clip URL — FFmpeg assembly can be added later
-      finalVideoUrl = successClips[0].videoUrl;
+    const finalVideoUrl = clips.find(c => c.videoUrl)?.videoUrl || null;
+    let r2Url = null;
+    if (finalVideoUrl && process.env.R2_BUCKET_NAME) {
+      r2Url = await tryUploadToR2(finalVideoUrl, `videos/${jobId}.mp4`);
     }
 
-    // Done!
     await updateJob(jobId, {
-      status: 'completed', progress: 100, step: 'Complete!',
-      result: {
-        script,
-        audioUrl: audioUrl || (audioPath ? `/output/voice_${jobId}.mp3` : null),
-        clips,
-        finalVideoUrl,
-        uploadResults: [],
-      },
+      status: 'completed',
+      progress: 100,
+      step: 'Complete!',
+      result: { script, clips, finalVideoUrl: r2Url || finalVideoUrl, audioPath },
     });
-    console.log(`✅ Job ${jobId} complete`);
+
+    if (process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL) {
+      try {
+        const { sendVideoCompleteEmail } = await import('./services/emailService.js');
+        await sendVideoCompleteEmail({ jobId, script, clipUrl: r2Url || finalVideoUrl, topic: topic || url, persona, duration, platforms });
+      } catch (e) { console.warn('Email failed:', e.message); }
+    }
   } catch (e) {
-    console.error(`Job ${jobId} failed:`, e.message);
-    await updateJob(jobId, { status: 'failed', error: e.message });
+    console.error('Pipeline error:', e.message);
+    await updateJob(jobId, { status: 'failed', step: 'Failed', error: e.message });
   }
 }
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// ── VSL generation ────────────────────────────────────────────────────────────
+async function generateVSLScript({ product, price, audience, pain, solution, duration, affiliateUrl }) {
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-5',
+    max_tokens: 2000,
+    system: 'Expert VSL copywriter. Return only valid JSON.',
+    messages: [{
+      role: 'user',
+      content: `Write a high-converting VSL script for: ${product} ($${price}) targeting ${audience}.
+Pain point: ${pain}. Solution: ${solution}. Duration: ${duration || '60s'}.
+${affiliateUrl ? `Affiliate link: ${affiliateUrl}` : ''}
+Return JSON: { "hook", "problemAgitation", "solutionReveal", "socialProof", "offer", "guarantee", "cta", "fullScript", "hashtags": [] }`,
+    }],
+  });
+  const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  return JSON.parse(raw);
+}
+
+// ── API Routes ────────────────────────────────────────────────────────────────
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
+});
+
 app.post('/api/video/generate', async (req, res) => {
-  const { inputMode='topic', topic='', url='', affiliateUrl='', persona='ugc',
-    duration='30s', style='ugc', platforms=['tiktok'], autoUpload=false, videoType='auto',
-    competitorUrl='', vslSections=[], autoPacing=true, trendCaptions=true,
-    autoScrape=true, showPrice=false, ctaText='', tagline='', brandColor='#534AB7',
-    preserveStruct=true, energyLevel=3, personaStyle='Friendly reviewer' } = req.body;
-
-  if (!topic && !url && !affiliateUrl) return res.status(400).json({ error: 'topic, url, or affiliateUrl required' });
-
-  const job = createJob({ inputMode, topic, url, affiliateUrl, persona, duration,
-    style, platforms, autoUpload, videoType, competitorUrl });
-  res.json({ jobId: job.id, status: 'queued' });
-
-  runPipeline(job.id, { inputMode, topic, url, affiliateUrl, persona, duration,
-    style, platforms, videoType }).catch(console.error);
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  const jobId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const job = { id: jobId, status: 'queued', progress: 0, step: 'Queued...', data: req.body, createdAt: new Date().toISOString() };
+  jobs.set(jobId, job);
+  res.json({ jobId, status: 'queued' });
+  runPipeline(jobId, req.body).catch(console.error);
 });
 
 app.get('/api/video/job/:id', async (req, res) => {
@@ -458,17 +379,193 @@ app.get('/api/video/jobs', async (_req, res) => {
 
 app.post('/api/vsl/generate', async (req, res) => {
   try {
-    const script = await generateScript({
-      ...req.body, inputMode: 'topic', topic: req.body.product,
-      persona: 'testimonial', platforms: ['tiktok'], style: 'studio', videoType: 'ai-vsl',
-    });
+    const script = await generateVSLScript(req.body);
     res.json({ script });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/persona', (_req, res) => res.json({
-  personas: ['testimonial', 'demo', 'influencer', 'educator', 'ugc']
-}));
+app.post('/api/generate', async (req, res) => {
+  try {
+    const { inputMode, topic, url, style, platforms, affiliate } = req.body;
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const PM = { facebook: 'Facebook', instagram: 'Instagram', reddit: 'Reddit' };
+    const active = (platforms || ['facebook','instagram','reddit']).filter(p => PM[p]);
+    const prompt = `Write ${style || 'Casual'} social media posts for: ${inputMode === 'topic' ? topic : url}
+${affiliate ? 'Include affiliate link naturally.' : ''}
+Platforms: ${active.join(', ')}
+Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": true, "note": ""}`).join(', ')} }`;
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-5', max_tokens: 1000,
+      system: 'Expert social media copywriter. Return only valid JSON.',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    res.json({ posts: JSON.parse(raw) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/persona', (_req, res) => {
+  res.json({ personas: ['ugc','testimonial','demo','influencer','educator'] });
+});
+
+// ── Bulk routes ───────────────────────────────────────────────────────────────
+const bulkJobs = new Map();
+
+app.post('/api/bulk/variations', async (req, res) => {
+  const { baseTopic, count = 10, persona = 'ugc', videoType = 'auto' } = req.body;
+  if (!baseTopic) return res.status(400).json({ error: 'baseTopic required' });
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-5', max_tokens: 500,
+      system: 'Reply with valid JSON array only.',
+      messages: [{ role: 'user', content: `Generate ${count} unique video topic variations based on: "${baseTopic}" for ${persona} style videos. Return JSON array of ${count} strings.` }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    res.json({ topics: JSON.parse(raw) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/bulk/generate', async (req, res) => {
+  const { topics, persona = 'ugc', duration = '30s', style = 'ugc', platforms = ['tiktok'], videoType = 'auto', concurrency = 2 } = req.body;
+  if (!topics?.length) return res.status(400).json({ error: 'topics array required' });
+  if (topics.length > 10) return res.status(400).json({ error: 'Max 10 videos per batch' });
+  const batchId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const batch = {
+    batchId, status: 'queued', total: topics.length, completed: 0, failed: 0, progress: 0,
+    jobs: topics.map((topic, i) => ({ index: i+1, topic, status: 'queued', progress: 0, step: 'Waiting...', result: null, error: null })),
+    createdAt: new Date().toISOString(),
+    settings: { persona, duration, style, platforms, videoType },
+  };
+  bulkJobs.set(batchId, batch);
+  res.json({ batchId, total: batch.total, status: 'queued' });
+  runBulkBatch(batchId, topics, { persona, duration, style, platforms, videoType, concurrency }).catch(console.error);
+});
+
+app.get('/api/bulk/:batchId', (req, res) => {
+  const batch = bulkJobs.get(req.params.batchId);
+  if (!batch) return res.status(404).json({ error: 'Batch not found' });
+  res.json(batch);
+});
+
+app.get('/api/bulk', (_req, res) => {
+  res.json({ batches: [...bulkJobs.values()].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10) });
+});
+
+async function runBulkBatch(batchId, topics, settings) {
+  const batch = bulkJobs.get(batchId);
+  batch.status = 'processing';
+  const { concurrency = 2, persona, duration, style, platforms, videoType } = settings;
+  for (let i = 0; i < topics.length; i += concurrency) {
+    const chunk = topics.slice(i, i + concurrency);
+    await Promise.all(chunk.map(async (topic, ci) => {
+      const idx = i + ci;
+      batch.jobs[idx].status = 'processing';
+      batch.jobs[idx].step = 'Writing script...';
+      try {
+        const script = await generateScript({ inputMode: 'topic', topic, persona, duration, style, platforms, videoType });
+        batch.jobs[idx].progress = 40;
+        batch.jobs[idx].step = 'Script ready...';
+        let clipUrl = null;
+        if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.[0]) {
+          try { clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5); } catch (e) { console.warn(`Bulk clip failed:`, e.message); }
+        }
+        batch.jobs[idx].status = 'completed';
+        batch.jobs[idx].progress = 100;
+        batch.jobs[idx].step = 'Complete!';
+        batch.jobs[idx].result = { script, clipUrl, topic };
+        batch.completed++;
+      } catch (e) {
+        batch.jobs[idx].status = 'failed';
+        batch.jobs[idx].error = e.message;
+        batch.failed++;
+      }
+      batch.progress = Math.round(((batch.completed + batch.failed) / batch.total) * 100);
+    }));
+  }
+  batch.status = 'completed';
+}
+
+// ── Schedule routes ───────────────────────────────────────────────────────────
+const schedules = new Map();
+
+app.post('/api/schedule', async (req, res) => {
+  const { jobId, platforms, scheduledAt, script, videoUrl } = req.body;
+  if (!platforms?.length || !scheduledAt) return res.status(400).json({ error: 'platforms and scheduledAt required' });
+  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const schedule = { id, jobId, platforms, scheduledAt, script, videoUrl, status: 'scheduled', createdAt: new Date().toISOString() };
+  schedules.set(id, schedule);
+  res.json({ schedule });
+});
+
+app.get('/api/schedule', (_req, res) => {
+  res.json({ schedules: [...schedules.values()].sort((a,b) => new Date(a.scheduledAt)-new Date(b.scheduledAt)) });
+});
+
+app.delete('/api/schedule/:id', (req, res) => {
+  schedules.delete(req.params.id);
+  res.json({ success: true });
+});
+
+app.get('/api/schedule/optimal/:platform', (req, res) => {
+  const times = {
+    tiktok: [{ time:'19:00', label:'7pm — Peak TikTok' }],
+    instagram: [{ time:'11:00', label:'11am — Peak Reels' }],
+    youtube: [{ time:'15:00', label:'3pm — Shorts peak' }],
+    'fb-reels': [{ time:'13:00', label:'1pm — Facebook lunch' }],
+    reddit: [{ time:'08:00', label:'8am ET — Reddit peak' }],
+  };
+  const t = times[req.params.platform];
+  if (!t) return res.status(404).json({ error: 'Platform not found' });
+  res.json({ platform: req.params.platform, optimalTimes: t });
+});
+
+// ── Email routes ──────────────────────────────────────────────────────────────
+app.get('/api/email/settings', (_req, res) => {
+  res.json({
+    configured: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
+    notifyEmail: process.env.NOTIFY_EMAIL ? process.env.NOTIFY_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') : null,
+  });
+});
+
+app.post('/api/email/test', async (req, res) => {
+  if (!process.env.RESEND_API_KEY || !process.env.NOTIFY_EMAIL) return res.status(400).json({ error: 'RESEND_API_KEY and NOTIFY_EMAIL required' });
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'ContentForge <notifications@contentstudiohub.com>', to: [process.env.NOTIFY_EMAIL], subject: '✅ ContentForge email working!', html: '<p>Email notifications are working!</p>' }),
+    });
+    if (!r.ok) throw new Error(`Resend: ${r.status}`);
+    res.json({ success: true, message: `Test email sent to ${process.env.NOTIFY_EMAIL}` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Reddit routes ─────────────────────────────────────────────────────────────
+app.get('/api/reddit/verify', async (_req, res) => {
+  if (!process.env.REDDIT_CLIENT_ID) return res.json({ connected: false, error: 'REDDIT_CLIENT_ID not set' });
+  try {
+    const { verifyRedditCredentials } = await import('./services/redditService.js');
+    res.json(await verifyRedditCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/reddit/post-video', async (req, res) => {
+  try {
+    const { postVideoToReddit } = await import('./services/redditService.js');
+    res.json(await postVideoToReddit(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/reddit/post-text', async (req, res) => {
+  try {
+    const { postTextToReddit } = await import('./services/redditService.js');
+    res.json(await postTextToReddit(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.post('/api/affiliate/shorten', async (req, res) => {
   try {
@@ -479,237 +576,18 @@ app.post('/api/affiliate/shorten', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-createServer(app).listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ ContentForge Video Engine v2.0 running on port ${PORT}`);
-  console.log(`☁️  R2 Storage: ${process.env.R2_ACCOUNT_ID ? 'Configured ✅' : 'Not configured'}`);
-  console.log(`🗄️  Supabase:   ${process.env.SUPABASE_URL ? 'Configured ✅' : 'Not configured'}`);
+// ── Start server ──────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`✅ ContentForge Video Engine running on port ${PORT}`);
 });
 
-// ── Scheduler routes ──────────────────────────────────────────────────────────
-app.post('/api/schedule', async (req, res) => {
-  const { jobId, platforms, scheduledAt, script, videoUrl } = req.body;
-  if (!platforms?.length || !scheduledAt) return res.status(400).json({ error: 'platforms and scheduledAt required' });
-  try {
-    const { schedulePost } = await import('./services/schedulerService.js');
-    const schedule = await schedulePost({ jobId, platforms, scheduledAt, script, videoUrl });
-    res.json({ schedule });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/schedule', async (_req, res) => {
-  try {
-    const { getAllSchedules } = await import('./services/schedulerService.js');
-    res.json({ schedules: await getAllSchedules() });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/schedule/:id', async (req, res) => {
-  try {
-    const { cancelSchedule } = await import('./services/schedulerService.js');
-    await cancelSchedule(req.params.id);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/schedule/optimal/:platform', async (req, res) => {
-  try {
-    const { OPTIMAL_TIMES, getNextOptimalTime } = await import('./services/schedulerService.js');
-    const times = OPTIMAL_TIMES[req.params.platform];
-    if (!times) return res.status(404).json({ error: 'Platform not found' });
-    res.json({ platform: req.params.platform, optimalTimes: Array.isArray(times)?times:[times], nextSlot: getNextOptimalTime(req.params.platform) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Start the scheduler
-import('./services/schedulerService.js').then(({ startScheduler }) => startScheduler()).catch(console.warn);
-
-// ── Bulk generation routes ────────────────────────────────────────────────────
-
-// Generate topic variations
-app.post('/api/bulk/variations', async (req, res) => {
-  const { baseTopic, count = 10, persona = 'ugc', videoType = 'auto' } = req.body;
-  if (!baseTopic) return res.status(400).json({ error: 'baseTopic required' });
-  try {
-    const { generateTopicVariations } = await import('./services/bulkService.js');
-    const topics = await generateTopicVariations({ baseTopic, count, persona, videoType });
-    res.json({ topics });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Start bulk generation
-app.post('/api/bulk/generate', async (req, res) => {
-  const { topics, persona='ugc', duration='30s', style='ugc', platforms=['tiktok'], videoType='auto', concurrency=2 } = req.body;
-  if (!topics?.length) return res.status(400).json({ error: 'topics array required' });
-  if (topics.length > 10) return res.status(400).json({ error: 'Max 10 videos per batch' });
-
-  const { createBulkJob, updateBulkJob, updateBulkJobItem, getBulkJob } = await import('./services/bulkService.js');
-  const batch = createBulkJob({ topics, persona, duration, style, platforms, videoType });
-
-  res.json({ batchId: batch.batchId, total: batch.total, status: 'queued' });
-
-  // Run with concurrency limit
-  runBulkGeneration(batch.batchId, topics, { persona, duration, style, platforms, videoType, concurrency },
-    { createBulkJob, updateBulkJob, updateBulkJobItem, getBulkJob }).catch(console.error);
-});
-
-// Get bulk job status
-app.get('/api/bulk/:batchId', async (req, res) => {
-  const { getBulkJob } = await import('./services/bulkService.js');
-  const batch = getBulkJob(req.params.batchId);
-  if (!batch) return res.status(404).json({ error: 'Batch not found' });
-  res.json(batch);
-});
-
-// Get all bulk jobs
-app.get('/api/bulk', async (_req, res) => {
-  const { getAllBulkJobs } = await import('./services/bulkService.js');
-  res.json({ batches: getAllBulkJobs().slice(0, 10) });
-});
-
-// ── Bulk generation runner with concurrency ───────────────────────────────────
-async function runBulkGeneration(batchId, topics, settings, store) {
-  const { updateBulkJob, updateBulkJobItem } = store;
-  updateBulkJob(batchId, { status: 'processing' });
-
-  const { concurrency = 2, persona, duration, style, platforms, videoType } = settings;
-
-  // Process in chunks based on concurrency
-  for (let i = 0; i < topics.length; i += concurrency) {
-    const chunk = topics.slice(i, i + concurrency);
-    await Promise.all(chunk.map(async (topic, chunkIdx) => {
-      const index = i + chunkIdx + 1;
-      updateBulkJobItem(batchId, index, { status: 'processing', step: 'Writing script...' });
-      try {
-        // Generate script
-        const script = await generateScript({
-          inputMode: 'topic', topic, persona, duration,
-          style, platforms, videoType,
-        });
-        updateBulkJobItem(batchId, index, { progress: 40, step: 'Generating voiceover...' });
-
-        // Voiceover
-        let audioPath = null;
-        if (process.env.ELEVENLABS_API_KEY || process.env.OPENAI_API_KEY) {
-          try {
-            audioPath = await generateVoiceover(script.fullScript, persona, `bulk_${batchId}_${index}`);
-          } catch (e) { console.warn(`Bulk ${index} voiceover failed:`, e.message); }
-        }
-        updateBulkJobItem(batchId, index, { progress: 70, step: 'Generating video clip...' });
-
-        // One scene clip per video (faster for bulk)
-        let clipUrl = null;
-        if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.[0]) {
-          try {
-            clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5);
-          } catch (e) { console.warn(`Bulk ${index} clip failed:`, e.message); }
-        }
-
-        updateBulkJobItem(batchId, index, {
-          status: 'completed', progress: 100, step: 'Complete!',
-          result: { script, clipUrl, audioPath, topic },
-        });
-      } catch (e) {
-        updateBulkJobItem(batchId, index, {
-          status: 'failed', progress: 0,
-          step: 'Failed', error: e.message,
-        });
-      }
-    }));
+// Scheduler — check every minute
+setInterval(async () => {
+  const now = new Date();
+  for (const [id, s] of schedules.entries()) {
+    if (s.status === 'scheduled' && new Date(s.scheduledAt) <= now) {
+      console.log(`📅 Publishing scheduled post ${id}`);
+      schedules.set(id, { ...s, status: 'published', publishedAt: now.toISOString() });
+    }
   }
-
-  const final = store.getBulkJob(batchId);
-  updateBulkJob(batchId, {
-    status: 'completed',
-    step: `${final.completed} videos ready · ${final.failed} failed`,
-  });
-  console.log(`✅ Bulk batch ${batchId} complete — ${final.completed}/${final.total} succeeded`);
-}
-
-// ── Email notification hook — fires after every job completes ─────────────────
-const originalUpdateJob = updateJob;
-async function updateJobWithEmail(id, updates) {
-  const result = await originalUpdateJob(id, updates);
-  if (updates.status === 'completed' && process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL) {
-    try {
-      const job = await getJob(id);
-      const { sendVideoCompleteEmail } = await import('./services/emailService.js');
-      await sendVideoCompleteEmail({
-        jobId: id,
-        script:    job?.result?.script,
-        clipUrl:   job?.result?.finalVideoUrl,
-        audioUrl:  job?.result?.audioUrl,
-        topic:     job?.data?.topic || job?.data?.url,
-        persona:   job?.data?.persona,
-        duration:  job?.data?.duration,
-        platforms: job?.data?.platforms,
-      });
-    } catch (e) { console.warn('Email notification failed:', e.message); }
-  }
-  return result;
-}
-
-// Email settings routes
-app.get('/api/email/settings', (_req, res) => {
-  res.json({
-    configured: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
-    notifyEmail: process.env.NOTIFY_EMAIL ? process.env.NOTIFY_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') : null,
-    from: process.env.EMAIL_FROM || 'notifications@contentstudiohub.com',
-  });
-});
-
-app.post('/api/email/test', async (req, res) => {
-  if (!process.env.RESEND_API_KEY || !process.env.NOTIFY_EMAIL) {
-    return res.status(400).json({ error: 'RESEND_API_KEY and NOTIFY_EMAIL required' });
-  }
-  try {
-    const { sendEmail } = await import('./services/emailService.js');
-    await sendEmail({
-      to: process.env.NOTIFY_EMAIL,
-      subject: '✅ ContentForge email notifications are working!',
-      html: `<div style="font-family:sans-serif;background:#0D2137;padding:30px;color:#E8F4F0;border-radius:12px;max-width:500px;margin:0 auto"><h2 style="color:#5DCAA5">✅ Email notifications working!</h2><p style="color:#7BAAA0">ContentForge will now email you when:<br><br>🎬 A video finishes generating<br>⚡ A bulk batch completes<br>📅 A scheduled post is published</p><a href="https://contentstudiohub.com" style="display:inline-block;background:#1D9E75;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;margin-top:16px">Open ContentForge →</a></div>`,
-    });
-    res.json({ success: true, message: `Test email sent to ${process.env.NOTIFY_EMAIL}` });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ── Reddit routes ─────────────────────────────────────────────────────────────
-
-// Verify Reddit credentials
-app.get('/api/reddit/verify', async (_req, res) => {
-  try {
-    const { verifyRedditCredentials } = await import('./services/redditService.js');
-    const result = await verifyRedditCredentials();
-    res.json(result);
-  } catch (e) { res.json({ connected: false, error: e.message }); }
-});
-
-// Post video to Reddit
-app.post('/api/reddit/post-video', async (req, res) => {
-  const { videoUrl, title, subreddit, description } = req.body;
-  if (!videoUrl || !title) return res.status(400).json({ error: 'videoUrl and title required' });
-  try {
-    const { postVideoToReddit } = await import('./services/redditService.js');
-    const result = await postVideoToReddit({ videoUrl, title, subreddit, description });
-    res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Post text to Reddit
-app.post('/api/reddit/post-text', async (req, res) => {
-  const { title, text, subreddit } = req.body;
-  if (!title) return res.status(400).json({ error: 'title required' });
-  try {
-    const { postTextToReddit } = await import('./services/redditService.js');
-    const result = await postTextToReddit({ title, text, subreddit });
-    res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Log Reddit status on startup
-if (process.env.REDDIT_CLIENT_ID) {
-  import('./services/redditService.js')
-    .then(({ verifyRedditCredentials }) => verifyRedditCredentials())
-    .then(r => console.log('Reddit:', r.connected ? `✅ Connected as u/${r.username}` : `❌ ${r.error}`))
-    .catch(e => console.warn('Reddit check failed:', e.message));
-}
+}, 60000);
