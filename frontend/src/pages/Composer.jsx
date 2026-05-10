@@ -168,7 +168,7 @@ export default function Composer({ onPlatformsChange }) {
         <div>
           <div className={styles.outHeader}>
             <div style={{fontSize:14,fontWeight:500}}>✦ Generated Posts</div>
-            <div style={{display:'flex',gap:8'}}>
+            <div style={{display:'flex',gap:8}}>
               <span style={{fontSize:11,color:'var(--text3)'}}>Click ✎ Edit to refine any post before copying</span>
               <button className="btn btn-ghost btn-sm" onClick={generate}>Regenerate ↻</button>
             </div>
