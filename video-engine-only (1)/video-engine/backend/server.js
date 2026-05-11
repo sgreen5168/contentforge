@@ -327,7 +327,14 @@ async function runPipeline(jobId, params) {
       status: 'completed',
       progress: 100,
       step: 'Complete!',
-      result: { script, clips, finalVideoUrl: r2Url || finalVideoUrl, audioPath },
+      result: {
+        script,
+        clips,
+        finalVideoUrl: r2Url || finalVideoUrl,
+        audioPath,
+        audioUrl: audioPath ? 'generated' : null,  // flag for frontend
+        hasAudio: !!audioPath,
+      },
     });
 
     if (process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL) {
