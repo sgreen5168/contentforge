@@ -190,21 +190,27 @@ async function generateClip(prompt, duration) {
     if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
     const gen = JSON.parse(resText);
     const genId = gen.id;
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 5000));
-      const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
-        headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
-      });
-      const t = await poll.json();
-      console.log(`Luma status: ${t.state} (${i + 1}/60)`);
-      if (t.state === 'completed') {
-        const videoUrl = t.assets?.video;
-        if (videoUrl) return videoUrl;
-        throw new Error('Luma completed but no video URL');
+    console.log(`⏳ Luma id: ${genId} — polling every 8s up to 12 min`);
+    for (let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
+          headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
+        });
+        const t = await poll.json();
+        console.log(`Luma: ${t.state} (${i+1}/90 ~${Math.round((i+1)*8/60)}min)`);
+        if (t.state === 'completed') {
+          const videoUrl = t.assets?.video;
+          if (videoUrl) { console.log(`✅ Luma ready: ${videoUrl.slice(0,60)}`); return videoUrl; }
+          throw new Error('Luma completed but no video URL');
+        }
+        if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
+      } catch (e) {
+        if (e.message.startsWith('Luma')) throw e;
+        console.warn(`Luma poll error ${i+1}:`, e.message);
       }
-      if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
     }
-    throw new Error('Luma timed out');
+    throw new Error('Luma timed out after 12 minutes');
   }
 
   if (process.env.FAL_API_KEY) {
