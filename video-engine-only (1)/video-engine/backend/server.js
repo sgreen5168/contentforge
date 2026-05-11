@@ -64,6 +64,7 @@ console.log('ContentForge Video Engine starting...');
 console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
@@ -168,6 +169,58 @@ async function generateVoiceover(script, persona, jobId) {
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
 
+  // ── RunwayML (primary) ────────────────────────────────────────────────────
+  if (process.env.RUNWAY_API_KEY) {
+    console.log(`🎬 RunwayML: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+        'Content-Type': 'application/json',
+        'X-Runway-Version': '2024-11-06',
+      },
+      body: JSON.stringify({
+        model: 'gen3a_turbo',
+        promptText: prompt,
+        duration: Math.min(duration || 5, 10),
+        ratio: '720:1280',
+      }),
+    });
+    const resText = await res.text();
+    console.log(`RunwayML ${res.status}:`, resText.slice(0, 150));
+    if (!res.ok) {
+      let errMsg;
+      try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
+      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
+    }
+    const task = JSON.parse(resText);
+    console.log(`⏳ RunwayML task: ${task.id}`);
+    for (let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+            'X-Runway-Version': '2024-11-06',
+          },
+        });
+        const t = await poll.json();
+        console.log(`RunwayML: ${t.status} (${i+1}/90)`);
+        if (t.status === 'SUCCEEDED') {
+          const url = t.output?.[0] || t.artifacts?.[0]?.url;
+          if (url) { console.log(`✅ RunwayML clip ready`); return url; }
+          throw new Error('RunwayML succeeded but no video URL');
+        }
+        if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || t.failureCode || 'unknown'}`);
+      } catch (e) {
+        if (e.message.startsWith('RunwayML')) throw e;
+        console.warn(`RunwayML poll error ${i+1}:`, e.message);
+      }
+    }
+    throw new Error('RunwayML timed out after 12 minutes');
+  }
+
+  // ── Luma Dream Machine (fallback) ─────────────────────────────────────────
   if (process.env.LUMA_API_KEY) {
     console.log(`🎬 Luma: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
@@ -189,19 +242,18 @@ async function generateClip(prompt, duration) {
     console.log(`Luma ${res.status}:`, resText.slice(0, 150));
     if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
     const gen = JSON.parse(resText);
-    const genId = gen.id;
-    console.log(`⏳ Luma id: ${genId} — polling every 8s up to 12 min`);
+    console.log(`⏳ Luma id: ${gen.id}`);
     for (let i = 0; i < 90; i++) {
       await new Promise(r => setTimeout(r, 8000));
       try {
-        const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${genId}`, {
+        const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${gen.id}`, {
           headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
         });
         const t = await poll.json();
-        console.log(`Luma: ${t.state} (${i+1}/90 ~${Math.round((i+1)*8/60)}min)`);
+        console.log(`Luma: ${t.state} (${i+1}/90)`);
         if (t.state === 'completed') {
-          const videoUrl = t.assets?.video;
-          if (videoUrl) { console.log(`✅ Luma ready: ${videoUrl.slice(0,60)}`); return videoUrl; }
+          const url = t.assets?.video;
+          if (url) return url;
           throw new Error('Luma completed but no video URL');
         }
         if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
@@ -213,6 +265,7 @@ async function generateClip(prompt, duration) {
     throw new Error('Luma timed out after 12 minutes');
   }
 
+  // ── fal.ai (fallback) ─────────────────────────────────────────────────────
   if (process.env.FAL_API_KEY) {
     console.log(`🎬 fal.ai: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
@@ -222,16 +275,15 @@ async function generateClip(prompt, duration) {
     });
     if (!res.ok) throw new Error(`fal.ai ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
-    const requestId = data.request_id;
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 5000));
-      const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${requestId}`, {
+      const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${data.request_id}`, {
         headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}` },
       });
       const t = await poll.json();
       if (t.status === 'COMPLETED') {
-        const videoUrl = t.output?.video?.url || t.output?.[0]?.url;
-        if (videoUrl) return videoUrl;
+        const url = t.output?.video?.url || t.output?.[0]?.url;
+        if (url) return url;
         throw new Error('fal.ai no video URL');
       }
       if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error}`);
@@ -239,32 +291,10 @@ async function generateClip(prompt, duration) {
     throw new Error('fal.ai timed out');
   }
 
-  if (process.env.RUNWAY_API_KEY) {
-    console.log(`🎬 RunwayML: "${prompt.slice(0, 60)}..."`);
-    const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'Content-Type': 'application/json', 'X-Runway-Version': '2024-11-06' },
-      body: JSON.stringify({ model: 'gen3a_turbo', promptText: prompt, duration: Math.min(duration || 5, 10), ratio: '720:1280' }),
-    });
-    const resText = await res.text();
-    if (!res.ok) throw new Error(`RunwayML ${res.status}: ${resText.slice(0, 200)}`);
-    const task = JSON.parse(resText);
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 5000));
-      const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
-        headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
-      });
-      const t = await poll.json();
-      if (t.status === 'SUCCEEDED') return t.output?.[0] || t.artifacts?.[0]?.url;
-      if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure}`);
-    }
-    throw new Error('RunwayML timed out');
-  }
-
-  throw new Error('No video API key — add LUMA_API_KEY, FAL_API_KEY, or RUNWAY_API_KEY to Railway');
+  throw new Error('No video API key — add RUNWAY_API_KEY, LUMA_API_KEY, or FAL_API_KEY to Railway');
 }
 
-// ── R2 upload ─────────────────────────────────────────────────────────────────
+
 async function tryUploadToR2(localPath, key) {
   try {
     const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
@@ -328,7 +358,7 @@ async function runPipeline(jobId, params) {
       }
     } else if (!hasVideoKey) {
       console.log('⚠ No video API key configured');
-      await updateJob(jobId, { clipError: 'No video API key — add LUMA_API_KEY to Railway' });
+      await updateJob(jobId, { clipError: 'No video API key — add RUNWAY_API_KEY to Railway' });
     } else if (!hasScenes) {
       console.log('⚠ Script returned no scene descriptions');
       await updateJob(jobId, { clipError: 'Script did not return scene descriptions — try regenerating' });
