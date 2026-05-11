@@ -511,9 +511,9 @@ export default function VideoEngine() {
                     )}
 
                     {/* Voiceover note */}
-                    {job.status==='completed' && !job.result?.audioUrl && (
+                    {job.status==='completed' && !job.result?.audioUrl && !job.result?.audioPath && (
                       <div style={{marginTop:8,fontSize:11,color:'#4A7A72'}}>
-                        💡 No voiceover — add ELEVENLABS_API_KEY to Railway to enable audio.
+                        💡 No voiceover generated — check OPENAI_API_KEY is set in Railway Variables.
                       </div>
                     )}
 
@@ -634,7 +634,8 @@ export default function VideoEngine() {
             <div className={styles.panelBody}>
               {[
                 ['RunwayML','RUNWAY_API_KEY','Video generation'],
-                ['ElevenLabs','ELEVENLABS_API_KEY','Voiceover'],
+                ['OpenAI','OPENAI_API_KEY','Voiceover (primary)'],
+              ['ElevenLabs','ELEVENLABS_API_KEY','Voiceover (fallback)'],
                 ['TikTok','TIKTOK_ACCESS_TOKEN','Auto-upload'],
                 ['Instagram','INSTAGRAM_ACCESS_TOKEN','Reels upload'],
                 ['Facebook','FACEBOOK_ACCESS_TOKEN','Feed + Reels'],
