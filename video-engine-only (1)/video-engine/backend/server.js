@@ -300,11 +300,16 @@ async function runPipeline(jobId, params) {
     }
 
     const clips = [];
-    if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.length) {
-      await updateJob(jobId, { progress: 55, step: 'Generating video scenes...' });
+    const hasVideoKey = !!(process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
+    const hasScenes = !!(script.sceneDescriptions?.length);
+    console.log(`🎬 Video clip check: hasKey=${hasVideoKey} hasScenes=${hasScenes} sceneCount=${script.sceneDescriptions?.length || 0}`);
+
+    if (hasVideoKey && hasScenes) {
+      await updateJob(jobId, { progress: 55, step: 'Generating video scenes with Luma...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
       for (const scene of scenes) {
         try {
+          console.log(`🎬 Generating scene ${scene.scene}: "${scene.visual?.slice(0,60)}..."`);
           const videoUrl = await generateClip(scene.visual, scene.duration || 5);
           clips.push({ scene: scene.scene, videoUrl, status: 'success' });
           const pct = 55 + Math.round((clips.length / scenes.length) * 30);
@@ -315,6 +320,12 @@ async function runPipeline(jobId, params) {
           await updateJob(jobId, { clipError: e.message });
         }
       }
+    } else if (!hasVideoKey) {
+      console.log('⚠ No video API key configured');
+      await updateJob(jobId, { clipError: 'No video API key — add LUMA_API_KEY to Railway' });
+    } else if (!hasScenes) {
+      console.log('⚠ Script returned no scene descriptions');
+      await updateJob(jobId, { clipError: 'Script did not return scene descriptions — try regenerating' });
     }
 
     const finalVideoUrl = clips.find(c => c.videoUrl)?.videoUrl || null;
