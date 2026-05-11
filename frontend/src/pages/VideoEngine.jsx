@@ -504,8 +504,8 @@ export default function VideoEngine() {
                         ⚠ Script generated — video clips were skipped.<br/>
                         <span style={{color:'#7BAAA0'}}>
                           {job.clipError
-                            ? `Luma error: ${job.clipError}`
-                            : 'Luma Dream Machine did not return a video clip. Check your LUMA_API_KEY credits at lumalabs.ai/dream-machine and try again.'}
+                            ? job.clipError
+                            : 'Video clips were skipped. Check RUNWAY_API_KEY is set in Railway Variables and credits are available at app.dev.runwayml.com'}
                         </span>
                       </div>
                     )}
