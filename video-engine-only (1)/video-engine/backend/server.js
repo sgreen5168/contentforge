@@ -293,8 +293,10 @@ async function runPipeline(jobId, params) {
         await updateJob(jobId, { progress: 50, step: 'Voiceover ready — generating video scenes...' });
       } catch (e) {
         console.warn('Voiceover failed:', e.message);
-        await updateJob(jobId, { step: 'Voiceover skipped — generating video scenes...' });
+        await updateJob(jobId, { step: `Voiceover failed (${e.message.slice(0,60)}) — generating video scenes...` });
       }
+    } else {
+      await updateJob(jobId, { step: 'No voiceover key — generating video scenes...' });
     }
 
     const clips = [];
@@ -364,6 +366,14 @@ Return JSON: { "hook", "problemAgitation", "solutionReveal", "socialProof", "off
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
+});
+
+app.post('/api/video/script', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  try {
+    const script = await generateScript(req.body);
+    res.json({ script });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/video/generate', async (req, res) => {
