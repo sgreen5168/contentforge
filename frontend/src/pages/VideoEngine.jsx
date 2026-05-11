@@ -503,9 +503,9 @@ export default function VideoEngine() {
                       <div style={{marginTop:10,padding:'10px 12px',background:'rgba(245,166,35,.08)',border:'0.5px solid rgba(245,166,35,.25)',borderRadius:8,fontSize:12,color:'#FAC775',lineHeight:1.6}}>
                         ⚠ Script generated — video clips were skipped.<br/>
                         <span style={{color:'#7BAAA0'}}>
-                          This happens when either: (1) RunwayML credits are empty — check app.runwayml.com, 
-                          or (2) the script did not return scene descriptions. 
-                          The RUNWAY_API_KEY is set in Railway. Try generating again.
+                          {job.clipError
+                            ? `Luma error: ${job.clipError}`
+                            : 'Luma Dream Machine did not return a video clip. Check your LUMA_API_KEY credits at lumalabs.ai/dream-machine and try again.'}
                         </span>
                       </div>
                     )}
