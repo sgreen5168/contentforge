@@ -70,6 +70,9 @@ export default function Composer({ onPlatformsChange }) {
 
   const active   = Object.keys(plats).filter(p => plats[p]);
   const hasInput = mode === 'topic' ? topic.trim() : url.trim();
+  // Auto-enable affiliate embed when in affiliate tab
+  const effectiveAffiliate = affiliate || mode === 'affiliate';
+  const effectiveAffUrl = affiliateUrl || (mode === 'affiliate' ? url : '');
 
   function togglePlat(p) {
     const next = { ...plats, [p]: !plats[p] };
@@ -79,6 +82,9 @@ export default function Composer({ onPlatformsChange }) {
 
   async function generate() {
     if (!hasInput || !active.length) return;
+    // Auto-fill affiliateUrl from the url field when in affiliate tab
+    const effectiveAffUrl = affiliateUrl || (mode === 'affiliate' ? url : '');
+    if (mode === 'affiliate' && url && !affiliateUrl) setAffUrl(url);
     setStatus('loading'); setPosts(null); setEdited({}); setEditing({}); setError(''); setStep(0);
     const t1 = setTimeout(() => setStep(1), 700);
     const t2 = setTimeout(() => setStep(2), 1600);
@@ -86,7 +92,7 @@ export default function Composer({ onPlatformsChange }) {
       const result = await generatePosts({
         inputMode: mode, topic, url, style,
         platforms: active, affiliate,
-        affiliateUrl: affiliate ? affiliateUrl : '',
+        affiliateUrl: affiliate ? effectiveAffUrl : '',
         keyword: affiliate && linkMode === 'keyword' ? keyword : '',
         linkMode: affiliate ? linkMode : 'none',
       });
@@ -103,17 +109,15 @@ export default function Composer({ onPlatformsChange }) {
   // Get final text with embedded link
   function getFinalText(key, raw = false) {
     const base = edited[key] ?? posts[key]?.text ?? '';
-    if (raw || !affiliate || !affiliateUrl) return base;
+    if (raw || !effectiveAffiliate || !effectiveAffUrl) return base;
 
-    if (linkMode === 'manual') return base; // user handles link themselves
+    if (linkMode === 'manual') return base;
     if (linkMode === 'keyword' && keyword.trim()) {
-      // Replace exact keyword with linked version
       const kw = keyword.trim();
       const re = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i');
-      return base.replace(re, `<a href="${affiliateUrl}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;text-underline-offset:3px">$1</a>`);
+      return base.replace(re, `<a href="${effectiveAffUrl}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;text-underline-offset:3px">$1</a>`);
     }
-    // Auto mode — find best descriptive word
-    return embedAffiliateLink(base, affiliateUrl);
+    return embedAffiliateLink(base, effectiveAffUrl);
   }
 
   function copy(key) {
@@ -134,7 +138,7 @@ export default function Composer({ onPlatformsChange }) {
     const plain = new Blob([html.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
     const item = new ClipboardItem({ 'text/html': blob, 'text/plain': plain });
     navigator.clipboard.write([item]).catch(() => {
-      navigator.clipboard.writeText(html.replace(/<[^>]+>/g, '') + '\n' + affiliateUrl);
+      navigator.clipboard.writeText(html.replace(/<[^>]+>/g, '') + '\n' + effectiveAffUrl);
     });
     setCopied(key + '_html');
     setTimeout(() => setCopied(''), 2000);
@@ -308,7 +312,7 @@ export default function Composer({ onPlatformsChange }) {
           <div className={styles.outHeader}>
             <div style={{fontSize:14,fontWeight:500}}>✦ Generated Posts</div>
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              {affiliate && affiliateUrl && (
+              {effectiveAffiliate && effectiveAffUrl && (
                 <span style={{fontSize:11,color:'var(--accent)',background:'var(--ag)',padding:'2px 8px',borderRadius:10}}>
                   🔗 Link embedded
                 </span>
@@ -335,7 +339,7 @@ export default function Composer({ onPlatformsChange }) {
                     {wasEdited && !isEdit && (
                       <span style={{fontSize:10,padding:'1px 6px',borderRadius:8,background:'rgba(124,107,255,.15)',color:'var(--accent)',marginLeft:6}}>Edited</span>
                     )}
-                    {affiliate && affiliateUrl && !isEdit && (
+                    {effectiveAffiliate && effectiveAffUrl && !isEdit && (
                       <span style={{fontSize:10,padding:'1px 6px',borderRadius:8,background:'rgba(34,201,138,.1)',color:'var(--ok)',marginLeft:4}}>🔗 Linked</span>
                     )}
                     <span style={{marginLeft:'auto',fontSize:10,color:'var(--text3)'}}>{style}</span>
@@ -376,7 +380,7 @@ export default function Composer({ onPlatformsChange }) {
                       <>
                         <button onClick={() => startEdit(p)} style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid var(--border)',background:'none',color:'var(--text2)',cursor:'pointer',fontFamily:'inherit'}}>✎ Edit</button>
                         {wasEdited && <button onClick={() => resetEdit(p)} style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'none',background:'none',color:'var(--text3)',cursor:'pointer',fontFamily:'inherit'}}>Reset</button>}
-                        {affiliate && affiliateUrl && (
+                        {effectiveAffiliate && effectiveAffUrl && (
                           <button onClick={() => copyWithLink(p)} style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid rgba(34,201,138,.3)',background:'rgba(34,201,138,.08)',color:'var(--ok)',cursor:'pointer',fontFamily:'inherit'}}>
                             {copied===p+'_html' ? '🔗 Copied!' : '🔗 Copy with link'}
                           </button>
@@ -393,7 +397,7 @@ export default function Composer({ onPlatformsChange }) {
           </div>
 
           {/* Affiliate link guide */}
-          {affiliate && affiliateUrl && (
+          {effectiveAffiliate && effectiveAffUrl && (
             <div style={{marginTop:16,padding:'14px 16px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:10}}>
               <div style={{fontSize:13,fontWeight:500,color:'var(--text)',marginBottom:8}}>🔗 How to publish with your embedded link</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
