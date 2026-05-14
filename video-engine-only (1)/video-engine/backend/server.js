@@ -65,9 +65,13 @@ console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌')
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
+console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
+console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
+console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
+console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
 
 // ── Script generation ─────────────────────────────────────────────────────────
 async function generateScript(params) {
@@ -638,6 +642,65 @@ app.post('/api/reddit/post-text', async (req, res) => {
     res.json(await postTextToReddit(req.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── Facebook routes ──────────────────────────────────────────────────────────
+app.get('/api/facebook/verify', async (_req, res) => {
+  try {
+    const { verifyFacebookCredentials } = await import('./services/facebookService.js');
+    res.json(await verifyFacebookCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/facebook/post-video', async (req, res) => {
+  try {
+    const { postVideoToFacebook } = await import('./services/facebookService.js');
+    res.json(await postVideoToFacebook(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/facebook/post-text', async (req, res) => {
+  try {
+    const { postTextToFacebook } = await import('./services/facebookService.js');
+    res.json(await postTextToFacebook(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Instagram routes ──────────────────────────────────────────────────────────
+app.get('/api/instagram/verify', async (_req, res) => {
+  try {
+    const { verifyInstagramCredentials } = await import('./services/instagramService.js');
+    res.json(await verifyInstagramCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/instagram/post-video', async (req, res) => {
+  try {
+    const { postVideoToInstagram } = await import('./services/instagramService.js');
+    res.json(await postVideoToInstagram(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/instagram/post-image', async (req, res) => {
+  try {
+    const { postImageToInstagram } = await import('./services/instagramService.js');
+    res.json(await postImageToInstagram(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Verify all platforms on startup ──────────────────────────────────────────
+if (process.env.FACEBOOK_ACCESS_TOKEN) {
+  import('./services/facebookService.js')
+    .then(({ verifyFacebookCredentials }) => verifyFacebookCredentials())
+    .then(r => console.log('Facebook:', r.connected ? `✅ ${r.pageName} (${r.followers} followers)` : `❌ ${r.error}`))
+    .catch(e => console.warn('Facebook check failed:', e.message));
+}
+
+if (process.env.INSTAGRAM_ACCESS_TOKEN) {
+  import('./services/instagramService.js')
+    .then(({ verifyInstagramCredentials }) => verifyInstagramCredentials())
+    .then(r => console.log('Instagram:', r.connected ? `✅ @${r.username} (${r.followers} followers)` : `❌ ${r.error}`))
+    .catch(e => console.warn('Instagram check failed:', e.message));
+}
 
 app.post('/api/affiliate/shorten', async (req, res) => {
   try {
