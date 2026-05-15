@@ -8,7 +8,6 @@ import BulkGenerator from './pages/BulkGenerator.jsx';
 import EmailSettings from './pages/EmailSettings.jsx';
 import Analytics from './pages/Analytics.jsx';
 import { Brand, Compliance } from './pages/OtherPages.jsx';
-import RedditSettings from './pages/RedditSettings.jsx';
 import styles from './App.module.css';
 
 // ── Inline Tutorial — no separate file needed ─────────────────────────────────
@@ -218,7 +217,6 @@ const QUICK_REF = {
     ['Instagram','INSTAGRAM_ACCESS_TOKEN — developers.facebook.com'],
     ['Facebook','FACEBOOK_ACCESS_TOKEN — developers.facebook.com'],
     ['YouTube','YOUTUBE_ACCESS_TOKEN — console.cloud.google.com'],
-    ['Reddit','REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET — reddit.com/prefs/apps'],
   ],
   '📱 Platform limits': [
     ['TikTok','10 min · 4GB · 9:16'],
@@ -470,7 +468,6 @@ export default function App() {
           {page === 'email'      && <EmailSettings />}
           {page === 'analytics'  && <Analytics />}
           {page === 'tutorial'   && <TutorialPage />}
-          {page === 'reddit'     && <RedditSettings />}
           {page === 'brand'      && <Brand />}
           {page === 'compliance' && <Compliance />}
         </main>
