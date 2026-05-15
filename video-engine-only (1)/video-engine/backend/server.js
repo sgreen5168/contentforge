@@ -704,34 +704,22 @@ app.post('/api/image/generate', async (req, res) => {
       'no text overlay, no watermarks, no logos, high quality',
     ].filter(Boolean).join(', ');
 
-    // Determine DALL-E size
-    const ratio = width / height;
-    let dalleSize = '1024x1024';
-    if (ratio > 1.5) dalleSize = '1792x1024';
-    else if (ratio < 0.7) dalleSize = '1024x1792';
-
+    // DALL-E 2 — works with all OpenAI accounts
     const count = Math.min(n, 4);
-    const results = [];
-
-    // Generate images (DALL-E 3 does 1 at a time)
-    for (let i = 0; i < count; i++) {
-      const r = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model:   'dall-e-3',
-          prompt:  enhancedPrompt,
-          n:       1,
-          size:    dalleSize,
-          quality: 'standard',
-        }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error?.message || `DALL-E error: ${r.status}`);
-      results.push({ url: data.data[0].url, revised_prompt: data.data[0].revised_prompt });
-    }
-
-    console.log(`✅ Generated ${results.length} images`);
+    const r = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:  'dall-e-2',
+        prompt: enhancedPrompt.slice(0, 1000),
+        n:      count,
+        size:   '1024x1024',
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error?.message || `Image generation error: ${r.status}`);
+    const results = data.data.map(img => ({ url: img.url }));
+        console.log(`✅ Generated ${results.length} images`);
     res.json({ images: results, count: results.length });
   } catch (e) {
     console.error('Image generation error:', e.message);
