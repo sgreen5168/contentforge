@@ -681,6 +681,65 @@ if (process.env.INSTAGRAM_ACCESS_TOKEN) {
     .catch(e => console.warn('Instagram check failed:', e.message));
 }
 
+// ── Image generation ─────────────────────────────────────────────────────────
+app.post('/api/image/generate', async (req, res) => {
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OPENAI_API_KEY not configured in Railway' });
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const { prompt, negative_prompt, width = 1024, height = 1024, n = 2, style } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'prompt required' });
+
+    // Build enhanced prompt
+    const styleMap = {
+      photorealistic: 'photorealistic, high quality photography, professional photo, 4K',
+      lifestyle:      'lifestyle photography, natural light, authentic, warm tones, Instagram aesthetic',
+      professional:   'professional corporate photography, clean background, business style',
+      minimalist:     'minimalist, clean, simple background, elegant, modern',
+      vibrant:        'vibrant colors, bold, eye-catching, dynamic composition, high saturation',
+      social:         'social media ready, engaging, modern, trendy aesthetic, polished',
+    };
+    const enhancedPrompt = [
+      prompt,
+      styleMap[style] || '',
+      'no text overlay, no watermarks, no logos, high quality',
+    ].filter(Boolean).join(', ');
+
+    // Determine DALL-E size
+    const ratio = width / height;
+    let dalleSize = '1024x1024';
+    if (ratio > 1.5) dalleSize = '1792x1024';
+    else if (ratio < 0.7) dalleSize = '1024x1792';
+
+    const count = Math.min(n, 4);
+    const results = [];
+
+    // Generate images (DALL-E 3 does 1 at a time)
+    for (let i = 0; i < count; i++) {
+      const r = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model:           'dall-e-3',
+          prompt:          enhancedPrompt,
+          n:               1,
+          size:            dalleSize,
+          quality:         'standard',
+          response_format: 'url',
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error?.message || `DALL-E error: ${r.status}`);
+      results.push({ url: data.data[0].url, revised_prompt: data.data[0].revised_prompt });
+    }
+
+    console.log(`✅ Generated ${results.length} images`);
+    res.json({ images: results, count: results.length });
+  } catch (e) {
+    console.error('Image generation error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/affiliate/shorten', async (req, res) => {
   try {
     const fetch = (await import('node-fetch')).default;
