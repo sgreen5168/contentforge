@@ -719,12 +719,11 @@ app.post('/api/image/generate', async (req, res) => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model:           'dall-e-3',
-          prompt:          enhancedPrompt,
-          n:               1,
-          size:            dalleSize,
-          quality:         'standard',
-          response_format: 'url',
+          model:   'dall-e-3',
+          prompt:  enhancedPrompt,
+          n:       1,
+          size:    dalleSize,
+          quality: 'standard',
         }),
       });
       const data = await r.json();
