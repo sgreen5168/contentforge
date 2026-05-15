@@ -1,523 +1,707 @@
-import React, { useState, useEffect } from 'react';
-import Login from './pages/Login.jsx';
-import Sidebar from './components/Sidebar.jsx';
-import Composer from './pages/Composer.jsx';
-import VideoEngine from './pages/VideoEngine.jsx';
-import Scheduler from './pages/Scheduler.jsx';
-import BulkGenerator from './pages/BulkGenerator.jsx';
-import EmailSettings from './pages/EmailSettings.jsx';
-import Analytics from './pages/Analytics.jsx';
-import { Brand, Compliance } from './pages/OtherPages.jsx';
-import styles from './App.module.css';
+import express from 'express';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// ── Inline Tutorial — no separate file needed ─────────────────────────────────
-const TUTORIAL_DATA = [
-  { id:'start', icon:'🚀', label:'Getting started', topics:[
-    { title:'Logging in', desc:'ContentForge is password protected.',
-      steps:['Go to contentstudiohub.com','Type: ContentForge2026','Press Enter or tap Sign in','You stay logged in until you sign out'],
-      tip:'On mobile tap ☰ top-left to open the navigation menu.' },
-    { title:'Navigation', desc:'9 sections in the sidebar. On mobile it slides in.',
-      steps:['Desktop: sidebar always visible on the left','Mobile: tap ☰ to open','Tap any section to navigate','Tap outside to close the menu'],
-      tip:'Add to home screen: Share → Add to Home Screen on iPhone.' },
-  ]},
-  { id:'composer', icon:'✦', label:'AI Composer', topics:[
-    { title:'Writing social posts', desc:'Claude writes a unique post for each platform.',
-      steps:['Click AI Composer','Type your topic','Select platforms','Choose tone','Click Generate Posts ⚡','Click Copy to use the post'],
-      tip:'Instagram gets hashtags. Reddit gets conversational tone. Facebook gets longer format.' },
-  ]},
-  { id:'video', icon:'▶', label:'AI Video Engine', topics:[
-    { title:'3 input modes', desc:'Topic, URL, or affiliate link.',
-      steps:['TOPIC — type any subject: "morning productivity"','URL — paste a product page, Claude reads it','AFFILIATE — paste tracking link, Claude adds it to CTA'],
-      tip:'Affiliate mode auto-adds your link to every call-to-action.' },
-    { title:'Smart Mode', desc:'Claude picks the best format automatically.',
-      steps:['Smart Mode ON (default) — Claude picks the format','Smart Mode OFF — choose from 7 types manually','Toggle at the top of the left panel'],
-      tip:'Keep Smart Mode ON when starting out.' },
-    { title:'7 video types', desc:'Each has a different script structure.',
-      steps:['UGC Persona — authentic first-person review','AI VSL — Hook → Problem → Solution → CTA','Hybrid VSL — avatar + B-roll footage','Reel Ads — short punchy vertical ads','Product Ads — direct-response e-commerce','Commercial — cinematic brand story','Competitor Replicator — original content in competitor structure'],
-      tip:'UGC Persona works best for affiliate. VSL works best for high-ticket products.' },
-    { title:'Duration and cost', desc:'Drag slider to set length. Cost updates live.',
-      steps:['Drag slider: 10 seconds to 10 minutes','Preset buttons: 15s, 30s, 45s, 60s','Dollar amount = your API cost to generate','Platform limits enforced automatically','Orange warning if duration exceeds a platform limit'],
-      tip:'Start with 15s to test cheaply before longer videos.' },
-    { title:'Generating results', desc:'Click Generate then watch the pipeline run.',
-      steps:['Click Generate Video ⚡','Click the Result tab','Script in ~5 seconds','Voiceover in ~10 seconds','Video clips in 3–5 minutes','Download button when ready'],
-      tip:'You always get a full script even without RunwayML connected.' },
-  ]},
-  { id:'vsl', icon:'💰', label:'VSL Builder', topics:[
-    { title:'Building a VSL', desc:'High-converting Video Sales Letter scripts.',
-      steps:['AI Video Engine → VSL Builder tab','Enter product name and price','Describe target audience specifically','Describe the pain point — be specific','Describe your solution','Paste affiliate link (optional)','Set duration 30–90s','Click Generate VSL Script ⚡'],
-      tip:'Specificity converts — "struggling with dry skin despite $100 creams" beats "has dry skin".' },
-  ]},
-  { id:'bulk', icon:'⚡', label:'Bulk Generator', topics:[
-    { title:'Auto-generate mode', desc:'One topic becomes up to 10 unique variations.',
-      steps:['Click Bulk Generator','Select Auto-generate variations','Type a base topic','Choose count: 3, 5, 7, or 10','Click ✦ Generate','Review and edit topics','Set persona, duration, platforms, concurrency','Click Generate X Videos ⚡','Watch progress in the Progress tab'],
-      tip:'Concurrency 2 halves total time without overloading APIs.' },
-  ]},
-  { id:'scheduler', icon:'📅', label:'Video Scheduler', topics:[
-    { title:'Scheduling a post', desc:'Railway posts your video automatically at the exact time.',
-      steps:['Click Video Scheduler','Select a completed video','Choose platforms','Click an optimal time slot','Pick the date','Click Schedule Post 📅','Fires automatically at scheduled time'],
-      tip:'Railway stellar-achievement must be Online for auto-posting.' },
-    { title:'Peak times', desc:'Best engagement windows per platform.',
-      steps:['TikTok: 7pm — Tuesday 8pm is best','Instagram: 11am — Wednesday 11am','YouTube: 3pm — Saturday 11am','Facebook: 1pm — Wednesday 1pm','Reddit: 8am ET — Monday 8am ET'],
-      tip:'Check your own analytics after a few weeks for your audience peak times.' },
-  ]},
-  { id:'analytics', icon:'◎', label:'Analytics', topics:[
-    { title:'4 analytics tabs', desc:'Live data — every video appears here automatically.',
-      steps:['Overview — daily chart, status donut, breakdowns','Videos — full list with hook previews and downloads','Platforms — usage charts and timing reference','Costs — API spend and monthly projections','Click Refresh ↻ to pull latest data'],
-      tip:'Data persists in Supabase even if Railway restarts.' },
-  ]},
-  { id:'email', icon:'📧', label:'Email Notifications', topics:[
-    { title:'Setting up alerts', desc:'Emails when videos finish, batches complete, posts publish.',
-      steps:['Sign up free at resend.com','Create API Key → copy the re_ key','Railway → stellar-achievement → Variables → add RESEND_API_KEY and NOTIFY_EMAIL','Email Notifications → Send test email'],
-      tip:'3 types: video complete, bulk done, scheduled post published.' },
-  ]},
-  { id:'mobile', icon:'📱', label:'Using on mobile', topics:[
-    { title:'Mobile navigation', desc:'Fully optimised for phones.',
-      steps:['Open contentstudiohub.com','Log in','Tap ☰ to open menu','Tap section — menu closes automatically','All buttons sized for finger taps'],
-      tip:'Add to home screen for app-like access.' },
-    { title:'Generating on mobile', desc:'Full pipeline works on mobile.',
-      steps:['Tap AI Video Engine','Type topic','Set duration and platforms','Tap Generate Video ⚡','Watch Result tab — 3–5 minutes','Check Job History for completed videos'],
-      tip:'Keep screen on — some browsers pause when locked.' },
-  ]},
-  { id:'brandvoice', icon:'◈', label:'Brand Voice Memory', topics:[
-    { title:'What is Brand Voice Memory', desc:'Brand Voice Memory teaches Claude your unique writing style so every post and script sounds like you — not like a generic AI.',
-      steps:[
-        'Without Brand Voice: Claude writes in its default style — clear and professional but generic',
-        'With Brand Voice: Claude learns your tone, vocabulary, sentence length, personality, and content style',
-        'The more examples you give it the more accurately it replicates your voice',
-        'Brand Voice applies automatically to every post generated in the AI Composer',
-        'It also influences script writing in the Video Engine when persona matches your style',
-      ],
-      tip:'Think of Brand Voice Memory as training Claude to be your personal ghostwriter who understands exactly how you communicate.' },
-    { title:'Setting up your Brand Voice', desc:'Train Claude on your style by providing examples of your best-performing content.',
-      steps:[
-        'Click Brand Voice in the sidebar',
-        'Paste 3 to 5 examples of your own posts or captions in the input field — these are your style samples',
-        'Include a mix: a story post, a tips post, a promotional post, and a casual update',
-        'Write a short description of your tone — e.g. "casual and direct, uses short sentences, occasionally funny, never corporate"',
-        'Describe your audience — e.g. "entrepreneurs aged 25-40 interested in passive income"',
-        'Click Save Brand Voice — Claude now uses these samples as reference for every generation',
-      ],
-      tip:'Use your top-performing posts as examples — if they resonated with your audience they represent your best voice.' },
-    { title:'What Brand Voice controls', desc:'Brand Voice Memory influences multiple aspects of how Claude writes for you.',
-      steps:[
-        'TONE: formal vs casual, serious vs playful, authoritative vs conversational',
-        'VOCABULARY: the specific words and phrases you naturally use vs avoid',
-        'SENTENCE LENGTH: short punchy sentences vs longer detailed explanations',
-        'CONTENT STRUCTURE: whether you lead with questions, stories, stats, or statements',
-        'EMOJI USAGE: whether you use them, how many, and which ones fit your brand',
-        'HASHTAG STYLE: broad popular tags vs niche specific tags vs no hashtags at all',
-        'CALL TO ACTION: your specific CTA phrasing vs generic "click the link" language',
-      ],
-      tip:'Even small details matter. If you never use exclamation marks tell Claude that. If you always start posts with a question include examples that show this pattern.' },
-    { title:'Brand Voice for video scripts', desc:'Your brand voice also shapes the scripts Claude writes for your videos.',
-      steps:[
-        'In the AI Video Engine your Brand Voice influences the hook style and opening line',
-        'The persona you select (UGC, Educator, Influencer etc.) blends with your brand voice',
-        'A UGC persona with a casual brand voice produces authentic-feeling ad scripts',
-        'An Educator persona with an authoritative brand voice produces expert tip videos',
-        'You can override brand voice for any individual video using the script editor before approving',
-        'After generating — edit the script directly in the Review & Edit panel before clicking Approve',
-      ],
-      tip:'The script review step lets you apply your brand voice manually if the AI version is not quite right. Edit any line before approving and sending to video generation.' },
-    { title:'Improving your Brand Voice over time', desc:'Brand Voice Memory gets better as you refine it with more examples and feedback.',
-      steps:[
-        'After generating posts — note which ones sound most like you and which do not',
-        'Go back to Brand Voice and add examples of the posts that sounded best',
-        'Remove examples that led to off-brand results',
-        'Update your tone description to be more specific over time',
-        'Add examples of content you would NEVER post to teach Claude what to avoid',
-        'Re-generate the same topic after updating Brand Voice and compare the two versions',
-      ],
-      tip:'Brand Voice is not set-and-forget. Update it monthly with your newest best-performing content to keep it current with how your style evolves.' },
-  ]},
-  { id:'publishing', icon:'📤', label:'Publishing workflow', topics:[
-    { title:'How content gets posted', desc:'ContentForge uses a 5-stage workflow to take your content from idea to published post on every platform.',
-      steps:[
-        'STAGE 1 — Input: you provide a topic, URL, or affiliate link in the AI Composer or Video Engine',
-        'STAGE 2 — Generation: Claude AI writes the script or post, ElevenLabs records the voiceover, fal.ai generates the video clips',
-        'STAGE 3 — Assembly: the backend stitches audio and video together and uploads the finished file to Cloudflare R2 for permanent storage',
-        'STAGE 4 — Scheduling: you choose to post immediately or schedule for a peak engagement time using the Video Scheduler',
-        'STAGE 5 — Publishing: Railway automatically calls each platform API at the scheduled time and posts your content',
-      ],
-      tip:'Every completed video gets a permanent Cloudflare R2 URL. Even if Railway restarts your videos are never lost.' },
-    { title:'Posting social media text posts', desc:'The AI Composer sends finished posts directly to your connected social accounts.',
-      steps:[
-        'Click AI Composer in the sidebar',
-        'Type your topic and select your platforms — Facebook, Instagram, Reddit',
-        'Click Generate Posts ⚡ — Claude writes a unique version for each platform',
-        'Review the posts — each shows character count and compliance status',
-        'Click Copy under any post to copy it to your clipboard',
-        'Open the platform app on your phone and paste — or use Auto-upload if credentials are connected',
-        'For scheduled posting: go to Video Scheduler, select the post, pick a time, click Schedule Post',
-      ],
-      tip:'Instagram posts include hashtags automatically. Reddit posts are written in a community-authentic tone. Facebook posts are longer and more conversational.' },
-    { title:'Posting videos to social media', desc:'The Video Engine generates and publishes videos through a fully automated pipeline.',
-      steps:[
-        'STEP 1 — Generate: AI Video Engine creates script, voiceover, and video clips (3–5 minutes total)',
-        'STEP 2 — Storage: finished video uploads automatically to Cloudflare R2 and you get a permanent download URL',
-        'STEP 3 — Manual post: click Download Video and upload directly to TikTok, Instagram, YouTube, Facebook, or Reddit',
-        'STEP 4 — Auto-post: toggle Auto-upload ON before generating — Railway posts directly to connected platforms using their APIs',
-        'STEP 5 — Scheduled post: go to Video Scheduler, select the completed video, choose platforms, pick an optimal time, click Schedule Post 📅',
-      ],
-      tip:'Auto-upload requires platform API tokens added to Railway Variables. Without them you get the video file to post manually — which works perfectly.' },
-    { title:'Scheduling for peak times', desc:'The Video Scheduler posts your content automatically at the exact time you choose.',
-      steps:[
-        'Go to Video Scheduler in the sidebar',
-        'Select a completed video from the dropdown — only completed jobs appear here',
-        'Choose which platforms to post to — you can select multiple',
-        'Click any Optimal time suggestion to auto-fill the best posting time for that platform',
-        'Or set a custom date and time using the date and time pickers',
-        'Review the preview showing exactly when and where it will post',
-        'Click Schedule Post 📅 — the post appears in the Upcoming tab',
-        'At the exact scheduled time Railway fires the API call and publishes automatically',
-        'You receive an email confirmation when the post goes live (if email notifications are set up)',
-      ],
-      tip:'Railway stellar-achievement must stay Online for scheduled posts to fire. If it restarts it picks up pending schedules automatically within 1 minute.' },
-    { title:'Platform-by-platform publishing guide', desc:'Each platform has different requirements and optimal strategies.',
-      steps:[
-        'TIKTOK: max 10 minutes, 9:16 vertical format, post at 7pm for best reach — add TIKTOK_ACCESS_TOKEN to Railway for auto-posting',
-        'INSTAGRAM REELS: max 90 seconds, 9:16 vertical, post at 11am Wednesday for highest reach — add INSTAGRAM_ACCESS_TOKEN to Railway',
-        'YOUTUBE SHORTS: max 60 seconds, 9:16 vertical, post at 3pm Saturday — add YOUTUBE_ACCESS_TOKEN to Railway',
-        'FACEBOOK REELS: max 90 seconds, 9:16 vertical, post at 1pm Wednesday — add FACEBOOK_ACCESS_TOKEN to Railway',
-        'FACEBOOK FEED: max 4 hours, any ratio, post at 9am Thursday — uses same FACEBOOK_ACCESS_TOKEN',
-        'REDDIT: max 15 minutes, any ratio, post at 8am ET Monday — add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET to Railway',
-      ],
-      tip:'You do not need all platform tokens to use ContentForge. Without a token the system generates the video and you post it manually. Add tokens one platform at a time.' },
-    { title:'Connecting platform accounts', desc:'Add API tokens to Railway to enable automatic posting to each platform.',
-      steps:[
-        'Go to railway.app → stellar-achievement → Variables → Raw Editor',
-        'Add your platform tokens one per line in the format: VARIABLE_NAME=your_token_value',
-        'TIKTOK_ACCESS_TOKEN — get from developers.tiktok.com → your app → Access Token',
-        'INSTAGRAM_ACCESS_TOKEN — get from developers.facebook.com → your Instagram Basic Display app',
-        'FACEBOOK_ACCESS_TOKEN — get from developers.facebook.com → your app → User Access Token',
-        'YOUTUBE_ACCESS_TOKEN — get from console.cloud.google.com → OAuth 2.0 credentials',
-        'REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET — get from reddit.com/prefs/apps → create script app',
-        'Click Save — Railway restarts and the new tokens are live within 30 seconds',
-      ],
-      tip:'Facebook and Instagram use the same developer app. Create one app at developers.facebook.com and you get tokens for both platforms at once.' },
-  ]},
-];
+const app = express();
 
-const QUICK_REF = {
-  '⚡ Quick actions': [
-    ['Generate a video','AI Video Engine → topic → Generate ⚡'],
-    ['Generate 10 videos','Bulk Generator → base topic → Generate X Videos'],
-    ['Schedule a post','Video Scheduler → video → time → Schedule Post 📅'],
-    ['Write social posts','AI Composer → topic → platforms → Generate Posts ⚡'],
-    ['Build a VSL','AI Video Engine → VSL Builder → Generate VSL ⚡'],
-    ['Post immediately','Generate → Download → upload to platform app manually'],
-    ['Auto-post video','Enable Auto-upload toggle → Generate → Railway posts automatically'],
-    ['Check analytics','Analytics → Overview / Videos / Platforms / Costs'],
-    ['Set up emails','Email Notifications → Resend key → test'],
-    ['Connect a platform','Railway → stellar-achievement → Variables → add platform token'],
-    ['Sign out','Sidebar bottom → Sign out'],
-  ],
-  '📤 Publishing tokens': [
-    ['TikTok','TIKTOK_ACCESS_TOKEN — developers.tiktok.com'],
-    ['Instagram','INSTAGRAM_ACCESS_TOKEN — developers.facebook.com'],
-    ['Facebook','FACEBOOK_ACCESS_TOKEN — developers.facebook.com'],
-    ['YouTube','YOUTUBE_ACCESS_TOKEN — console.cloud.google.com'],
-  ],
-  '📱 Platform limits': [
-    ['TikTok','10 min · 4GB · 9:16'],
-    ['Instagram Reels','90 sec · 1GB · 9:16'],
-    ['YouTube Shorts','60 sec · 256GB · 9:16'],
-    ['Facebook Reels','90 sec · 4GB · 9:16'],
-    ['Facebook Feed','4 hours · 10GB · any'],
-    ['Reddit','15 min · 1GB · any'],
-  ],
-  '💵 API costs': [
-    ['Claude script','$0.01/video'],
-    ['ElevenLabs voice','$0.05/30sec'],
-    ['RunwayML clips','$0.05/second'],
-    ['30-sec video','~$1.56 total'],
-    ['10-video bulk','~$3.10 total'],
-  ],
-  '🔧 Troubleshooting': [
-    ['"Failed to fetch"','Check stellar-achievement is Online at railway.app'],
-    ['"Connection error"','ANTHROPIC_API_KEY missing in Railway Variables'],
-    ['"ElevenLabs 401"','Remove prefix text from ElevenLabs key in Railway'],
-    ['No video clips','RUNWAY_API_KEY missing or credits empty'],
-    ['Password not working','F12 → Application → Local Storage → delete cf_auth_v2'],
-    ['Netlify not updating','Deploys → Clear cache and deploy site'],
-  ],
-};
+// CORS headers — no external package needed
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 
-function TutorialPage() {
-  const [sec, setSec] = useState(0);
-  const [top, setTop] = useState(0);
-  const [done, setDone] = useState(new Set());
-  const [view, setView] = useState('guide');
-  const [q, setQ] = useState('');
+app.use(express.json({ limit: '50mb' }));
 
-  const S = TUTORIAL_DATA[sec];
-  const T = S.topics[top];
-  const pct = Math.round(done.size / TUTORIAL_DATA.length * 100);
-  const isFirst = sec === 0 && top === 0;
-  const isLast = sec === TUTORIAL_DATA.length - 1 && top === S.topics.length - 1;
+const PORT = process.env.PORT || 3001;
 
-  function goNext() { if (top < S.topics.length-1) setTop(top+1); else if (sec < TUTORIAL_DATA.length-1) { setSec(sec+1); setTop(0); } }
-  function goPrev() { if (top > 0) setTop(top-1); else if (sec > 0) { setSec(sec-1); setTop(TUTORIAL_DATA[sec-1].topics.length-1); } }
-  function mark() { const n = new Set(done); n.has(sec) ? n.delete(sec) : n.add(sec); setDone(n); }
+// ── In-memory job store ───────────────────────────────────────────────────────
+const jobs = new Map();
 
-  const hits = q.trim() ? TUTORIAL_DATA.flatMap((s,si) => s.topics.flatMap((t,ti) =>
-    [t.title,t.desc,...t.steps,t.tip].join(' ').toLowerCase().includes(q.toLowerCase())
-      ? [{si,ti,icon:s.icon,sec:s.label,top:t.title}] : [])) : [];
-
-  return (
-    <div style={{ padding:24, maxWidth:1100, fontFamily:'inherit' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14, flexWrap:'wrap', gap:10 }}>
-        <div>
-          <div style={{ fontSize:20, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', gap:8 }}>
-            📖 Tutorial
-            <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:'rgba(29,158,117,.2)', color:'#5DCAA5' }}>Interactive</span>
-          </div>
-          <div style={{ fontSize:13, color:'#7BAAA0', marginTop:4 }}>Complete guide to every ContentForge feature</div>
-        </div>
-        <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search…"
-            style={{ padding:'7px 11px', border:'1px solid rgba(29,158,117,.25)', borderRadius:8, fontSize:13, fontFamily:'inherit', background:'rgba(255,255,255,.05)', color:'#E8F4F0', outline:'none', width:150 }} />
-          {['guide','ref'].map(v => (
-            <button key={v} onClick={() => { setView(v); setQ(''); }}
-              style={{ padding:'6px 12px', border:'1px solid rgba(29,158,117,.25)', borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:'inherit',
-                background: view===v&&!q ? 'rgba(29,158,117,.2)' : 'transparent',
-                color: view===v&&!q ? '#5DCAA5' : '#7BAAA0' }}>
-              {v === 'guide' ? 'Step-by-step' : 'Quick ref'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
-        <div style={{ flex:1, height:4, background:'rgba(255,255,255,.08)', borderRadius:2, overflow:'hidden' }}>
-          <div style={{ height:'100%', width:pct+'%', background:'#1D9E75', borderRadius:2, transition:'width .4s' }} />
-        </div>
-        <span style={{ fontSize:11, color:'#7BAAA0', flexShrink:0 }}>{done.size}/{TUTORIAL_DATA.length} done</span>
-      </div>
-
-      {q.trim() !== '' && (
-        <div style={{ border:'1px solid rgba(29,158,117,.2)', borderRadius:12, overflow:'hidden', marginBottom:14, background:'rgba(255,255,255,.04)' }}>
-          <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(29,158,117,.15)', fontSize:13, fontWeight:500, color:'#E8F4F0' }}>
-            {hits.length} result{hits.length!==1?'s':''} for "{q}"
-          </div>
-          {hits.length === 0
-            ? <div style={{ padding:20, textAlign:'center', color:'#7BAAA0', fontSize:13 }}>No results found</div>
-            : hits.map((h,i) => (
-              <div key={i} onClick={() => { setSec(h.si); setTop(h.ti); setQ(''); setView('guide'); }}
-                style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', cursor:'pointer', borderBottom: i<hits.length-1 ? '1px solid rgba(29,158,117,.1)' : 'none' }}>
-                <span>{h.icon}</span>
-                <div style={{ flex:1, fontSize:13, fontWeight:500, color:'#E8F4F0' }}>{h.sec} → {h.top}</div>
-                <span style={{ fontSize:12, color:'#5DCAA5' }}>Go →</span>
-              </div>
-            ))
-          }
-        </div>
-      )}
-
-      {!q.trim() && view === 'guide' && (
-        <div style={{ display:'grid', gridTemplateColumns:'175px 1fr', gap:14 }}>
-          <nav style={{ display:'flex', flexDirection:'column', gap:2 }}>
-            {TUTORIAL_DATA.map((s,i) => (
-              <button key={s.id} onClick={() => { setSec(i); setTop(0); }}
-                style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', textAlign:'left', width:'100%', minHeight:42,
-                  border: i===sec ? '1px solid rgba(29,158,117,.4)' : '1px solid transparent',
-                  background: i===sec ? 'rgba(29,158,117,.1)' : 'transparent' }}>
-                <span style={{ fontSize:14 }}>{s.icon}</span>
-                <span style={{ fontSize:12, color:'#E8F4F0', flex:1 }}>{s.label}</span>
-                {done.has(i) && <span style={{ fontSize:11, color:'#1D9E75' }}>✓</span>}
-              </button>
-            ))}
-          </nav>
-
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', border:'1px solid rgba(29,158,117,.2)', borderRadius:10, background:'rgba(255,255,255,.04)' }}>
-              <span style={{ fontSize:22 }}>{S.icon}</span>
-              <span style={{ fontSize:15, fontWeight:500, color:'#E8F4F0', flex:1 }}>{S.label}</span>
-              <button onClick={mark}
-                style={{ padding:'5px 11px', borderRadius:20, fontSize:11, cursor:'pointer', fontFamily:'inherit',
-                  border:'1px solid rgba(29,158,117,.3)',
-                  background: done.has(sec) ? 'rgba(29,158,117,.2)' : 'transparent',
-                  color: done.has(sec) ? '#5DCAA5' : '#7BAAA0' }}>
-                {done.has(sec) ? '✓ Done' : 'Mark done'}
-              </button>
-            </div>
-
-            {S.topics.length > 1 && (
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                {S.topics.map((t,i) => (
-                  <button key={i} onClick={() => setTop(i)}
-                    style={{ padding:'5px 12px', borderRadius:20, fontSize:11, cursor:'pointer', fontFamily:'inherit',
-                      border: `1px solid ${i===top ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
-                      background: i===top ? 'rgba(29,158,117,.15)' : 'transparent',
-                      color: i===top ? '#5DCAA5' : '#7BAAA0', fontWeight: i===top ? 500 : 400 }}>
-                    {t.title}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div style={{ padding:'16px 18px', border:'1px solid rgba(29,158,117,.2)', borderRadius:12, background:'rgba(255,255,255,.04)' }}>
-              <div style={{ fontSize:15, fontWeight:500, color:'#E8F4F0', marginBottom:6 }}>{T.title}</div>
-              <div style={{ fontSize:13, color:'#7BAAA0', marginBottom:14, lineHeight:1.6 }}>{T.desc}</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:14 }}>
-                {T.steps.map((step,i) => (
-                  <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                    <div style={{ width:22, height:22, borderRadius:'50%', flexShrink:0, marginTop:2, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:500, background:'rgba(29,158,117,.18)', color:'#5DCAA5' }}>{i+1}</div>
-                    <div style={{ fontSize:13, color:'#E8F4F0', lineHeight:1.6 }}>{step}</div>
-                  </div>
-                ))}
-              </div>
-              {T.tip && (
-                <div style={{ display:'flex', gap:10, background:'rgba(29,158,117,.08)', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, padding:'10px 12px' }}>
-                  <span style={{ fontSize:15, flexShrink:0 }}>💡</span>
-                  <div style={{ fontSize:13, color:'#5DCAA5', lineHeight:1.6 }}>{T.tip}</div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <button onClick={goPrev} disabled={isFirst}
-                style={{ padding:'7px 14px', borderRadius:8, fontSize:12, cursor:isFirst?'not-allowed':'pointer', fontFamily:'inherit', border:'1px solid rgba(29,158,117,.2)', background:'transparent', color:'#7BAAA0', opacity:isFirst?.35:1 }}>
-                ← Previous
-              </button>
-              <span style={{ fontSize:11, color:'#7BAAA0' }}>{sec+1}/{TUTORIAL_DATA.length} · {top+1}/{S.topics.length}</span>
-              <button onClick={goNext} disabled={isLast}
-                style={{ padding:'7px 18px', borderRadius:8, fontSize:12, fontWeight:500, cursor:isLast?'not-allowed':'pointer', fontFamily:'inherit', border:'none', background:'#1D9E75', color:'white', opacity:isLast?.35:1 }}>
-                Next →
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!q.trim() && view === 'ref' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {Object.entries(QUICK_REF).map(([h, rows]) => (
-            <div key={h} style={{ border:'1px solid rgba(29,158,117,.2)', borderRadius:12, overflow:'hidden', background:'rgba(255,255,255,.04)' }}>
-              <div style={{ padding:'11px 15px', borderBottom:'1px solid rgba(29,158,117,.12)', fontSize:13, fontWeight:500, color:'#E8F4F0' }}>{h}</div>
-              <div style={{ padding:'4px 15px' }}>
-                {rows.map(([k,v],i) => (
-                  <div key={i} style={{ display:'flex', gap:12, padding:'8px 0', borderBottom:i<rows.length-1?'1px solid rgba(29,158,117,.08)':'none' }}>
-                    <span style={{ fontSize:13, fontWeight:500, color:'#E8F4F0', flex:1 }}>{k}</span>
-                    <span style={{ fontSize:12, color:'#7BAAA0', textAlign:'right', flex:1 }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+async function updateJob(id, updates) {
+  const job = jobs.get(id) || {};
+  const updated = { ...job, ...updates, updatedAt: new Date().toISOString() };
+  jobs.set(id, updated);
+  if (process.env.SUPABASE_URL) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      await db.from('video_jobs').upsert({ id, ...updates, updated_at: updated.updatedAt });
+    } catch (e) { console.warn('DB update failed:', e.message); }
+  }
+  return updated;
 }
 
-// ── Auth ───────────────────────────────────────────────────────────────────────
-const CORRECT_PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'ContentForge2026';
-function checkAuth() {
-  try { return localStorage.getItem('cf_auth_v2') === 'true'; }
-  catch { return false; }
+async function getJob(id) {
+  if (jobs.has(id)) return jobs.get(id);
+  if (process.env.SUPABASE_URL) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const { data } = await db.from('video_jobs').select('*').eq('id', id).single();
+      if (data) { jobs.set(id, data); return data; }
+    } catch (e) {}
+  }
+  return null;
 }
 
-const PAGE_LABELS = {
-  composer:'AI Composer', video:'AI Video Engine', scheduler:'Video Scheduler',
-  bulk:'Bulk Generator', email:'Email Notifications', analytics:'Analytics',
-  tutorial:'Tutorial',
-  reddit:'Reddit Integration', brand:'Brand Voice', compliance:'Compliance',
-};
+async function getAllJobs() {
+  if (process.env.SUPABASE_URL) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const { data } = await db.from('video_jobs').select('*').order('created_at', { ascending: false }).limit(50);
+      return data || [];
+    } catch (e) {}
+  }
+  return [...jobs.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
 
-export default function App() {
-  const [authed, setAuthed]       = useState(checkAuth);
-  const [page, setPage]           = useState('composer');
-  const [platforms, setPlatforms] = useState({ facebook:true, instagram:true, reddit:true });
-  const [sidebarOpen, setSidebar] = useState(false);
+// ── Startup log ───────────────────────────────────────────────────────────────
+console.log('ContentForge Video Engine starting...');
+console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
+console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
+console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
+console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
+console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
+console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
+console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
+console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
+console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
 
-  useEffect(() => {
-    const onFocus = () => setAuthed(checkAuth());
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, []);
+// ── Script generation ─────────────────────────────────────────────────────────
+async function generateScript(params) {
+  const { inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, videoType, editedScript } = params;
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  function navigateTo(p) { setPage(p); setSidebar(false); }
-  function handleLogout() {
-    localStorage.removeItem('cf_auth_v2');
-    localStorage.removeItem('cf_auth');
-    setAuthed(false);
+  const videoTypes = {
+    'ugc-persona':  'authentic UGC-style first-person review',
+    'ai-vsl':       'Video Sales Letter with Hook-Problem-Solution-CTA structure',
+    'hybrid-vsl':   'Hybrid VSL combining avatar sections with B-roll',
+    'reel-ads':     'short punchy Reel ad under 30 seconds',
+    'product-ads':  'direct-response product ad with price and urgency',
+    'commercial':   'cinematic brand commercial with emotional arc',
+    'competitor':   'competitor-style video with original content',
+  };
+
+  const vType = videoTypes[videoType] || 'engaging short-form video';
+  const inputDesc = inputMode === 'topic' ? `Topic: ${topic}` : inputMode === 'url' ? `URL: ${url}` : `Affiliate link: ${affiliateUrl}`;
+
+  const prompt = `Create a complete ${vType} script for ${platforms?.join(', ') || 'social media'}.
+
+${inputDesc}
+Duration: ${duration || '30s'}
+Persona: ${persona || 'ugc'}
+Style: ${style || 'casual'}
+${editedScript ? `Use this as the base script and improve it:\n${editedScript}` : ''}
+
+Return ONLY valid JSON with this exact structure:
+{
+  "hook": "opening line that grabs attention",
+  "fullScript": "complete word-for-word script",
+  "cta": "call to action",
+  "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
+  "sceneDescriptions": [
+    {"scene": 1, "visual": "detailed visual description for AI video generation", "duration": 5},
+    {"scene": 2, "visual": "detailed visual description for AI video generation", "duration": 5},
+    {"scene": 3, "visual": "detailed visual description for AI video generation", "duration": 5}
+  ]
+}`;
+
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-5',
+    max_tokens: 1500,
+    system: 'You are an expert video script writer. Return only valid JSON, no markdown.',
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  return JSON.parse(raw);
+}
+
+// ── Voiceover generation ──────────────────────────────────────────────────────
+async function generateVoiceover(script, persona, jobId) {
+  const fetch = (await import('node-fetch')).default;
+  const fs = (await import('fs')).default;
+  const audioPath = `/tmp/voice_${jobId}_${Date.now()}.mp3`;
+
+  if (process.env.OPENAI_API_KEY) {
+    const voices = { ugc: 'nova', testimonial: 'shimmer', demo: 'onyx', influencer: 'alloy', educator: 'echo' };
+    const voice = voices[persona] || 'nova';
+    const res = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'tts-1', input: script.slice(0, 4096), voice }),
+    });
+    if (!res.ok) throw new Error(`OpenAI TTS: ${res.status}`);
+    const buffer = await res.buffer();
+    fs.writeFileSync(audioPath, buffer);
+    console.log('✅ OpenAI TTS voiceover ready');
+    return audioPath;
   }
 
-  if (!authed) return <LoginPage onLogin={() => setAuthed(true)} />;
+  if (process.env.ELEVENLABS_API_KEY) {
+    const voiceIds = {
+      ugc: '21m00Tcm4TlvDq8ikWAM',
+      testimonial: 'AZnzlk1XvdvUeBnXmlld',
+      demo: 'EXAVITQu4vr4xnSDxMaL',
+      influencer: 'ErXwobaYiN019PkySvjV',
+      educator: 'VR6AewLTigWG4xSOukaG',
+    };
+    const voiceId = voiceIds[persona] || '21m00Tcm4TlvDq8ikWAM';
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+      body: JSON.stringify({ text: script.slice(0, 2500), model_id: 'eleven_monolingual_v1', voice_settings: { stability: 0.5, similarity_boost: 0.75 } }),
+    });
+    if (!res.ok) throw new Error(`ElevenLabs: ${res.status}`);
+    const buffer = await res.buffer();
+    fs.writeFileSync(audioPath, buffer);
+    console.log('✅ ElevenLabs voiceover ready');
+    return audioPath;
+  }
 
-  return (
-    <div className={styles.app}>
-      {sidebarOpen && <div className={styles.overlay} onClick={() => setSidebar(false)} />}
-      <Sidebar page={page} setPage={navigateTo} platforms={platforms} onLogout={handleLogout} isOpen={sidebarOpen} onClose={() => setSidebar(false)} />
-      <div className={styles.main}>
-        <header className={styles.topbar}>
-          <button className={styles.menuBtn} onClick={() => setSidebar(true)} aria-label="Open menu">☰</button>
-          <div className={styles.topbarTitle}>{PAGE_LABELS[page]}</div>
-          <div className={styles.topbarRight}>
-            <div className={styles.statusPill}><span className={styles.dot} /> Claude Live</div>
-            {['video','scheduler','bulk'].includes(page) && <div className={styles.videoBadge}>▶ Video Engine</div>}
-            <button onClick={handleLogout} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'transparent', color:'#888', cursor:'pointer', fontFamily:'inherit' }}>Sign out</button>
-          </div>
-        </header>
-        <main>
-          {page === 'composer'   && <Composer onPlatformsChange={setPlatforms} />}
-          {page === 'video'      && <VideoEngine />}
-          {page === 'scheduler'  && <Scheduler />}
-          {page === 'bulk'       && <BulkGenerator />}
-          {page === 'email'      && <EmailSettings />}
-          {page === 'analytics'  && <Analytics />}
-          {page === 'tutorial'   && <TutorialPage />}
-          {page === 'brand'      && <Brand />}
-          {page === 'compliance' && <Compliance />}
-        </main>
-      </div>
-    </div>
-  );
+  throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
 }
 
-function LoginPage({ onLogin }) {
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+// ── Video clip generation ─────────────────────────────────────────────────────
+async function generateClip(prompt, duration) {
+  const fetch = (await import('node-fetch')).default;
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!password.trim()) return;
-    setLoading(true);
-    setTimeout(() => {
-      if (password.trim() === CORRECT_PASSWORD.trim()) {
-        localStorage.setItem('cf_auth_v2', 'true');
-        onLogin();
-      } else {
-        setError('Incorrect password. Please try again.');
-        setPassword('');
+  // ── RunwayML (primary) ────────────────────────────────────────────────────
+  if (process.env.RUNWAY_API_KEY) {
+    console.log(`🎬 RunwayML: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+        'Content-Type': 'application/json',
+        'X-Runway-Version': '2024-11-06',
+      },
+      body: JSON.stringify({
+        model: 'gen3a_turbo',
+        promptText: prompt,
+        duration: Math.min(duration || 5, 10),
+        ratio: '720:1280',
+      }),
+    });
+    const resText = await res.text();
+    console.log(`RunwayML ${res.status}:`, resText.slice(0, 150));
+    if (!res.ok) {
+      let errMsg;
+      try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
+      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
+    }
+    const task = JSON.parse(resText);
+    console.log(`⏳ RunwayML task: ${task.id}`);
+    for (let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+            'X-Runway-Version': '2024-11-06',
+          },
+        });
+        const t = await poll.json();
+        console.log(`RunwayML: ${t.status} (${i+1}/90)`);
+        if (t.status === 'SUCCEEDED') {
+          const url = t.output?.[0] || t.artifacts?.[0]?.url;
+          if (url) { console.log(`✅ RunwayML clip ready`); return url; }
+          throw new Error('RunwayML succeeded but no video URL');
+        }
+        if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || t.failureCode || 'unknown'}`);
+      } catch (e) {
+        if (e.message.startsWith('RunwayML')) throw e;
+        console.warn(`RunwayML poll error ${i+1}:`, e.message);
       }
-      setLoading(false);
-    }, 400);
+    }
+    throw new Error('RunwayML timed out after 12 minutes');
   }
 
-  return (
-    <div style={{ minHeight:'100vh', background:'#0D2137', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ background:'#102D4F', border:'0.5px solid rgba(29,158,117,.25)', borderRadius:16, padding:'36px 32px', width:'100%', maxWidth:380, textAlign:'center' }}>
-        <div style={{ display:'flex', justifyContent:'center', marginBottom:16 }}>
-          <div style={{ width:48, height:48, borderRadius:12, background:'#1D9E75', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>⚡</div>
-        </div>
-        <div style={{ fontSize:22, fontWeight:500, color:'#E8F4F0', marginBottom:6 }}>ContentForge</div>
-        <div style={{ fontSize:13, color:'#7BAAA0', marginBottom:24 }}>Social AI Engine — Private Access</div>
-        <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:10, textAlign:'left' }}>
-          <label style={{ fontSize:11, color:'#4A7A72', fontWeight:500, textTransform:'uppercase', letterSpacing:.5 }}>Password</label>
-          <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-            placeholder="Enter your password" autoFocus autoComplete="off" data-form-type="other"
-            style={{ width:'100%', border:'0.5px solid rgba(29,158,117,.25)', borderRadius:8, padding:'11px 13px', fontSize:15, fontFamily:'inherit', color:'#E8F4F0', background:'#163D6A', outline:'none', boxSizing:'border-box' }} />
-          {error && <div style={{ fontSize:12, color:'#F09595', background:'rgba(226,75,74,.1)', border:'0.5px solid rgba(226,75,74,.3)', borderRadius:6, padding:'8px 10px' }}>{error}</div>}
-          <button type="submit" disabled={loading || !password.trim()}
-            style={{ background:'#1D9E75', color:'white', border:'none', borderRadius:8, padding:12, fontSize:15, fontWeight:500, cursor:'pointer', fontFamily:'inherit', marginTop:4, opacity: loading||!password.trim() ? 0.5 : 1 }}>
-            {loading ? '⏳ Checking…' : 'Sign in →'}
-          </button>
-        </form>
-        <div style={{ fontSize:11, color:'#4A7A72', marginTop:20 }}>Private — not publicly accessible</div>
-      </div>
-    </div>
-  );
+  // ── Luma Dream Machine (fallback) ─────────────────────────────────────────
+  if (process.env.LUMA_API_KEY) {
+    console.log(`🎬 Luma: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        model: 'ray-2',
+        resolution: '720p',
+        duration: duration <= 5 ? '5s' : '9s',
+        aspect_ratio: '9:16',
+      }),
+    });
+    const resText = await res.text();
+    console.log(`Luma ${res.status}:`, resText.slice(0, 150));
+    if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
+    const gen = JSON.parse(resText);
+    console.log(`⏳ Luma id: ${gen.id}`);
+    for (let i = 0; i < 90; i++) {
+      await new Promise(r => setTimeout(r, 8000));
+      try {
+        const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${gen.id}`, {
+          headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
+        });
+        const t = await poll.json();
+        console.log(`Luma: ${t.state} (${i+1}/90)`);
+        if (t.state === 'completed') {
+          const url = t.assets?.video;
+          if (url) return url;
+          throw new Error('Luma completed but no video URL');
+        }
+        if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
+      } catch (e) {
+        if (e.message.startsWith('Luma')) throw e;
+        console.warn(`Luma poll error ${i+1}:`, e.message);
+      }
+    }
+    throw new Error('Luma timed out after 12 minutes');
+  }
+
+  // ── fal.ai (fallback) ─────────────────────────────────────────────────────
+  if (process.env.FAL_API_KEY) {
+    console.log(`🎬 fal.ai: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, duration: duration <= 5 ? '5' : '10', aspect_ratio: '9:16' }),
+    });
+    if (!res.ok) throw new Error(`fal.ai ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const data = await res.json();
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${data.request_id}`, {
+        headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}` },
+      });
+      const t = await poll.json();
+      if (t.status === 'COMPLETED') {
+        const url = t.output?.video?.url || t.output?.[0]?.url;
+        if (url) return url;
+        throw new Error('fal.ai no video URL');
+      }
+      if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error}`);
+    }
+    throw new Error('fal.ai timed out');
+  }
+
+  throw new Error('No video API key — add RUNWAY_API_KEY, LUMA_API_KEY, or FAL_API_KEY to Railway');
 }
+
+
+async function tryUploadToR2(localPath, key) {
+  try {
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const fs = await import('fs');
+    const client = new S3Client({
+      region: 'auto',
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY },
+    });
+    const body = fs.default.readFileSync(localPath);
+    await client.send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key, Body: body, ContentType: 'video/mp4' }));
+    return `https://pub-${process.env.R2_ACCOUNT_ID}.r2.dev/${key}`;
+  } catch (e) {
+    console.warn('R2 upload failed:', e.message);
+    return null;
+  }
+}
+
+// ── Main pipeline ─────────────────────────────────────────────────────────────
+async function runPipeline(jobId, params) {
+  const { inputMode, topic, url, affiliateUrl, persona, duration, durationSeconds, style, platforms, autoUpload, videoType, editedScript } = params;
+
+  try {
+    await updateJob(jobId, { status: 'processing', progress: 10, step: 'Writing script with Claude AI...' });
+    const script = await generateScript({ inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, videoType, editedScript });
+    await updateJob(jobId, { progress: 30, step: 'Script ready — generating voiceover...', script });
+
+    let audioPath = null;
+    if (process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY) {
+      try {
+        audioPath = await generateVoiceover(script.fullScript, persona, jobId);
+        await updateJob(jobId, { progress: 50, step: 'Voiceover ready — generating video scenes...' });
+      } catch (e) {
+        console.warn('Voiceover failed:', e.message);
+        await updateJob(jobId, { step: `Voiceover failed (${e.message.slice(0,60)}) — generating video scenes...` });
+      }
+    } else {
+      await updateJob(jobId, { step: 'No voiceover key — generating video scenes...' });
+    }
+
+    const clips = [];
+    const hasVideoKey = !!(process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
+    const hasScenes = !!(script.sceneDescriptions?.length);
+    console.log(`🎬 Video clip check: hasKey=${hasVideoKey} hasScenes=${hasScenes} sceneCount=${script.sceneDescriptions?.length || 0}`);
+
+    if (hasVideoKey && hasScenes) {
+      await updateJob(jobId, { progress: 55, step: 'Generating video scenes with Luma...' });
+      const scenes = script.sceneDescriptions.slice(0, 3);
+      for (const scene of scenes) {
+        try {
+          console.log(`🎬 Generating scene ${scene.scene}: "${scene.visual?.slice(0,60)}..."`);
+          const videoUrl = await generateClip(scene.visual, scene.duration || 5);
+          clips.push({ scene: scene.scene, videoUrl, status: 'success' });
+          const pct = 55 + Math.round((clips.length / scenes.length) * 30);
+          await updateJob(jobId, { progress: pct, step: `Scene ${clips.length} of ${scenes.length} ready...`, clipError: null });
+        } catch (e) {
+          console.error(`Scene ${scene.scene} failed:`, e.message);
+          clips.push({ scene: scene.scene, status: 'failed', error: e.message });
+          await updateJob(jobId, { clipError: e.message });
+        }
+      }
+    } else if (!hasVideoKey) {
+      console.log('⚠ No video API key configured');
+      await updateJob(jobId, { clipError: 'No video API key — add RUNWAY_API_KEY to Railway' });
+    } else if (!hasScenes) {
+      console.log('⚠ Script returned no scene descriptions');
+      await updateJob(jobId, { clipError: 'Script did not return scene descriptions — try regenerating' });
+    }
+
+    const finalVideoUrl = clips.find(c => c.videoUrl)?.videoUrl || null;
+    let r2Url = null;
+    if (finalVideoUrl && process.env.R2_BUCKET_NAME) {
+      r2Url = await tryUploadToR2(finalVideoUrl, `videos/${jobId}.mp4`);
+    }
+
+    await updateJob(jobId, {
+      status: 'completed',
+      progress: 100,
+      step: 'Complete!',
+      result: {
+        script,
+        clips,
+        finalVideoUrl: r2Url || finalVideoUrl,
+        audioPath,
+        audioUrl: audioPath ? 'generated' : null,  // flag for frontend
+        hasAudio: !!audioPath,
+      },
+    });
+
+    if (process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL) {
+      try {
+        const { sendVideoCompleteEmail } = await import('./services/emailService.js');
+        await sendVideoCompleteEmail({ jobId, script, clipUrl: r2Url || finalVideoUrl, topic: topic || url, persona, duration, platforms });
+      } catch (e) { console.warn('Email failed:', e.message); }
+    }
+  } catch (e) {
+    console.error('Pipeline error:', e.message);
+    await updateJob(jobId, { status: 'failed', step: 'Failed', error: e.message });
+  }
+}
+
+// ── VSL generation ────────────────────────────────────────────────────────────
+async function generateVSLScript({ product, price, audience, pain, solution, duration, affiliateUrl }) {
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const msg = await client.messages.create({
+    model: 'claude-opus-4-5',
+    max_tokens: 2000,
+    system: 'Expert VSL copywriter. Return only valid JSON.',
+    messages: [{
+      role: 'user',
+      content: `Write a high-converting VSL script for: ${product} ($${price}) targeting ${audience}.
+Pain point: ${pain}. Solution: ${solution}. Duration: ${duration || '60s'}.
+${affiliateUrl ? `Affiliate link: ${affiliateUrl}` : ''}
+Return JSON: { "hook", "problemAgitation", "solutionReveal", "socialProof", "offer", "guarantee", "cta", "fullScript", "hashtags": [] }`,
+    }],
+  });
+  const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  return JSON.parse(raw);
+}
+
+// ── API Routes ────────────────────────────────────────────────────────────────
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
+});
+
+app.post('/api/video/script', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  try {
+    const script = await generateScript(req.body);
+    res.json({ script });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/video/generate', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  const jobId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const job = { id: jobId, status: 'queued', progress: 0, step: 'Queued...', data: req.body, createdAt: new Date().toISOString() };
+  jobs.set(jobId, job);
+  res.json({ jobId, status: 'queued' });
+  runPipeline(jobId, req.body).catch(console.error);
+});
+
+app.get('/api/video/job/:id', async (req, res) => {
+  const job = await getJob(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
+});
+
+app.get('/api/video/jobs', async (_req, res) => {
+  res.json(await getAllJobs());
+});
+
+app.post('/api/vsl/generate', async (req, res) => {
+  try {
+    const script = await generateVSLScript(req.body);
+    res.json({ script });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/generate', async (req, res) => {
+  try {
+    const { inputMode, topic, url, style, platforms, affiliate } = req.body;
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const PM = { facebook: 'Facebook', instagram: 'Instagram', reddit: 'Reddit' };
+    const active = (platforms || ['facebook','instagram','reddit']).filter(p => PM[p]);
+    const prompt = `Write ${style || 'Casual'} social media posts for: ${inputMode === 'topic' ? topic : url}
+${affiliate ? 'Include affiliate link naturally.' : ''}
+Platforms: ${active.join(', ')}
+Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": true, "note": ""}`).join(', ')} }`;
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-5', max_tokens: 1000,
+      system: 'Expert social media copywriter. Return only valid JSON.',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    res.json({ posts: JSON.parse(raw) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/persona', (_req, res) => {
+  res.json({ personas: ['ugc','testimonial','demo','influencer','educator'] });
+});
+
+// ── Bulk routes ───────────────────────────────────────────────────────────────
+const bulkJobs = new Map();
+
+app.post('/api/bulk/variations', async (req, res) => {
+  const { baseTopic, count = 10, persona = 'ugc', videoType = 'auto' } = req.body;
+  if (!baseTopic) return res.status(400).json({ error: 'baseTopic required' });
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-opus-4-5', max_tokens: 500,
+      system: 'Reply with valid JSON array only.',
+      messages: [{ role: 'user', content: `Generate ${count} unique video topic variations based on: "${baseTopic}" for ${persona} style videos. Return JSON array of ${count} strings.` }],
+    });
+    const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    res.json({ topics: JSON.parse(raw) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/bulk/generate', async (req, res) => {
+  const { topics, persona = 'ugc', duration = '30s', style = 'ugc', platforms = ['tiktok'], videoType = 'auto', concurrency = 2 } = req.body;
+  if (!topics?.length) return res.status(400).json({ error: 'topics array required' });
+  if (topics.length > 10) return res.status(400).json({ error: 'Max 10 videos per batch' });
+  const batchId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const batch = {
+    batchId, status: 'queued', total: topics.length, completed: 0, failed: 0, progress: 0,
+    jobs: topics.map((topic, i) => ({ index: i+1, topic, status: 'queued', progress: 0, step: 'Waiting...', result: null, error: null })),
+    createdAt: new Date().toISOString(),
+    settings: { persona, duration, style, platforms, videoType },
+  };
+  bulkJobs.set(batchId, batch);
+  res.json({ batchId, total: batch.total, status: 'queued' });
+  runBulkBatch(batchId, topics, { persona, duration, style, platforms, videoType, concurrency }).catch(console.error);
+});
+
+app.get('/api/bulk/:batchId', (req, res) => {
+  const batch = bulkJobs.get(req.params.batchId);
+  if (!batch) return res.status(404).json({ error: 'Batch not found' });
+  res.json(batch);
+});
+
+app.get('/api/bulk', (_req, res) => {
+  res.json({ batches: [...bulkJobs.values()].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0,10) });
+});
+
+async function runBulkBatch(batchId, topics, settings) {
+  const batch = bulkJobs.get(batchId);
+  batch.status = 'processing';
+  const { concurrency = 2, persona, duration, style, platforms, videoType } = settings;
+  for (let i = 0; i < topics.length; i += concurrency) {
+    const chunk = topics.slice(i, i + concurrency);
+    await Promise.all(chunk.map(async (topic, ci) => {
+      const idx = i + ci;
+      batch.jobs[idx].status = 'processing';
+      batch.jobs[idx].step = 'Writing script...';
+      try {
+        const script = await generateScript({ inputMode: 'topic', topic, persona, duration, style, platforms, videoType });
+        batch.jobs[idx].progress = 40;
+        batch.jobs[idx].step = 'Script ready...';
+        let clipUrl = null;
+        if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.[0]) {
+          try { clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5); } catch (e) { console.warn(`Bulk clip failed:`, e.message); }
+        }
+        batch.jobs[idx].status = 'completed';
+        batch.jobs[idx].progress = 100;
+        batch.jobs[idx].step = 'Complete!';
+        batch.jobs[idx].result = { script, clipUrl, topic };
+        batch.completed++;
+      } catch (e) {
+        batch.jobs[idx].status = 'failed';
+        batch.jobs[idx].error = e.message;
+        batch.failed++;
+      }
+      batch.progress = Math.round(((batch.completed + batch.failed) / batch.total) * 100);
+    }));
+  }
+  batch.status = 'completed';
+}
+
+// ── Schedule routes ───────────────────────────────────────────────────────────
+const schedules = new Map();
+
+app.post('/api/schedule', async (req, res) => {
+  const { jobId, platforms, scheduledAt, script, videoUrl } = req.body;
+  if (!platforms?.length || !scheduledAt) return res.status(400).json({ error: 'platforms and scheduledAt required' });
+  const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const schedule = { id, jobId, platforms, scheduledAt, script, videoUrl, status: 'scheduled', createdAt: new Date().toISOString() };
+  schedules.set(id, schedule);
+  res.json({ schedule });
+});
+
+app.get('/api/schedule', (_req, res) => {
+  res.json({ schedules: [...schedules.values()].sort((a,b) => new Date(a.scheduledAt)-new Date(b.scheduledAt)) });
+});
+
+app.delete('/api/schedule/:id', (req, res) => {
+  schedules.delete(req.params.id);
+  res.json({ success: true });
+});
+
+app.get('/api/schedule/optimal/:platform', (req, res) => {
+  const times = {
+    tiktok: [{ time:'19:00', label:'7pm — Peak TikTok' }],
+    instagram: [{ time:'11:00', label:'11am — Peak Reels' }],
+    youtube: [{ time:'15:00', label:'3pm — Shorts peak' }],
+    'fb-reels': [{ time:'13:00', label:'1pm — Facebook lunch' }],
+    reddit: [{ time:'08:00', label:'8am ET — Reddit peak' }],
+  };
+  const t = times[req.params.platform];
+  if (!t) return res.status(404).json({ error: 'Platform not found' });
+  res.json({ platform: req.params.platform, optimalTimes: t });
+});
+
+// ── Email routes ──────────────────────────────────────────────────────────────
+app.get('/api/email/settings', (_req, res) => {
+  res.json({
+    configured: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
+    notifyEmail: process.env.NOTIFY_EMAIL ? process.env.NOTIFY_EMAIL.replace(/(.{2}).*(@.*)/, '$1***$2') : null,
+  });
+});
+
+app.post('/api/email/test', async (req, res) => {
+  if (!process.env.RESEND_API_KEY || !process.env.NOTIFY_EMAIL) return res.status(400).json({ error: 'RESEND_API_KEY and NOTIFY_EMAIL required' });
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'ContentForge <notifications@contentstudiohub.com>', to: [process.env.NOTIFY_EMAIL], subject: '✅ ContentForge email working!', html: '<p>Email notifications are working!</p>' }),
+    });
+    if (!r.ok) throw new Error(`Resend: ${r.status}`);
+    res.json({ success: true, message: `Test email sent to ${process.env.NOTIFY_EMAIL}` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Reddit integration removed
+
+// ── Facebook routes ──────────────────────────────────────────────────────────
+app.get('/api/facebook/verify', async (_req, res) => {
+  try {
+    const { verifyFacebookCredentials } = await import('./services/facebookService.js');
+    res.json(await verifyFacebookCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/facebook/post-video', async (req, res) => {
+  try {
+    const { postVideoToFacebook } = await import('./services/facebookService.js');
+    res.json(await postVideoToFacebook(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/facebook/post-text', async (req, res) => {
+  try {
+    const { postTextToFacebook } = await import('./services/facebookService.js');
+    res.json(await postTextToFacebook(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Instagram routes ──────────────────────────────────────────────────────────
+app.get('/api/instagram/verify', async (_req, res) => {
+  try {
+    const { verifyInstagramCredentials } = await import('./services/instagramService.js');
+    res.json(await verifyInstagramCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/instagram/post-video', async (req, res) => {
+  try {
+    const { postVideoToInstagram } = await import('./services/instagramService.js');
+    res.json(await postVideoToInstagram(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/instagram/post-image', async (req, res) => {
+  try {
+    const { postImageToInstagram } = await import('./services/instagramService.js');
+    res.json(await postImageToInstagram(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Verify all platforms on startup ──────────────────────────────────────────
+if (process.env.FACEBOOK_ACCESS_TOKEN) {
+  import('./services/facebookService.js')
+    .then(({ verifyFacebookCredentials }) => verifyFacebookCredentials())
+    .then(r => console.log('Facebook:', r.connected ? `✅ ${r.pageName} (${r.followers} followers)` : `❌ ${r.error}`))
+    .catch(e => console.warn('Facebook check failed:', e.message));
+}
+
+if (process.env.INSTAGRAM_ACCESS_TOKEN) {
+  import('./services/instagramService.js')
+    .then(({ verifyInstagramCredentials }) => verifyInstagramCredentials())
+    .then(r => console.log('Instagram:', r.connected ? `✅ @${r.username} (${r.followers} followers)` : `❌ ${r.error}`))
+    .catch(e => console.warn('Instagram check failed:', e.message));
+}
+
+app.post('/api/affiliate/shorten', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const r = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(req.body.url)}`);
+    const short = await r.text();
+    res.json({ original: req.body.url, shortened: short.trim() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Start server ──────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`✅ ContentForge Video Engine running on port ${PORT}`);
+});
+
+// Scheduler — check every minute
+setInterval(async () => {
+  const now = new Date();
+  for (const [id, s] of schedules.entries()) {
+    if (s.status === 'scheduled' && new Date(s.scheduledAt) <= now) {
+      console.log(`📅 Publishing scheduled post ${id}`);
+      schedules.set(id, { ...s, status: 'published', publishedAt: now.toISOString() });
+    }
+  }
+}, 60000);
