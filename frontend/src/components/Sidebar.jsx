@@ -10,6 +10,7 @@ const NAV = [
   { id:'analytics', label:'Analytics',           icon:'◎',  section:'Insights' },
   { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
   { id:'landing',   label:'Landing Page Builder', icon:'🚀', section:'Content' },
+  { id:'images',    label:'AI Image Generator',    icon:'🖼', section:'Content' },
   { id:'email',     label:'Email Notifications', icon:'📧', section:'Settings' },
   { id:'tutorial',  label:'Tutorial',            icon:'📖', section:'Settings' },
 ];
