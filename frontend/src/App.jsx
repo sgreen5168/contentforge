@@ -8,6 +8,7 @@ import BulkGenerator from './pages/BulkGenerator.jsx';
 import EmailSettings from './pages/EmailSettings.jsx';
 import Analytics from './pages/Analytics.jsx';
 import { Brand, Compliance } from './pages/OtherPages.jsx';
+import LandingPageBuilder from './pages/LandingPageBuilder.jsx';
 import styles from './App.module.css';
 
 // ── Inline Tutorial — no separate file needed ─────────────────────────────────
@@ -422,6 +423,7 @@ const PAGE_LABELS = {
   composer:'AI Composer', video:'AI Video Engine', scheduler:'Video Scheduler',
   bulk:'Bulk Generator', email:'Email Notifications', analytics:'Analytics',
   tutorial:'Tutorial',
+  landing:'Landing Page Builder',
   reddit:'Reddit Integration', brand:'Brand Voice', compliance:'Compliance',
 };
 
@@ -468,6 +470,7 @@ export default function App() {
           {page === 'email'      && <EmailSettings />}
           {page === 'analytics'  && <Analytics />}
           {page === 'tutorial'   && <TutorialPage />}
+          {page === 'landing'    && <LandingPageBuilder />}
           {page === 'brand'      && <Brand />}
           {page === 'compliance' && <Compliance />}
         </main>
