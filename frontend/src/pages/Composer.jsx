@@ -66,7 +66,12 @@ export default function Composer({ onPlatformsChange }) {
   const [editing, setEditing]     = useState({});
   const [error, setError]         = useState('');
   const [copied, setCopied]       = useState('');
-  const [linkMode, setLinkMode]   = useState('auto'); // auto | keyword | manual
+  const [linkMode, setLinkMode]   = useState('auto');
+  const [autoImage, setAutoImage] = useState(true);
+  const [postImage, setPostImage] = useState(null);
+  const [imgLoading, setImgLoad]  = useState(false);
+  const [imgError, setImgError]   = useState('');
+  const [selImage, setSelImage]   = useState(null); // auto | keyword | manual
 
   const active   = Object.keys(plats).filter(p => plats[p]);
   const hasInput = mode === 'topic' ? topic.trim() : url.trim();
@@ -99,6 +104,12 @@ export default function Composer({ onPlatformsChange }) {
       clearTimeout(t1); clearTimeout(t2);
       setPosts(result);
       setStatus('done');
+      // Auto-generate image from post content
+      if (autoImage) {
+        const firstPost = result[active[0]];
+        const postText = firstPost?.text || topic || url;
+        generatePostImage(postText);
+      }
     } catch (e) {
       clearTimeout(t1); clearTimeout(t2);
       setError(e.message);
@@ -156,6 +167,38 @@ export default function Composer({ onPlatformsChange }) {
   function resetEdit(key) {
     setEdited(prev => { const n = { ...prev }; delete n[key]; return n; });
     setEditing(prev => ({ ...prev, [key]: false }));
+  }
+
+  async function generatePostImage(postText) {
+    setImgLoad(true); setImgError(''); setPostImage(null);
+    try {
+      // Build a clean visual prompt from the post text
+      const words = postText.replace(/[#@]/g, '').replace(/https?:\/\/\S+/g, '').trim();
+      const prompt = `${words.slice(0, 200)}, lifestyle photography, social media, professional, no text`;
+      const seed = Math.floor(Math.random() * 999999);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
+      setPostImage({ url, prompt });
+      setSelImage({ url, prompt });
+    } catch (e) {
+      setImgError(e.message);
+    } finally {
+      setImgLoad(false);
+    }
+  }
+
+  async function regenerateImage(customPrompt) {
+    setImgLoad(true); setImgError('');
+    try {
+      const seed = Math.floor(Math.random() * 999999);
+      const finalPrompt = customPrompt || (postImage?.prompt || topic);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
+      setPostImage({ url, prompt: finalPrompt });
+      setSelImage({ url, prompt: finalPrompt });
+    } catch (e) {
+      setImgError(e.message);
+    } finally {
+      setImgLoad(false);
+    }
   }
 
   return (
@@ -272,6 +315,17 @@ export default function Composer({ onPlatformsChange }) {
             )}
           </div>
 
+          {/* Auto image toggle */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>🖼 Auto-generate image</div>
+              <div style={{fontSize:11,color:'var(--text3)'}}>Creates a relevant image from your post content automatically</div>
+            </div>
+            <label className={styles.toggle}>
+              <input type="checkbox" checked={autoImage} onChange={e => setAutoImage(e.target.checked)} />
+              <span className={styles.slider} />
+            </label>
+          </div>
           <div className={styles.generateBar}>
             <div style={{fontSize:12,color:'var(--text3)'}}>
               {affiliate && affiliateUrl ? '🔗 Affiliate link will be embedded' : ''}
@@ -320,6 +374,60 @@ export default function Composer({ onPlatformsChange }) {
               <button className="btn btn-ghost btn-sm" onClick={generate}>Regenerate ↻</button>
             </div>
           </div>
+
+          {/* Generated image panel */}
+          {(imgLoading || postImage) && (
+            <div style={{background:'rgba(16,45,79,.9)',border:'1px solid rgba(29,158,117,.2)',borderRadius:12,overflow:'hidden',marginBottom:14}}>
+              <div style={{padding:'11px 15px',borderBottom:'1px solid rgba(29,158,117,.15)',fontSize:13,fontWeight:500,color:'#E8F4F0',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <span>🖼 Post image</span>
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={() => regenerateImage()}
+                    style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid rgba(29,158,117,.3)',background:'transparent',color:'#5DCAA5',cursor:'pointer',fontFamily:'inherit'}}>
+                    ↻ Regenerate
+                  </button>
+                  {postImage && (
+                    <button onClick={() => { const a=document.createElement('a');a.href=postImage.url;a.download='post-image.png';a.target='_blank';a.click(); }}
+                      style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'none',background:'#1D9E75',color:'white',cursor:'pointer',fontFamily:'inherit'}}>
+                      ⬇ Download
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div style={{padding:'12px 15px'}}>
+                {imgLoading && (
+                  <div style={{display:'flex',alignItems:'center',gap:10,color:'#5DCAA5',fontSize:13}}>
+                    <div style={{width:18,height:18,border:'2px solid rgba(29,158,117,.3)',borderTopColor:'#1D9E75',borderRadius:'50%',animation:'spin 1s linear infinite',flexShrink:0}} />
+                    Generating image from your post content...
+                  </div>
+                )}
+                {postImage && !imgLoading && (
+                  <div>
+                    <img src={postImage.url} alt="Post visual"
+                      style={{width:'100%',maxHeight:300,objectFit:'cover',borderRadius:8,marginBottom:10,display:'block'}}
+                      onError={() => setImgError('Image failed to load — click Regenerate')}
+                    />
+                    {/* Custom prompt */}
+                    <div style={{display:'flex',gap:6}}>
+                      <input
+                        placeholder="Describe a different image..."
+                        style={{flex:1,border:'1px solid rgba(29,158,117,.2)',borderRadius:6,padding:'6px 10px',fontSize:12,fontFamily:'inherit',color:'#E8F4F0',background:'rgba(22,61,106,.6)',outline:'none'}}
+                        onKeyDown={e => { if(e.key==='Enter') regenerateImage(e.target.value); }}
+                        id="imgPromptInput"
+                      />
+                      <button onClick={() => { const v=document.getElementById('imgPromptInput').value; if(v) regenerateImage(v); }}
+                        style={{padding:'6px 12px',borderRadius:6,border:'none',background:'#1D9E75',color:'white',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
+                        ⚡
+                      </button>
+                    </div>
+                    {imgError && <div style={{fontSize:11,color:'#F09595',marginTop:6}}>⚠ {imgError}</div>}
+                    <div style={{fontSize:10,color:'#4A7A72',marginTop:6}}>
+                      💡 Download and attach when posting to Facebook, Instagram or Pinterest
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className={styles.postGrid}>
             {active.filter(p => posts[p]).map(p => {
@@ -419,4 +527,6 @@ export default function Composer({ onPlatformsChange }) {
       )}
     </div>
   );
+
+  ;<style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 }
