@@ -117,6 +117,35 @@ Avoid income guarantees, false claims, or misleading urgency.`,
     }
   }
 
+  async function publishPage() {
+    if (!page) return;
+    setGenerating(true);
+    try {
+      const slug = product.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) + '-' + Math.random().toString(36).slice(2,5);
+      const res = await fetch(`${API}/api/landing/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          headline:    page.headline,
+          subheadline: page.subheadline,
+          benefits:    page.benefits,
+          cta:         page.cta || keyword || 'Learn More',
+          affiliateUrl: page.affiliateUrl,
+          disclaimer:  page.disclaimer,
+          product,
+          slug,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPublishedUrl(data.url);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function copyHTML() {
     if (!page) return;
     const html = `<!DOCTYPE html>
@@ -327,6 +356,10 @@ Avoid income guarantees, false claims, or misleading urgency.`,
                       <button onClick={copyText}
                         style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', cursor:'pointer', fontFamily:'inherit' }}>
                         {copied==='text' ? '✓ Copied' : 'Copy text'}
+                      </button>
+                      <button onClick={publishPage} disabled={generating}
+                        style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid rgba(29,158,117,.3)', background:'rgba(29,158,117,.15)', color:'#5DCAA5', cursor:'pointer', fontFamily:'inherit' }}>
+                        {generating ? '⏳...' : '🚀 Publish'}
                       </button>
                       <button onClick={copyHTML}
                         style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'#1D9E75', color:'white', cursor:'pointer', fontFamily:'inherit' }}>
