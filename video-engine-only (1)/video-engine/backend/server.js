@@ -681,6 +681,103 @@ if (process.env.INSTAGRAM_ACCESS_TOKEN) {
     .catch(e => console.warn('Instagram check failed:', e.message));
 }
 
+// ── Hosted Landing Pages ─────────────────────────────────────────────────────
+const landingPages = new Map(); // in-memory store
+
+app.post('/api/landing/create', async (req, res) => {
+  try {
+    const { headline, subheadline, benefits, cta, affiliateUrl, disclaimer, slug, product, style } = req.body;
+    if (!affiliateUrl || !headline) return res.status(400).json({ error: 'headline and affiliateUrl required' });
+
+    const id = slug || Math.random().toString(36).slice(2, 8);
+    const page = {
+      id, headline, subheadline, benefits: benefits || [],
+      cta: cta || 'Learn More', affiliateUrl, disclaimer,
+      product, style: style || 'teal',
+      createdAt: new Date().toISOString(),
+      views: 0, clicks: 0,
+    };
+    landingPages.set(id, page);
+    const pageUrl = `${process.env.FRONTEND_URL || 'https://contentstudiohub.com'}/lp/${id}`;
+    console.log(`✅ Landing page created: ${pageUrl}`);
+    res.json({ success: true, id, url: pageUrl, page });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/landing/:id', (req, res) => {
+  const page = landingPages.get(req.params.id);
+  if (!page) return res.status(404).json({ error: 'Landing page not found' });
+  res.json(page);
+});
+
+app.get('/api/landing', (_req, res) => {
+  res.json({ pages: [...landingPages.values()].sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)) });
+});
+
+app.delete('/api/landing/:id', (req, res) => {
+  landingPages.delete(req.params.id);
+  res.json({ success: true });
+});
+
+app.post('/api/landing/:id/click', (req, res) => {
+  const page = landingPages.get(req.params.id);
+  if (page) { page.clicks++; landingPages.set(req.params.id, page); }
+  res.json({ success: true });
+});
+
+// ── Render landing page as HTML ───────────────────────────────────────────────
+app.get('/lp/:id', (req, res) => {
+  const page = landingPages.get(req.params.id);
+  if (!page) return res.status(404).send('<h1>Page not found</h1>');
+  page.views++;
+  landingPages.set(req.params.id, page);
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${page.headline}</title>
+<meta name="description" content="${page.subheadline || page.headline}">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0D2137;color:#E8F4F0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#102D4F;border:1px solid rgba(29,158,117,.25);border-radius:16px;padding:40px 32px;max-width:520px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .badge{display:inline-block;background:rgba(29,158,117,.2);color:#5DCAA5;font-size:11px;padding:4px 12px;border-radius:20px;margin-bottom:16px;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+  h1{font-size:26px;font-weight:700;margin-bottom:12px;line-height:1.3;color:#E8F4F0}
+  .sub{font-size:16px;color:#7BAAA0;margin-bottom:28px;line-height:1.6}
+  .benefits{list-style:none;text-align:left;margin-bottom:28px}
+  .benefits li{padding:10px 0;border-bottom:1px solid rgba(29,158,117,.1);font-size:15px;display:flex;gap:10px;align-items:flex-start;color:#E8F4F0}
+  .benefits li::before{content:'✓';color:#1D9E75;font-weight:700;flex-shrink:0;margin-top:1px}
+  .cta{display:block;background:#1D9E75;color:white;text-decoration:none;padding:16px 32px;border-radius:10px;font-size:17px;font-weight:600;margin-bottom:12px;transition:opacity .2s;cursor:pointer}
+  .cta:hover{opacity:.9}
+  .sub-cta{font-size:12px;color:#4A7A72;margin-bottom:20px}
+  .disclaimer{font-size:11px;color:#4A7A72;line-height:1.5;border-top:1px solid rgba(29,158,117,.1);padding-top:16px}
+  .views{font-size:10px;color:#2A5A52;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">✦ Featured Resource</div>
+  <h1>${page.headline}</h1>
+  <p class="sub">${page.subheadline || ''}</p>
+  <ul class="benefits">
+    ${(page.benefits || []).map(b => `<li>${b.replace(/^[-•*✓]\s*/,'')}</li>`).join('')}
+  </ul>
+  <a href="${page.affiliateUrl}" class="cta" onclick="fetch('/api/landing/${page.id}/click',{method:'POST'})" target="_blank" rel="noopener noreferrer">
+    ${page.cta} →
+  </a>
+  <p class="sub-cta">No obligation • Takes less than 60 seconds</p>
+  <p class="disclaimer">${page.disclaimer || 'Results may vary. This page contains affiliate links.'} #ad #affiliate</p>
+  <p class="views">${page.views} people viewed this page</p>
+</div>
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
+
 // ── Image generation via Pollinations.ai (free, no API key needed) ────────────
 app.post('/api/image/generate', async (req, res) => {
   try {
