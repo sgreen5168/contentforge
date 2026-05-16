@@ -681,51 +681,47 @@ if (process.env.INSTAGRAM_ACCESS_TOKEN) {
     .catch(e => console.warn('Instagram check failed:', e.message));
 }
 
-// ── Image generation ─────────────────────────────────────────────────────────
+// ── Image generation via Pollinations.ai (free, no API key needed) ────────────
 app.post('/api/image/generate', async (req, res) => {
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'OPENAI_API_KEY not configured in Railway' });
   try {
     const fetch = (await import('node-fetch')).default;
-    const { prompt, negative_prompt, width = 1024, height = 1024, n = 2, style } = req.body;
+    const { prompt, width = 1024, height = 1024, n = 2, style } = req.body;
     if (!prompt) return res.status(400).json({ error: 'prompt required' });
 
-    // Build enhanced prompt
     const styleMap = {
       photorealistic: 'photorealistic, high quality photography, professional photo, 4K',
-      lifestyle:      'lifestyle photography, natural light, authentic, warm tones, Instagram aesthetic',
+      lifestyle:      'lifestyle photography, natural light, authentic, warm tones',
       professional:   'professional corporate photography, clean background, business style',
       minimalist:     'minimalist, clean, simple background, elegant, modern',
-      vibrant:        'vibrant colors, bold, eye-catching, dynamic composition, high saturation',
-      social:         'social media ready, engaging, modern, trendy aesthetic, polished',
+      vibrant:        'vibrant colors, bold, eye-catching, dynamic composition',
+      social:         'social media ready, engaging, modern, trendy aesthetic',
     };
+
     const enhancedPrompt = [
       prompt,
-      styleMap[style] || '',
-      'no text overlay, no watermarks, no logos, high quality',
+      styleMap[style] || 'high quality, professional',
+      'no text, no watermarks, no logos',
     ].filter(Boolean).join(', ');
 
-    // DALL-E 2 — works with all OpenAI accounts
     const count = Math.min(n, 4);
-    const r = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model:  'dall-e-2',
-        prompt: enhancedPrompt.slice(0, 1000),
-        n:      count,
-        size:   '1024x1024',
-      }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error?.message || `Image generation error: ${r.status}`);
-    const results = data.data.map(img => ({ url: img.url }));
-        console.log(`✅ Generated ${results.length} images`);
+    const results = [];
+
+    for (let i = 0; i < count; i++) {
+      const seed = Math.floor(Math.random() * 999999);
+      const w = Math.min(width, 1024);
+      const h = Math.min(height, 1024);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${w}&height=${h}&seed=${seed}&nologo=true&enhance=true`;
+      results.push({ url, seed });
+    }
+
+    console.log(`✅ Generated ${results.length} images via Pollinations.ai`);
     res.json({ images: results, count: results.length });
   } catch (e) {
     console.error('Image generation error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
+
 
 app.post('/api/affiliate/shorten', async (req, res) => {
   try {
