@@ -11,13 +11,49 @@ const STYLES = [
   { id:'social',         label:'Social Media',     icon:'📱' },
 ];
 
-const SIZES = [
-  { id:'square',    label:'Square 1:1',     w:1024, h:1024,  icon:'⬜', use:'Instagram feed, Facebook' },
-  { id:'portrait',  label:'Portrait 4:5',   w:896,  h:1120,  icon:'📱', use:'Instagram Reels, TikTok' },
-  { id:'landscape', label:'Landscape 16:9', w:1344, h:768,   icon:'🖥', use:'YouTube, Facebook cover' },
-  { id:'story',     label:'Story 9:16',     w:768,  h:1344,  icon:'📲', use:'Stories, Reels, TikTok' },
-  { id:'banner',    label:'Banner 3:1',     w:1536, h:512,   icon:'🏷', use:'Landing page header' },
-];
+const PLATFORMS_SIZES = {
+  facebook: [
+    { id:'fb-feed',    label:'Feed Post',    w:1200, h:630,  icon:'📰', use:'Facebook feed — 1200x630' },
+    { id:'fb-square',  label:'Square Post',  w:1080, h:1080, icon:'⬜', use:'Facebook square — 1080x1080' },
+    { id:'fb-story',   label:'Story / Reel', w:1080, h:1920, icon:'📲', use:'Facebook Story/Reel — 1080x1920' },
+    { id:'fb-cover',   label:'Cover Photo',  w:851,  h:315,  icon:'🖼', use:'Facebook cover — 851x315' },
+  ],
+  instagram: [
+    { id:'ig-square',  label:'Square Post',  w:1080, h:1080, icon:'⬜', use:'Instagram square — 1080x1080 ★ most popular' },
+    { id:'ig-portrait',label:'Portrait Post', w:1080, h:1350, icon:'📱', use:'Instagram portrait — 1080x1350 ★ highest reach' },
+    { id:'ig-landscape',label:'Landscape',   w:1080, h:566,  icon:'🖥', use:'Instagram landscape — 1080x566' },
+    { id:'ig-story',   label:'Story / Reel', w:1080, h:1920, icon:'📲', use:'Instagram Story/Reel — 1080x1920' },
+  ],
+  pinterest: [
+    { id:'pin-standard',label:'Standard Pin', w:1000, h:1500, icon:'📌', use:'Pinterest standard — 1000x1500 ★ best performer' },
+    { id:'pin-square',  label:'Square Pin',   w:1000, h:1000, icon:'⬜', use:'Pinterest square — 1000x1000' },
+    { id:'pin-long',    label:'Long Pin',     w:1000, h:2100, icon:'📏', use:'Pinterest long — 1000x2100' },
+    { id:'pin-story',   label:'Story Pin',    w:1080, h:1920, icon:'📲', use:'Pinterest Story — 1080x1920' },
+  ],
+  youtube: [
+    { id:'yt-thumb',   label:'Thumbnail',    w:1280, h:720,  icon:'▶', use:'YouTube thumbnail — 1280x720 ★ required' },
+    { id:'yt-shorts',  label:'Shorts',       w:1080, h:1920, icon:'📲', use:'YouTube Shorts — 1080x1920' },
+    { id:'yt-banner',  label:'Channel Art',  w:2560, h:1440, icon:'🖥', use:'YouTube channel art — 2560x1440' },
+  ],
+  tiktok: [
+    { id:'tt-cover',   label:'Video Cover',  w:1080, h:1920, icon:'📲', use:'TikTok cover — 1080x1920' },
+    { id:'tt-square',  label:'Square',       w:1080, h:1080, icon:'⬜', use:'TikTok square — 1080x1080' },
+  ],
+  universal: [
+    { id:'uni-square', label:'Square 1:1',   w:1080, h:1080, icon:'⬜', use:'Works on Facebook, Instagram, Pinterest' },
+    { id:'uni-portrait',label:'Portrait 4:5',w:1080, h:1350, icon:'📱', use:'Works on Instagram + Facebook feed' },
+    { id:'uni-vertical',label:'Vertical 9:16',w:1080,h:1920, icon:'📲', use:'Works on all Stories + Reels + TikTok' },
+    { id:'uni-landscape',label:'Landscape 16:9',w:1280,h:720,icon:'🖥', use:'Works on YouTube + Facebook cover' },
+    { id:'uni-pinterest',label:'Pinterest 2:3',w:1000,h:1500,icon:'📌', use:'Optimised for Pinterest' },
+  ],
+};
+
+const PLATFORM_LABELS = {
+  facebook:'Facebook', instagram:'Instagram', pinterest:'Pinterest',
+  youtube:'YouTube', tiktok:'TikTok', universal:'Universal (multi-platform)',
+};
+
+const SIZES = PLATFORMS_SIZES.universal; // default
 
 const THEMES = [
   'Make Money Online', 'Health & Wellness', 'Fitness', 'Beauty & Skincare',
@@ -28,7 +64,8 @@ const THEMES = [
 export default function ImageGenerator({ onImageSelect, compact = false }) {
   const [prompt, setPrompt]     = useState('');
   const [style, setStyle]       = useState('lifestyle');
-  const [size, setSize]         = useState('square');
+  const [platform, setPlatform] = useState('universal');
+  const [size, setSize]         = useState('uni-square');
   const [theme, setTheme]       = useState('');
   const [negPrompt, setNeg]     = useState('text, watermark, logo, blurry, low quality, distorted');
   const [generating, setGen]    = useState(false);
@@ -40,7 +77,8 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
   const [count, setCount]       = useState(2);
   const canvasRef               = useRef(null);
 
-  const selectedSize = SIZES.find(s => s.id === size);
+  const currentSizes = PLATFORMS_SIZES[platform] || PLATFORMS_SIZES.universal;
+  const selectedSize = currentSizes.find(s => s.id === size) || currentSizes[0];
 
   async function generate(editMode = false) {
     const finalPrompt = editMode ? editPrompt : buildPrompt();
@@ -124,16 +162,24 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
           placeholder="Describe the image you want..."
           style={{ width:'100%', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, padding:'8px 11px', fontSize:12, fontFamily:'inherit', color:'#E8F4F0', background:'rgba(22,61,106,.6)', outline:'none', marginBottom:8, boxSizing:'border-box' }}
         />
-        <div style={{ display:'flex', gap:6, marginBottom:8, flexWrap:'wrap' }}>
-          {SIZES.slice(0,3).map(s => (
-            <button key={s.id} onClick={() => setSize(s.id)}
+        <div style={{ display:'flex', gap:4, marginBottom:8, flexWrap:'wrap' }}>
+          {Object.entries(PLATFORM_LABELS).slice(0,5).map(([key, label]) => (
+            <button key={key} onClick={() => {
+              setPlatform(key);
+              const firstSize = PLATFORMS_SIZES[key]?.[0];
+              if (firstSize) setSize(firstSize.id);
+            }}
               style={{ fontSize:10, padding:'3px 8px', borderRadius:6, cursor:'pointer', fontFamily:'inherit',
-                border: `1px solid ${size===s.id ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
-                background: size===s.id ? 'rgba(29,158,117,.15)' : 'transparent',
-                color: size===s.id ? '#5DCAA5' : '#7BAAA0' }}>
-              {s.icon} {s.label}
+                border: `1px solid ${platform===key ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
+                background: platform===key ? 'rgba(29,158,117,.15)' : 'transparent',
+                color: platform===key ? '#5DCAA5' : '#7BAAA0' }}>
+              {key==='facebook'?'📘':key==='instagram'?'📷':key==='pinterest'?'📌':key==='youtube'?'▶':'🎵'} {label}
             </button>
           ))}
+        </div>
+        {/* Show selected format */}
+        <div style={{ fontSize:10, color:'#4A7A72', marginBottom:6 }}>
+          Format: {selectedSize?.label} — {selectedSize?.use}
         </div>
         <button onClick={() => generate(false)} disabled={generating || !prompt.trim()}
           style={{ width:'100%', padding:'8px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:'inherit', opacity: generating||!prompt.trim() ? 0.5 : 1 }}>
@@ -213,9 +259,26 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
                 ))}
               </div>
 
-              <div style={{ fontSize:10, color:'#4A7A72', fontWeight:500, textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Image size</div>
+              <div style={{ fontSize:10, color:'#4A7A72', fontWeight:500, textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Target platform</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4, marginBottom:12 }}>
+                {Object.entries(PLATFORM_LABELS).map(([key, label]) => (
+                  <button key={key} onClick={() => {
+                    setPlatform(key);
+                    const firstSize = PLATFORMS_SIZES[key]?.[0];
+                    if (firstSize) setSize(firstSize.id);
+                  }}
+                    style={{ padding:'7px 8px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', fontSize:11, textAlign:'center',
+                      border: `1px solid ${platform===key ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
+                      background: platform===key ? 'rgba(29,158,117,.12)' : 'transparent',
+                      color: platform===key ? '#5DCAA5' : '#7BAAA0' }}>
+                    {key==='facebook'?'📘':key==='instagram'?'📷':key==='pinterest'?'📌':key==='youtube'?'▶':key==='tiktok'?'🎵':'🌐'} {label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ fontSize:10, color:'#4A7A72', fontWeight:500, textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Image format</div>
               <div style={{ display:'flex', flexDirection:'column', gap:4, marginBottom:12 }}>
-                {SIZES.map(s => (
+                {currentSizes.map(s => (
                   <button key={s.id} onClick={() => setSize(s.id)}
                     style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', textAlign:'left',
                       border: `1px solid ${size===s.id ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
