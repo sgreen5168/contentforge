@@ -11,6 +11,8 @@ const NAV = [
   { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
   { id:'landing',   label:'Landing Page Builder', icon:'🚀', section:'Content' },
   { id:'images',    label:'AI Image Generator',    icon:'🖼', section:'Content' },
+  { id:'media',     label:'Media Library',           icon:'📁', section:'Content' },
+  { id:'submitter', label:'Post Submitter',           icon:'📤', section:'Content' },
   { id:'email',     label:'Email Notifications', icon:'📧', section:'Settings' },
   { id:'tutorial',  label:'Tutorial',            icon:'📖', section:'Settings' },
 ];
