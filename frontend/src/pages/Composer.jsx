@@ -202,7 +202,6 @@ export default function Composer({ onPlatformsChange }) {
 
 
   return (
-  return (
     <div className="page-content">
       <h1 className="page-title serif">AI Content <span>Composer</span></h1>
       <p className="page-sub">Enter a topic, URL, or affiliate link — Claude writes platform-ready posts instantly</p>
@@ -506,8 +505,7 @@ export default function Composer({ onPlatformsChange }) {
           )}
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
-
-  ;<style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 }
