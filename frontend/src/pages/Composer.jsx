@@ -375,60 +375,6 @@ export default function Composer({ onPlatformsChange }) {
             </div>
           </div>
 
-          {/* Generated image panel */}
-          {(imgLoading || postImage) && (
-            <div style={{background:'rgba(16,45,79,.9)',border:'1px solid rgba(29,158,117,.2)',borderRadius:12,overflow:'hidden',marginBottom:14}}>
-              <div style={{padding:'11px 15px',borderBottom:'1px solid rgba(29,158,117,.15)',fontSize:13,fontWeight:500,color:'#E8F4F0',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <span>🖼 Post image</span>
-                <div style={{display:'flex',gap:6}}>
-                  <button onClick={() => regenerateImage()}
-                    style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'1px solid rgba(29,158,117,.3)',background:'transparent',color:'#5DCAA5',cursor:'pointer',fontFamily:'inherit'}}>
-                    ↻ Regenerate
-                  </button>
-                  {postImage && (
-                    <button onClick={() => { const a=document.createElement('a');a.href=postImage.url;a.download='post-image.png';a.target='_blank';a.click(); }}
-                      style={{fontSize:11,padding:'3px 9px',borderRadius:6,border:'none',background:'#1D9E75',color:'white',cursor:'pointer',fontFamily:'inherit'}}>
-                      ⬇ Download
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div style={{padding:'12px 15px'}}>
-                {imgLoading && (
-                  <div style={{display:'flex',alignItems:'center',gap:10,color:'#5DCAA5',fontSize:13}}>
-                    <div style={{width:18,height:18,border:'2px solid rgba(29,158,117,.3)',borderTopColor:'#1D9E75',borderRadius:'50%',animation:'spin 1s linear infinite',flexShrink:0}} />
-                    Generating image from your post content...
-                  </div>
-                )}
-                {postImage && !imgLoading && (
-                  <div>
-                    <img src={postImage.url} alt="Post visual"
-                      style={{width:'100%',maxHeight:300,objectFit:'cover',borderRadius:8,marginBottom:10,display:'block'}}
-                      onError={() => setImgError('Image failed to load — click Regenerate')}
-                    />
-                    {/* Custom prompt */}
-                    <div style={{display:'flex',gap:6}}>
-                      <input
-                        placeholder="Describe a different image..."
-                        style={{flex:1,border:'1px solid rgba(29,158,117,.2)',borderRadius:6,padding:'6px 10px',fontSize:12,fontFamily:'inherit',color:'#E8F4F0',background:'rgba(22,61,106,.6)',outline:'none'}}
-                        onKeyDown={e => { if(e.key==='Enter') regenerateImage(e.target.value); }}
-                        id="imgPromptInput"
-                      />
-                      <button onClick={() => { const v=document.getElementById('imgPromptInput').value; if(v) regenerateImage(v); }}
-                        style={{padding:'6px 12px',borderRadius:6,border:'none',background:'#1D9E75',color:'white',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
-                        ⚡
-                      </button>
-                    </div>
-                    {imgError && <div style={{fontSize:11,color:'#F09595',marginTop:6}}>⚠ {imgError}</div>}
-                    <div style={{fontSize:10,color:'#4A7A72',marginTop:6}}>
-                      💡 Download and attach when posting to Facebook, Instagram or Pinterest
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className={styles.postGrid}>
             {active.filter(p => posts[p]).map(p => {
               const post     = posts[p];
@@ -452,6 +398,37 @@ export default function Composer({ onPlatformsChange }) {
                     )}
                     <span style={{marginLeft:'auto',fontSize:10,color:'var(--text3)'}}>{style}</span>
                   </div>
+
+                  {/* Per-post image — sized for each platform */}
+                  {(imgLoading || postImage) && (
+                    <div style={{borderBottom:'1px solid rgba(29,158,117,.1)'}}>
+                      {imgLoading && (
+                        <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px',color:'#5DCAA5',fontSize:12}}>
+                          <div style={{width:14,height:14,border:'2px solid rgba(29,158,117,.3)',borderTopColor:'#1D9E75',borderRadius:'50%',animation:'spin 1s linear infinite',flexShrink:0}} />
+                          Generating image...
+                        </div>
+                      )}
+                      {postImage && !imgLoading && (
+                        <div>
+                          <img src={postImage.url} alt="Post visual"
+                            style={{width:'100%',height:p==='instagram'?200:170,objectFit:'cover',display:'block'}}
+                            onError={e => { e.target.style.display='none'; }}
+                          />
+                          <div style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'rgba(13,33,55,.9)'}}>
+                            <span style={{fontSize:10,color:'#4A7A72',flex:1}}>🖼 AI image</span>
+                            <button onClick={() => regenerateImage()}
+                              style={{fontSize:10,padding:'2px 7px',borderRadius:4,border:'1px solid rgba(29,158,117,.3)',background:'transparent',color:'#5DCAA5',cursor:'pointer',fontFamily:'inherit'}}>
+                              ↻ New
+                            </button>
+                            <button onClick={() => { const a=document.createElement('a');a.href=postImage.url;a.download=`post-image-${p}.png`;a.target='_blank';a.click(); }}
+                              style={{fontSize:10,padding:'2px 7px',borderRadius:4,border:'none',background:'#1D9E75',color:'white',cursor:'pointer',fontFamily:'inherit'}}>
+                              ⬇
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Post body */}
                   {isEdit ? (
