@@ -172,35 +172,36 @@ export default function Composer({ onPlatformsChange }) {
   async function generatePostImage(postText) {
     setImgLoad(true); setImgError(''); setPostImage(null);
     try {
-      // Build a clean visual prompt from the post text
-      const words = postText.replace(/[#@]/g, '').replace(/https?:\/\/\S+/g, '').trim();
-      const prompt = `${words.slice(0, 200)}, lifestyle photography, social media, professional, no text`;
+      const cleaned = postText.replace(/[#@]/g, '').replace(/https?:\/\/\S+/g, '').trim();
+      const topicKeyword = (mode === 'topic' ? topic : url).slice(0, 60).replace(/https?:\/\/\S+/g, '').trim();
+      const basePrompt = topicKeyword || cleaned.slice(0, 100);
+      const seoPrompt = [basePrompt, 'lifestyle photography, natural lighting, high quality, social media ready', 'no text, no watermarks, no logos'].join(', ');
+      const seoName = basePrompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40).replace(/-+$/, '');
+      const altText = basePrompt + ' social media lifestyle image';
       const seed = Math.floor(Math.random() * 999999);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
-      setPostImage({ url, prompt });
-      setSelImage({ url, prompt });
-    } catch (e) {
-      setImgError(e.message);
-    } finally {
-      setImgLoad(false);
-    }
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(seoPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
+      setPostImage({ url: imageUrl, prompt: seoPrompt, altText, fileName: seoName + '-social.png', topic: basePrompt });
+      setSelImage({ url: imageUrl, prompt: seoPrompt, altText });
+    } catch (e) { setImgError(e.message); }
+    finally { setImgLoad(false); }
   }
 
   async function regenerateImage(customPrompt) {
     setImgLoad(true); setImgError('');
     try {
       const seed = Math.floor(Math.random() * 999999);
-      const finalPrompt = customPrompt || (postImage?.prompt || topic);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
-      setPostImage({ url, prompt: finalPrompt });
-      setSelImage({ url, prompt: finalPrompt });
-    } catch (e) {
-      setImgError(e.message);
-    } finally {
-      setImgLoad(false);
-    }
+      const base = customPrompt || postImage?.topic || topic || '';
+      const finalPrompt = base + ', lifestyle photography, social media ready, no text, no watermarks';
+      const seoName = base.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
+      setPostImage({ url: imageUrl, prompt: finalPrompt, altText: base + ' social media image', fileName: seoName + '-social.png', topic: base });
+      setSelImage({ url: imageUrl, prompt: finalPrompt });
+    } catch (e) { setImgError(e.message); }
+    finally { setImgLoad(false); }
   }
 
+
+  return (
   return (
     <div className="page-content">
       <h1 className="page-title serif">AI Content <span>Composer</span></h1>
@@ -410,17 +411,20 @@ export default function Composer({ onPlatformsChange }) {
                       )}
                       {postImage && !imgLoading && (
                         <div>
-                          <img src={postImage.url} alt="Post visual"
+                          <img src={postImage.url} alt={postImage.altText || (topic + " social media image")}
                             style={{width:'100%',height:p==='instagram'?200:170,objectFit:'cover',display:'block'}}
                             onError={e => { e.target.style.display='none'; }}
                           />
                           <div style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',background:'rgba(13,33,55,.9)'}}>
-                            <span style={{fontSize:10,color:'#4A7A72',flex:1}}>🖼 AI image</span>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:10,color:'#4A7A72'}}>🖼 AI image</div>
+                              <div style={{fontSize:9,color:'#2A5A52',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:120}}>{postImage.fileName}</div>
+                            </div>
                             <button onClick={() => regenerateImage()}
                               style={{fontSize:10,padding:'2px 7px',borderRadius:4,border:'1px solid rgba(29,158,117,.3)',background:'transparent',color:'#5DCAA5',cursor:'pointer',fontFamily:'inherit'}}>
                               ↻ New
                             </button>
-                            <button onClick={() => { const a=document.createElement('a');a.href=postImage.url;a.download=`post-image-${p}.png`;a.target='_blank';a.click(); }}
+                            <button onClick={() => { const a=document.createElement('a');a.href=postImage.url;a.download=postImage.fileName || (topic.toLowerCase().replace(/\s+/g,'-') + '-' + p + '-social.png');a.target='_blank';a.click(); }}
                               style={{fontSize:10,padding:'2px 7px',borderRadius:4,border:'none',background:'#1D9E75',color:'white',cursor:'pointer',fontFamily:'inherit'}}>
                               ⬇
                             </button>
