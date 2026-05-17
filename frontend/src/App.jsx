@@ -10,6 +10,8 @@ import Analytics from './pages/Analytics.jsx';
 import { Brand, Compliance } from './pages/OtherPages.jsx';
 import LandingPageBuilder from './pages/LandingPageBuilder.jsx';
 import ImageGenerator from './pages/ImageGenerator.jsx';
+import MediaLibrary from './pages/MediaLibrary.jsx';
+import PostSubmitter from './pages/PostSubmitter.jsx';
 import styles from './App.module.css';
 
 // ── Inline Tutorial — no separate file needed ─────────────────────────────────
@@ -79,6 +81,48 @@ const TUTORIAL_DATA = [
     { title:'Generating on mobile', desc:'Full pipeline works on mobile.',
       steps:['Tap AI Video Engine','Type topic','Set duration and platforms','Tap Generate Video ⚡','Watch Result tab — 3–5 minutes','Check Job History for completed videos'],
       tip:'Keep screen on — some browsers pause when locked.' },
+  ]},
+  { id:'overview', icon:'🗺', label:'Platform overview', topics:[
+    { title:'How ContentForge connects everything',
+      desc:'ContentForge is a complete content pipeline — each tool connects to the next in a logical workflow.',
+      steps:[
+        'STEP 1 — Create: AI Composer writes platform-specific posts · AI Video Engine generates scripts and videos · VSL Builder creates sales scripts',
+        'STEP 2 — Enhance: Media Library adds images and videos · Landing Page Builder creates hosted mini-pages · AI Image Generator creates SEO-optimized visuals',
+        'STEP 3 — Check: Compliance Checker scans every post for policy violations before publishing',
+        'STEP 4 — Publish: Post Submitter sends directly to Facebook and Instagram · Video Scheduler auto-posts at peak times · Bulk Generator creates 10 videos at once',
+        'STEP 5 — Track: Analytics dashboard shows performance · Email Notifications alert you when content publishes',
+      ],
+      tip:'The most powerful workflow: AI Composer → Landing Page Builder → Post Submitter. Your post links to your landing page which links to your affiliate offer.' },
+    { title:'The affiliate funnel workflow',
+      desc:'The recommended 4-step funnel for affiliate marketing with ContentForge.',
+      steps:[
+        'STEP 1 — Go to Landing Page Builder → enter your product and affiliate URL → click Generate → click Publish → copy your landing page URL',
+        'STEP 2 — Go to AI Composer → paste your landing page URL as the affiliate link → enable Embed affiliate link → choose Keyword mode → type your anchor text → click Generate Posts',
+        'STEP 3 — Posts now link to your landing page instead of directly to the affiliate link — this avoids platform penalties for direct affiliate links',
+        'STEP 4 — Visitor clicks post → lands on your branded page → reads benefits → clicks CTA → goes to affiliate offer → you earn commission',
+      ],
+      tip:'Direct affiliate links get flagged by Facebook and Instagram. A landing page in the middle improves trust, increases conversions, and avoids platform restrictions.' },
+    { title:'Platform connection status',
+      desc:'Which platforms are connected and what each one can do in ContentForge.',
+      steps:[
+        'FACEBOOK ✅ Connected — Post Submitter can publish text posts and videos directly to Make Money from Home page',
+        'INSTAGRAM ✅ Connected — Post Submitter can publish Reels and images to @sgreen5168',
+        'YOUTUBE ⏳ Pending — add YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN to Railway',
+        'PINTEREST ⏳ Pending — add PINTEREST_ACCESS_TOKEN to Railway after app approval',
+        'TIKTOK ⏳ Pending — add TIKTOK_ACCESS_TOKEN after developer app review',
+        'REDDIT ❌ Removed — account was blocked, not currently connected',
+      ],
+      tip:'You only need Facebook and Instagram connected to start publishing. Add YouTube and Pinterest when you are ready to expand your reach.' },
+    { title:'Image workflow — manual vs automatic',
+      desc:'ContentForge offers two ways to add images to your content.',
+      steps:[
+        'AUTOMATIC: In AI Composer toggle on Auto-generate image — Claude generates a relevant image from your post keywords automatically when you click Generate',
+        'MANUAL: In Media Library generate multiple AI images and pick the best one, upload your own product photos, or add a video from your PC',
+        'EDIT: In Media Library click Edit prompt to describe a change — generates a variation of the selected image',
+        'SEO: All images get descriptive alt text and keyword-rich file names automatically — important for Pinterest and Google image search',
+        'SIZES: AI Image Generator has platform-specific sizes — select Facebook, Instagram, Pinterest, YouTube or TikTok to get the exact right dimensions',
+      ],
+      tip:'For affiliate marketing your own product photos outperform AI images. Use Media Library to upload the product image and place it on your landing page for the highest conversion rate.' },
   ]},
   { id:'brandvoice', icon:'◈', label:'Brand Voice Memory', topics:[
     { title:'What is Brand Voice Memory', desc:'Brand Voice Memory teaches Claude your unique writing style so every post and script sounds like you — not like a generic AI.',
@@ -426,6 +470,8 @@ const PAGE_LABELS = {
   tutorial:'Tutorial',
   landing:'Landing Page Builder',
   images:'AI Image Generator',
+  media:'Media Library',
+  submitter:'Post Submitter',
   reddit:'Reddit Integration', brand:'Brand Voice', compliance:'Compliance',
 };
 
@@ -474,6 +520,8 @@ export default function App() {
           {page === 'tutorial'   && <TutorialPage />}
           {page === 'landing'    && <LandingPageBuilder />}
           {page === 'images'     && <ImageGenerator />}
+          {page === 'media'      && <MediaLibrary />}
+          {page === 'submitter'  && <PostSubmitter />}
           {page === 'brand'      && <Brand />}
           {page === 'compliance' && <Compliance />}
         </main>
