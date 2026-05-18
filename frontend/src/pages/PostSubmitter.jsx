@@ -5,8 +5,8 @@ const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 const PLATFORMS = {
   facebook:  { label:'Facebook',  icon:'📘', color:'#1877F2', desc:'Post to Make Money from Home page' },
   instagram: { label:'Instagram', icon:'📷', color:'#E1306C', desc:'Post Reel to @sgreen5168' },
-  pinterest: { label:'Pinterest', icon:'📌', color:'#E60023', desc:'Pin to your Pinterest boards' },
   youtube:   { label:'YouTube',   icon:'▶',  color:'#FF0000', desc:'Upload to your YouTube channel' },
+  pinterest: { label:'Pinterest', icon:'📌', color:'#E60023', desc:'Coming soon — trial pending' },
 };
 
 export default function PostSubmitter() {
@@ -36,6 +36,10 @@ export default function PostSubmitter() {
     try {
       const ig = await fetch(`${API}/api/instagram/verify`).then(r => r.json()).catch(() => ({ connected:false }));
       checks.instagram = ig.connected;
+    } catch {}
+    try {
+      const yt = await fetch(`${API}/api/youtube/verify`).then(r => r.json()).catch(() => ({ connected:false }));
+      checks.youtube = yt.connected;
     } catch {}
     setConnected(checks);
   }
@@ -76,6 +80,20 @@ export default function PostSubmitter() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ caption: content, videoUrl: mediaUrl, imageUrl: mediaUrl }),
+          });
+        } else if (plat === 'youtube') {
+          const isShort = mediaType === 'video' && mediaUrl;
+          const endpoint = isShort ? '/api/youtube/upload-short' : '/api/youtube/upload';
+          res = await fetch(`${API}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              videoUrl:    mediaUrl,
+              title:       title || content.slice(0, 80),
+              description: content,
+              tags:        [],
+              privacy:     'public',
+            }),
           });
         } else {
           setStatuses(prev => ({ ...prev, [plat]: 'skipped' }));
