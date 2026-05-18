@@ -67,11 +67,15 @@ console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
 console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
+console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌');
+console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
 console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
+console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌');
+console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
 
 // ── Script generation ─────────────────────────────────────────────────────────
 async function generateScript(params) {
@@ -666,6 +670,28 @@ app.post('/api/instagram/post-image', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── YouTube routes ───────────────────────────────────────────────────────────
+app.get('/api/youtube/verify', async (_req, res) => {
+  try {
+    const { verifyYouTubeCredentials } = await import('./services/youtubeService.js');
+    res.json(await verifyYouTubeCredentials());
+  } catch (e) { res.json({ connected: false, error: e.message }); }
+});
+
+app.post('/api/youtube/upload', async (req, res) => {
+  try {
+    const { uploadVideoToYouTube } = await import('./services/youtubeService.js');
+    res.json(await uploadVideoToYouTube(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/youtube/upload-short', async (req, res) => {
+  try {
+    const { uploadYouTubeShort } = await import('./services/youtubeService.js');
+    res.json(await uploadYouTubeShort(req.body));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Verify all platforms on startup ──────────────────────────────────────────
 if (process.env.FACEBOOK_ACCESS_TOKEN) {
   import('./services/facebookService.js')
@@ -679,6 +705,13 @@ if (process.env.INSTAGRAM_ACCESS_TOKEN) {
     .then(({ verifyInstagramCredentials }) => verifyInstagramCredentials())
     .then(r => console.log('Instagram:', r.connected ? `✅ @${r.username} (${r.followers} followers)` : `❌ ${r.error}`))
     .catch(e => console.warn('Instagram check failed:', e.message));
+}
+
+if (process.env.YOUTUBE_REFRESH_TOKEN) {
+  import('./services/youtubeService.js')
+    .then(({ verifyYouTubeCredentials }) => verifyYouTubeCredentials())
+    .then(r => console.log('YouTube:', r.connected ? `✅ ${r.channelName} (${r.subscribers} subscribers)` : `❌ ${r.error}`))
+    .catch(e => console.warn('YouTube check failed:', e.message));
 }
 
 // ── Hosted Landing Pages ─────────────────────────────────────────────────────
