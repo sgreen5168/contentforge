@@ -188,7 +188,7 @@ async function generateClip(prompt, duration) {
         'X-Runway-Version': '2024-11-06',
       },
       body: JSON.stringify({
-        model: 'gen3a_turbo',
+        model: 'gen4_turbo',
         promptText: prompt,
         duration: Math.min(duration || 5, 10),
         ratio: '720:1280',
@@ -366,7 +366,7 @@ async function runPipeline(jobId, params) {
       }
     } else if (!hasVideoKey) {
       console.log('⚠ No video API key configured');
-      await updateJob(jobId, { clipError: 'No video API key — add RUNWAY_API_KEY to Railway' });
+      await updateJob(jobId, { clipError: 'No video API key configured in Railway' });
     } else if (!hasScenes) {
       console.log('⚠ Script returned no scene descriptions');
       await updateJob(jobId, { clipError: 'Script did not return scene descriptions — try regenerating' });
@@ -549,7 +549,7 @@ async function runBulkBatch(batchId, topics, settings) {
         batch.jobs[idx].progress = 40;
         batch.jobs[idx].step = 'Script ready...';
         let clipUrl = null;
-        if ((process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY) && script.sceneDescriptions?.[0]) {
+        if ((process.env.RUNWAY_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
           try { clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5); } catch (e) { console.warn(`Bulk clip failed:`, e.message); }
         }
         batch.jobs[idx].status = 'completed';
