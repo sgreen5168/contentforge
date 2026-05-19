@@ -179,7 +179,8 @@ async function generateClip(prompt, duration) {
 
   // ── RunwayML (primary) ────────────────────────────────────────────────────
   if (process.env.RUNWAY_API_KEY) {
-    console.log(`🎬 RunwayML: "${prompt.slice(0, 60)}..."`);
+    console.log(`🎬 RunwayML Gen-4: "${prompt.slice(0, 60)}..."`);
+    console.log(`🔑 RunwayML key prefix: ${process.env.RUNWAY_API_KEY?.slice(0,15)}...`);
     const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
       method: 'POST',
       headers: {
@@ -199,7 +200,7 @@ async function generateClip(prompt, duration) {
     if (!res.ok) {
       let errMsg;
       try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
-      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
+      throw new Error(`RunwayML-Gen4 ${res.status}: ${errMsg}`);
     }
     const task = JSON.parse(resText);
     console.log(`⏳ RunwayML task: ${task.id}`);
