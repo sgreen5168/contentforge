@@ -189,9 +189,9 @@ async function generateClip(prompt, duration) {
         'X-Runway-Version': '2024-11-06',
       },
       body: JSON.stringify({
-        model: 'gen4.5',
+        model: 'gen3a_turbo',
         promptText: prompt,
-        duration: Math.min(duration || 5, 10),
+        duration: Math.min(duration || 5, 5),  // 5s max to conserve credits
         ratio: '720:1280',
       }),
     });
