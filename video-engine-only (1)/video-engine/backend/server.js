@@ -189,7 +189,7 @@ async function generateClip(prompt, duration) {
         'X-Runway-Version': '2024-11-06',
       },
       body: JSON.stringify({
-        model: 'gen4_turbo',
+        model: 'gen4.5',
         promptText: prompt,
         duration: Math.min(duration || 5, 10),
         ratio: '720:1280',
