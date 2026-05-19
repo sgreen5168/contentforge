@@ -64,6 +64,7 @@ console.log('ContentForge Video Engine starting...');
 console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
 console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
@@ -71,6 +72,7 @@ console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌')
 console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
+console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
 console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
@@ -212,6 +214,64 @@ async function generateClip(prompt, duration) {
     throw new Error(`ZSky ${res.status}: ${String(errText).slice(0, 100)}`);
   } catch (e) {
     console.warn('ZSky failed — trying RunwayML:', e.message);
+  }
+
+  // ── MiniMax Hailuo (primary paid — great quality, real API) ─────────────────
+  if (process.env.MINIMAX_API_KEY) {
+    console.log(`🎬 MiniMax Hailuo: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://api.minimax.io/v1/video_generation', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model:       'MiniMax-Hailuo-02',
+        prompt,
+        duration:    6,
+        resolution:  '768p',
+        aspect_ratio: '9:16',
+      }),
+    });
+    const resText = await res.text();
+    console.log(`MiniMax ${res.status}:`, resText.slice(0, 300));
+    if (!res.ok) {
+      console.warn('MiniMax failed — trying next provider');
+    } else {
+      const data = JSON.parse(resText);
+      const taskId = data.task_id;
+      if (!taskId) {
+        console.warn('MiniMax no task_id:', resText.slice(0, 150));
+      } else {
+        console.log(`⏳ MiniMax task: ${taskId}`);
+        for (let i = 0; i < 72; i++) {
+          await new Promise(r => setTimeout(r, 5000));
+          const poll = await fetch(`https://api.minimax.io/v1/query/video_generation?task_id=${taskId}`, {
+            headers: { 'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}` },
+          });
+          const t = await poll.json();
+          console.log(`MiniMax: ${t.status} (${i+1}/72)`);
+          if (t.status === 'Success') {
+            // Download video file using file_id
+            if (t.file_id) {
+              const fileRes = await fetch(`https://api.minimax.io/v1/files/retrieve?file_id=${t.file_id}`, {
+                headers: { 'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}` },
+              });
+              const fileData = await fileRes.json();
+              const url = fileData.file?.download_url;
+              if (url) { console.log(`✅ MiniMax video ready`); return url; }
+            }
+            if (t.video_url) { console.log(`✅ MiniMax video ready`); return t.video_url; }
+            console.warn('MiniMax success but no URL:', JSON.stringify(t).slice(0,200));
+            break;
+          }
+          if (t.status === 'Fail') {
+            console.warn(`MiniMax failed: ${t.message || 'unknown'}`);
+            break;
+          }
+        }
+      }
+    }
   }
 
   // ── RunwayML gen4.5 (fallback) ────────────────────────────────────────────
