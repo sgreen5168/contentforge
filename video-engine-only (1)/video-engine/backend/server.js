@@ -177,10 +177,46 @@ async function generateVoiceover(script, persona, jobId) {
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
 
-  // ── RunwayML (primary) ────────────────────────────────────────────────────
+  // ── ZSky AI (primary — free, no API key needed) ───────────────────────────
+  try {
+    console.log(`🎬 ZSky AI: "${prompt.slice(0, 60)}..."`);
+    const res = await fetch('https://zsky.ai/api/v1/video/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        duration:   Math.min(duration || 5, 10),
+        resolution: '1080p',
+        audio:      true,
+        style:      'cinematic',
+        ratio:      '9:16',
+      }),
+    });
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('video') || contentType.includes('octet')) {
+        // Direct video bytes returned
+        const buffer = await res.buffer();
+        const base64 = buffer.toString('base64');
+        const dataUrl = `data:video/mp4;base64,${base64}`;
+        console.log(`✅ ZSky video generated (${(buffer.length/1024/1024).toFixed(1)}MB)`);
+        return dataUrl;
+      }
+      // JSON response with URL
+      const data = await res.json();
+      const url = data.url || data.video_url || data.output;
+      if (url) { console.log(`✅ ZSky video URL: ${url}`); return url; }
+    }
+    const errText = await res.text().catch(() => res.status);
+    console.warn(`ZSky ${res.status}:`, String(errText).slice(0, 150));
+    throw new Error(`ZSky ${res.status}: ${String(errText).slice(0, 100)}`);
+  } catch (e) {
+    console.warn('ZSky failed — trying RunwayML:', e.message);
+  }
+
+  // ── RunwayML gen4.5 (fallback) ────────────────────────────────────────────
   if (process.env.RUNWAY_API_KEY) {
-    console.log(`🎬 RunwayML Gen-4: "${prompt.slice(0, 60)}..."`);
-    console.log(`🔑 RunwayML key prefix: ${process.env.RUNWAY_API_KEY?.slice(0,15)}...`);
+    console.log(`🎬 RunwayML gen4.5: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
       method: 'POST',
       headers: {
@@ -189,18 +225,18 @@ async function generateClip(prompt, duration) {
         'X-Runway-Version': '2024-11-06',
       },
       body: JSON.stringify({
-        model: 'gen3a_turbo',
+        model:      'gen4.5',
         promptText: prompt,
-        duration: Math.min(duration || 5, 5),  // 5s max to conserve credits
-        ratio: '720:1280',
+        duration:   Math.min(duration || 5, 5),
+        ratio:      '720:1280',
       }),
     });
     const resText = await res.text();
-    console.log(`RunwayML ${res.status}:`, resText.slice(0, 150));
+    console.log(`RunwayML ${res.status}:`, resText.slice(0, 200));
     if (!res.ok) {
       let errMsg;
-      try { errMsg = JSON.parse(resText)?.message || resText; } catch { errMsg = resText; }
-      throw new Error(`RunwayML-Gen4 ${res.status}: ${errMsg}`);
+      try { errMsg = JSON.parse(resText)?.error || resText; } catch { errMsg = resText; }
+      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
     }
     const task = JSON.parse(resText);
     console.log(`⏳ RunwayML task: ${task.id}`);
@@ -208,10 +244,7 @@ async function generateClip(prompt, duration) {
       await new Promise(r => setTimeout(r, 8000));
       try {
         const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
-          headers: {
-            'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
-            'X-Runway-Version': '2024-11-06',
-          },
+          headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
         });
         const t = await poll.json();
         console.log(`RunwayML: ${t.status} (${i+1}/90)`);
@@ -220,13 +253,13 @@ async function generateClip(prompt, duration) {
           if (url) { console.log(`✅ RunwayML clip ready`); return url; }
           throw new Error('RunwayML succeeded but no video URL');
         }
-        if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || t.failureCode || 'unknown'}`);
+        if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || 'unknown'}`);
       } catch (e) {
         if (e.message.startsWith('RunwayML')) throw e;
-        console.warn(`RunwayML poll error ${i+1}:`, e.message);
+        console.warn(`RunwayML poll error:`, e.message);
       }
     }
-    throw new Error('RunwayML timed out after 12 minutes');
+    throw new Error('RunwayML timed out');
   }
 
   // ── Luma Dream Machine (fallback) ─────────────────────────────────────────
@@ -237,41 +270,33 @@ async function generateClip(prompt, duration) {
       headers: {
         'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
       body: JSON.stringify({
         prompt,
-        model: 'ray-2',
-        resolution: '720p',
-        duration: duration <= 5 ? '5s' : '9s',
+        model:        'ray-2',
+        resolution:   '720p',
+        duration:     duration <= 5 ? '5s' : '9s',
         aspect_ratio: '9:16',
       }),
     });
     const resText = await res.text();
-    console.log(`Luma ${res.status}:`, resText.slice(0, 150));
     if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
     const gen = JSON.parse(resText);
-    console.log(`⏳ Luma id: ${gen.id}`);
     for (let i = 0; i < 90; i++) {
       await new Promise(r => setTimeout(r, 8000));
-      try {
-        const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${gen.id}`, {
-          headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}`, 'Accept': 'application/json' },
-        });
-        const t = await poll.json();
-        console.log(`Luma: ${t.state} (${i+1}/90)`);
-        if (t.state === 'completed') {
-          const url = t.assets?.video;
-          if (url) return url;
-          throw new Error('Luma completed but no video URL');
-        }
-        if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
-      } catch (e) {
-        if (e.message.startsWith('Luma')) throw e;
-        console.warn(`Luma poll error ${i+1}:`, e.message);
+      const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${gen.id}`, {
+        headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}` },
+      });
+      const t = await poll.json();
+      console.log(`Luma: ${t.state} (${i+1}/90)`);
+      if (t.state === 'completed') {
+        const url = t.assets?.video;
+        if (url) return url;
+        throw new Error('Luma completed but no video URL');
       }
+      if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
     }
-    throw new Error('Luma timed out after 12 minutes');
+    throw new Error('Luma timed out');
   }
 
   // ── fal.ai (fallback) ─────────────────────────────────────────────────────
@@ -280,7 +305,7 @@ async function generateClip(prompt, duration) {
     const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
       method: 'POST',
       headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, duration: duration <= 5 ? '5' : '10', aspect_ratio: '9:16' }),
+      body: JSON.stringify({ prompt, duration: '5', aspect_ratio: '9:16' }),
     });
     if (!res.ok) throw new Error(`fal.ai ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
@@ -300,7 +325,7 @@ async function generateClip(prompt, duration) {
     throw new Error('fal.ai timed out');
   }
 
-  throw new Error('No video API key — add RUNWAY_API_KEY, LUMA_API_KEY, or FAL_API_KEY to Railway');
+  throw new Error('No video provider available — ZSky failed and no API keys configured in Railway');
 }
 
 
