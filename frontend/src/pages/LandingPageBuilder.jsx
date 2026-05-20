@@ -55,6 +55,7 @@ export default function LandingPageBuilder() {
   const [template, setTemplate]     = useState('review');
   const [niche, setNiche]           = useState('Make Money Online');
   const [product, setProduct]       = useState('');
+  const [publishedUrl, setPublishedUrl] = useState('');
   const [affiliateUrl, setAffUrl]   = useState('');
   const [keyword, setKeyword]       = useState('');
   const [tone, setTone]             = useState('Casual');
