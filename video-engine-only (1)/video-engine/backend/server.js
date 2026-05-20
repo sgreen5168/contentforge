@@ -64,6 +64,8 @@ console.log('ContentForge Video Engine starting...');
 console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
+console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
 console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
@@ -72,6 +74,8 @@ console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌')
 console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
+console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
+console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
 console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
 console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' : '❌');
@@ -214,6 +218,58 @@ async function generateClip(prompt, duration) {
     throw new Error(`ZSky ${res.status}: ${String(errText).slice(0, 100)}`);
   } catch (e) {
     console.warn('ZSky failed — trying RunwayML:', e.message);
+  }
+
+  // ── Replicate — Kling 3.0 (primary — works server-side, pay per use) ────────
+  if (process.env.REPLICATE_API_KEY) {
+    console.log(`🎬 Replicate/Kling: "${prompt.slice(0, 60)}..."`);
+    const createRes = await fetch('https://api.replicate.com/v1/models/klingai/kling-3.0-standard/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait',
+      },
+      body: JSON.stringify({
+        input: {
+          prompt,
+          duration:     5,
+          aspect_ratio: '9:16',
+          mode:         'standard',
+        },
+      }),
+    });
+    const createText = await createRes.text();
+    console.log(`Replicate create ${createRes.status}:`, createText.slice(0, 200));
+
+    if (!createRes.ok) {
+      console.warn('Replicate failed — trying next provider');
+    } else {
+      const prediction = JSON.parse(createText);
+      const predId = prediction.id;
+      console.log(`⏳ Replicate prediction: ${predId} status: ${prediction.status}`);
+
+      // Poll for completion
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 5000));
+        const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${predId}`, {
+          headers: { 'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}` },
+        });
+        const t = await pollRes.json();
+        console.log(`Replicate: ${t.status} (${i+1}/60)`);
+
+        if (t.status === 'succeeded') {
+          const url = Array.isArray(t.output) ? t.output[0] : t.output;
+          if (url) { console.log(`✅ Replicate video ready: ${url}`); return url; }
+          console.warn('Replicate succeeded but no output URL');
+          break;
+        }
+        if (t.status === 'failed' || t.status === 'canceled') {
+          console.warn(`Replicate ${t.status}: ${t.error || 'unknown'}`);
+          break;
+        }
+      }
+    }
   }
 
   // ── MiniMax Hailuo (primary paid — great quality, real API) ─────────────────
