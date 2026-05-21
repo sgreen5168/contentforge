@@ -486,7 +486,7 @@ async function runPipeline(jobId, params) {
     }
 
     const clips = [];
-    const hasVideoKey = !!(process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
+    const hasVideoKey = !!(process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
     const hasScenes = !!(script.sceneDescriptions?.length);
     console.log(`🎬 Video clip check: hasKey=${hasVideoKey} hasScenes=${hasScenes} sceneCount=${script.sceneDescriptions?.length || 0}`);
 
@@ -728,7 +728,7 @@ async function runBulkBatch(batchId, topics, settings) {
         batch.jobs[idx].progress = 40;
         batch.jobs[idx].step = 'Script ready...';
         let clipUrl = null;
-        if ((process.env.RUNWAY_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
+        if ((process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.RUNWAY_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
           try { clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5); } catch (e) { console.warn(`Bulk clip failed:`, e.message); }
         }
         batch.jobs[idx].status = 'completed';
