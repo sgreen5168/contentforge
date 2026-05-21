@@ -352,30 +352,31 @@ async function generateClip(prompt, duration) {
     if (!res.ok) {
       let errMsg;
       try { errMsg = JSON.parse(resText)?.error || resText; } catch { errMsg = resText; }
-      throw new Error(`RunwayML ${res.status}: ${errMsg}`);
-    }
-    const task = JSON.parse(resText);
-    console.log(`⏳ RunwayML task: ${task.id}`);
-    for (let i = 0; i < 90; i++) {
-      await new Promise(r => setTimeout(r, 8000));
-      try {
-        const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
-          headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
-        });
-        const t = await poll.json();
-        console.log(`RunwayML: ${t.status} (${i+1}/90)`);
-        if (t.status === 'SUCCEEDED') {
-          const url = t.output?.[0] || t.artifacts?.[0]?.url;
-          if (url) { console.log(`✅ RunwayML clip ready`); return url; }
-          throw new Error('RunwayML succeeded but no video URL');
+      console.warn(`RunwayML failed: ${errMsg} — trying next provider`);
+      // Don't throw — fall through to next provider
+    } else {
+    if (res.ok) {
+      const task = JSON.parse(resText);
+      console.log(`⏳ RunwayML task: ${task.id}`);
+      for (let i = 0; i < 90; i++) {
+        await new Promise(r => setTimeout(r, 8000));
+        try {
+          const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
+            headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
+          });
+          const t = await poll.json();
+          console.log(`RunwayML: ${t.status} (${i+1}/90)`);
+          if (t.status === 'SUCCEEDED') {
+            const url = t.output?.[0] || t.artifacts?.[0]?.url;
+            if (url) { console.log(`✅ RunwayML clip ready`); return url; }
+            break;
+          }
+          if (t.status === 'FAILED') { console.warn(`RunwayML failed: ${t.failure || 'unknown'}`); break; }
+        } catch (e) {
+          console.warn(`RunwayML poll error:`, e.message);
         }
-        if (t.status === 'FAILED') throw new Error(`RunwayML failed: ${t.failure || 'unknown'}`);
-      } catch (e) {
-        if (e.message.startsWith('RunwayML')) throw e;
-        console.warn(`RunwayML poll error:`, e.message);
       }
     }
-    throw new Error('RunwayML timed out');
   }
 
   // ── Luma Dream Machine (fallback) ─────────────────────────────────────────
@@ -441,7 +442,7 @@ async function generateClip(prompt, duration) {
     throw new Error('fal.ai timed out');
   }
 
-  throw new Error('No video provider available — ZSky failed and no API keys configured in Railway');
+  throw new Error('All video providers failed or have no credits. Check Replicate billing at replicate.com/account/billing');
 }
 
 
