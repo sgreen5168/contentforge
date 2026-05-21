@@ -16,8 +16,6 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3001;
-
-// ── In-memory job store ───────────────────────────────────────────────────────
 const jobs = new Map();
 
 async function updateJob(id, updates) {
@@ -58,8 +56,6 @@ async function getAllJobs() {
   }
   return [...jobs.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
-
-// ── Startup log ───────────────────────────────────────────────────────────────
 console.log('ContentForge Video Engine starting...');
 console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
@@ -82,8 +78,6 @@ console.log('FACEBOOK_ACCESS_TOKEN:', process.env.FACEBOOK_ACCESS_TOKEN ? '✅' 
 console.log('INSTAGRAM_ACCESS_TOKEN:', process.env.INSTAGRAM_ACCESS_TOKEN ? '✅' : '❌');
 console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌');
 console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
-
-// ── Script generation ─────────────────────────────────────────────────────────
 async function generateScript(params) {
   const { inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, videoType, editedScript } = params;
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
@@ -133,8 +127,6 @@ Return ONLY valid JSON with this exact structure:
   const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   return JSON.parse(raw);
 }
-
-// ── Voiceover generation ──────────────────────────────────────────────────────
 async function generateVoiceover(script, persona, jobId) {
   const fetch = (await import('node-fetch')).default;
   const fs = (await import('fs')).default;
@@ -178,12 +170,8 @@ async function generateVoiceover(script, persona, jobId) {
 
   throw new Error('No voiceover key — add OPENAI_API_KEY or ELEVENLABS_API_KEY to Railway');
 }
-
-// ── Video clip generation ─────────────────────────────────────────────────────
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
-
-  // ── ZSky AI (primary — free, no API key needed) ───────────────────────────
   try {
     console.log(`🎬 ZSky AI: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://zsky.ai/api/v1/video/generate', {
@@ -219,8 +207,6 @@ async function generateClip(prompt, duration) {
   } catch (e) {
     console.warn('ZSky failed — trying RunwayML:', e.message);
   }
-
-  // ── Replicate — Kling 3.0 (primary — works server-side, pay per use) ────────
   if (process.env.REPLICATE_API_KEY) {
     console.log(`🎬 Replicate/Kling: "${prompt.slice(0, 60)}..."`);
     const createRes = await fetch('https://api.replicate.com/v1/models/klingai/kling-3.0-standard/predictions', {
@@ -271,8 +257,6 @@ async function generateClip(prompt, duration) {
       }
     }
   }
-
-  // ── MiniMax Hailuo (primary paid — great quality, real API) ─────────────────
   if (process.env.MINIMAX_API_KEY) {
     console.log(`🎬 MiniMax Hailuo: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.minimax.io/v1/video_generation', {
@@ -329,8 +313,6 @@ async function generateClip(prompt, duration) {
       }
     }
   }
-
-  // ── RunwayML gen4.5 (fallback) ────────────────────────────────────────────
   if (process.env.RUNWAY_API_KEY) {
     console.log(`🎬 RunwayML gen4.5: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
@@ -349,12 +331,6 @@ async function generateClip(prompt, duration) {
     });
     const resText = await res.text();
     console.log(`RunwayML ${res.status}:`, resText.slice(0, 200));
-    if (!res.ok) {
-      let errMsg;
-      try { errMsg = JSON.parse(resText)?.error || resText; } catch { errMsg = resText; }
-      console.warn(`RunwayML failed: ${errMsg} — trying next provider`);
-      // Don't throw — fall through to next provider
-    } else {
     if (res.ok) {
       const task = JSON.parse(resText);
       console.log(`⏳ RunwayML task: ${task.id}`);
@@ -376,10 +352,12 @@ async function generateClip(prompt, duration) {
           console.warn(`RunwayML poll error:`, e.message);
         }
       }
+    } else {
+      let errMsg;
+      try { errMsg = JSON.parse(resText)?.error || resText; } catch { errMsg = resText; }
+      console.warn(`RunwayML failed: ${errMsg} — trying next provider`);
     }
   }
-
-  // ── Luma Dream Machine (fallback) ─────────────────────────────────────────
   if (process.env.LUMA_API_KEY) {
     console.log(`🎬 Luma: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
@@ -415,8 +393,6 @@ async function generateClip(prompt, duration) {
     }
     throw new Error('Luma timed out');
   }
-
-  // ── fal.ai (fallback) ─────────────────────────────────────────────────────
   if (process.env.FAL_API_KEY) {
     console.log(`🎬 fal.ai: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
@@ -445,7 +421,6 @@ async function generateClip(prompt, duration) {
   throw new Error('All video providers failed or have no credits. Check Replicate billing at replicate.com/account/billing');
 }
 
-
 async function tryUploadToR2(localPath, key) {
   try {
     const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
@@ -463,8 +438,6 @@ async function tryUploadToR2(localPath, key) {
     return null;
   }
 }
-
-// ── Main pipeline ─────────────────────────────────────────────────────────────
 async function runPipeline(jobId, params) {
   const { inputMode, topic, url, affiliateUrl, persona, duration, durationSeconds, style, platforms, autoUpload, videoType, editedScript } = params;
 
@@ -546,8 +519,6 @@ async function runPipeline(jobId, params) {
     await updateJob(jobId, { status: 'failed', step: 'Failed', error: e.message });
   }
 }
-
-// ── VSL generation ────────────────────────────────────────────────────────────
 async function generateVSLScript({ product, price, audience, pain, solution, duration, affiliateUrl }) {
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -566,8 +537,6 @@ Return JSON: { "hook", "problemAgitation", "solutionReveal", "socialProof", "off
   const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   return JSON.parse(raw);
 }
-
-// ── API Routes ────────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
@@ -668,8 +637,6 @@ Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": 
 app.get('/api/persona', (_req, res) => {
   res.json({ personas: ['ugc','testimonial','demo','influencer','educator'] });
 });
-
-// ── Bulk routes ───────────────────────────────────────────────────────────────
 const bulkJobs = new Map();
 
 app.post('/api/bulk/variations', async (req, res) => {
@@ -747,8 +714,6 @@ async function runBulkBatch(batchId, topics, settings) {
   }
   batch.status = 'completed';
 }
-
-// ── Schedule routes ───────────────────────────────────────────────────────────
 const schedules = new Map();
 
 app.post('/api/schedule', async (req, res) => {
@@ -781,8 +746,6 @@ app.get('/api/schedule/optimal/:platform', (req, res) => {
   if (!t) return res.status(404).json({ error: 'Platform not found' });
   res.json({ platform: req.params.platform, optimalTimes: t });
 });
-
-// ── Email routes ──────────────────────────────────────────────────────────────
 app.get('/api/email/settings', (_req, res) => {
   res.json({
     configured: !!(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL),
@@ -805,8 +768,6 @@ app.post('/api/email/test', async (req, res) => {
 });
 
 // Reddit integration removed
-
-// ── Facebook routes ──────────────────────────────────────────────────────────
 app.get('/api/facebook/verify', async (_req, res) => {
   try {
     const { verifyFacebookCredentials } = await import('./services/facebookService.js');
@@ -827,8 +788,6 @@ app.post('/api/facebook/post-text', async (req, res) => {
     res.json(await postTextToFacebook(req.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// ── Instagram routes ──────────────────────────────────────────────────────────
 app.get('/api/instagram/verify', async (_req, res) => {
   try {
     const { verifyInstagramCredentials } = await import('./services/instagramService.js');
@@ -849,8 +808,6 @@ app.post('/api/instagram/post-image', async (req, res) => {
     res.json(await postImageToInstagram(req.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// ── YouTube routes ───────────────────────────────────────────────────────────
 app.get('/api/youtube/verify', async (_req, res) => {
   try {
     const { verifyYouTubeCredentials } = await import('./services/youtubeService.js');
@@ -871,8 +828,6 @@ app.post('/api/youtube/upload-short', async (req, res) => {
     res.json(await uploadYouTubeShort(req.body));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// ── Verify all platforms on startup ──────────────────────────────────────────
 if (process.env.FACEBOOK_ACCESS_TOKEN) {
   import('./services/facebookService.js')
     .then(({ verifyFacebookCredentials }) => verifyFacebookCredentials())
@@ -893,8 +848,6 @@ if (process.env.YOUTUBE_REFRESH_TOKEN) {
     .then(r => console.log('YouTube:', r.connected ? `✅ ${r.channelName} (${r.subscribers} subscribers)` : `❌ ${r.error}`))
     .catch(e => console.warn('YouTube check failed:', e.message));
 }
-
-// ── Hosted Landing Pages ─────────────────────────────────────────────────────
 const landingPages = new Map(); // in-memory store
 
 app.post('/api/landing/create', async (req, res) => {
@@ -937,8 +890,6 @@ app.post('/api/landing/:id/click', (req, res) => {
   if (page) { page.clicks++; landingPages.set(req.params.id, page); }
   res.json({ success: true });
 });
-
-// ── Render landing page as HTML ───────────────────────────────────────────────
 app.get('/lp/:id', (req, res) => {
   const page = landingPages.get(req.params.id);
   if (!page) return res.status(404).send('<h1>Page not found</h1>');
@@ -990,8 +941,6 @@ app.get('/lp/:id', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });
-
-// ── Image generation via Pollinations.ai (free, no API key needed) ────────────
 app.post('/api/image/generate', async (req, res) => {
   try {
     const fetch = (await import('node-fetch')).default;
@@ -1032,7 +981,6 @@ app.post('/api/image/generate', async (req, res) => {
   }
 });
 
-
 app.post('/api/affiliate/shorten', async (req, res) => {
   try {
     const fetch = (await import('node-fetch')).default;
@@ -1041,8 +989,6 @@ app.post('/api/affiliate/shorten', async (req, res) => {
     res.json({ original: req.body.url, shortened: short.trim() });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅ ContentForge Video Engine running on port ${PORT}`);
 });
