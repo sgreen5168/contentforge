@@ -3,110 +3,89 @@ import React, { useState, useEffect } from 'react';
 const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 const PLATFORMS = {
-  facebook:  { label:'Facebook',  icon:'📘', color:'#1877F2', desc:'Post to Make Money from Home page' },
-  instagram: { label:'Instagram', icon:'📷', color:'#E1306C', desc:'Post Reel to @sgreen5168' },
-  youtube:   { label:'YouTube',   icon:'▶',  color:'#FF0000', desc:'Upload to your YouTube channel' },
-  pinterest: { label:'Pinterest', icon:'📌', color:'#E60023', desc:'Coming soon — trial pending' },
+  facebook:  { label:'Facebook',  icon:'📘', color:'#1877F2', desc:'Make Money from Home page' },
+  instagram: { label:'Instagram', icon:'📷', color:'#E1306C', desc:'@sgreen5168' },
+  youtube:   { label:'YouTube',   icon:'▶',  color:'#FF0000', desc:'Your YouTube channel' },
 };
+
+const COMPLIANCE_RULES = [
+  { re:/\$\d+\s*(per|a|\/)\s*(day|week|month)/gi, label:'Income claim' },
+  { re:/guaranteed|100%\s*free|no\s*risk/gi,       label:'False guarantee' },
+  { re:/secret\s*(method|formula|trick)/gi,         label:'Misleading claim' },
+  { re:/get\s*rich\s*quick/gi,                      label:'Get rich claim' },
+  { re:/click\s*here\s*now|act\s*now/gi,            label:'Urgency language' },
+];
 
 export default function PostSubmitter() {
   const [step, setStep]         = useState(1);
+  const [title, setTitle]       = useState('');
   const [content, setContent]   = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
-  const [mediaType, setMediaType] = useState('image');
-  const [title, setTitle]       = useState('');
-  const [platforms, setPlatforms] = useState({ facebook:true, instagram:false });
-  const [scheduling, setSched]  = useState('now');
-  const [schedDate, setSchedDate] = useState('');
-  const [schedTime, setSchedTime] = useState('');
+  const [mediaType, setMType]   = useState('image');
+  const [plats, setPlats]       = useState({ facebook:true, instagram:false, youtube:false });
+  const [sched, setSched]       = useState('now');
+  const [schedDate, setSchedD]  = useState('');
+  const [schedTime, setSchedT]  = useState('');
   const [submitting, setSub]    = useState(false);
   const [results, setResults]   = useState([]);
-  const [statuses, setStatuses] = useState({});
-  const [compliance, setCompliance] = useState(null);
-  const [connected, setConnected] = useState({});
+  const [connected, setConn]    = useState({});
+  const [compliance, setComp]   = useState(null);
+  const [charCount, setChar]    = useState(0);
 
   useEffect(() => { checkConnections(); }, []);
 
   async function checkConnections() {
     const checks = {};
-    try {
-      const fb = await fetch(`${API}/api/facebook/verify`).then(r => r.json()).catch(() => ({ connected:false }));
-      checks.facebook = fb.connected;
-    } catch {}
-    try {
-      const ig = await fetch(`${API}/api/instagram/verify`).then(r => r.json()).catch(() => ({ connected:false }));
-      checks.instagram = ig.connected;
-    } catch {}
-    try {
-      const yt = await fetch(`${API}/api/youtube/verify`).then(r => r.json()).catch(() => ({ connected:false }));
-      checks.youtube = yt.connected;
-    } catch {}
-    setConnected(checks);
+    for (const plat of ['facebook','instagram','youtube']) {
+      try {
+        const r = await fetch(`${API}/api/${plat}/verify`).then(r=>r.json()).catch(()=>({connected:false}));
+        checks[plat] = r.connected;
+      } catch {}
+    }
+    setConn(checks);
   }
 
   function checkCompliance(text) {
-    const issues = [];
-    const rules = [
-      { pattern:/\$\d+\s*(per|a|\/)\s*(day|week|month)/gi, label:'Income claim' },
-      { pattern:/guaranteed|100%\s*free|no\s*risk/gi,       label:'False guarantee' },
-      { pattern:/secret\s*(method|formula|trick)/gi,         label:'Misleading claim' },
-      { pattern:/get\s*rich\s*quick/gi,                      label:'Get rich claim' },
-      { pattern:/click\s*here\s*now|act\s*now/gi,            label:'Urgency language' },
-    ];
-    rules.forEach(r => { if (text.match(r.pattern)) issues.push(r.label); });
+    const issues = COMPLIANCE_RULES.filter(r => text.match(r.re)).map(r => r.label);
     const score = Math.max(0, 100 - issues.length * 20);
-    setCompliance({ score, issues, safe: issues.length === 0 });
+    setComp({ score, issues, safe: issues.length === 0 });
+  }
+
+  function handleContentChange(val) {
+    setContent(val);
+    setChar(val.length);
+    if (val.length > 20) checkCompliance(val);
+    else setComp(null);
   }
 
   async function submit() {
-    const active = Object.keys(platforms).filter(p => platforms[p]);
+    const active = Object.keys(plats).filter(p => plats[p]);
     if (!content.trim() || !active.length) return;
-    setSub(true); setResults([]); setStatuses({});
+    setSub(true); setResults([]);
 
     for (const plat of active) {
-      setStatuses(prev => ({ ...prev, [plat]: 'posting' }));
       try {
-        let res;
+        let res, data;
         if (plat === 'facebook') {
-          const endpoint = mediaUrl && mediaType === 'video' ? '/api/facebook/post-video' : '/api/facebook/post-text';
-          res = await fetch(`${API}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: content, title: title || content.slice(0,80), videoUrl: mediaUrl, description: content }),
+          res = await fetch(`${API}/api/facebook/post-${mediaUrl && mediaType==='video' ? 'video' : 'text'}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ message:content, title:title||content.slice(0,80), videoUrl:mediaUrl, description:content }),
           });
         } else if (plat === 'instagram') {
-          const endpoint = mediaUrl && mediaType === 'video' ? '/api/instagram/post-video' : '/api/instagram/post-image';
-          res = await fetch(`${API}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ caption: content, videoUrl: mediaUrl, imageUrl: mediaUrl }),
+          res = await fetch(`${API}/api/instagram/post-${mediaUrl && mediaType==='video' ? 'video' : 'image'}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ caption:content, videoUrl:mediaUrl, imageUrl:mediaUrl }),
           });
         } else if (plat === 'youtube') {
-          const isShort = mediaType === 'video' && mediaUrl;
-          const endpoint = isShort ? '/api/youtube/upload-short' : '/api/youtube/upload';
-          res = await fetch(`${API}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoUrl:    mediaUrl,
-              title:       title || content.slice(0, 80),
-              description: content,
-              tags:        [],
-              privacy:     'public',
-            }),
+          res = await fetch(`${API}/api/youtube/${mediaType==='video'?'upload':'upload-short'}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ videoUrl:mediaUrl, title:title||content.slice(0,80), description:content, privacy:'public' }),
           });
-        } else {
-          setStatuses(prev => ({ ...prev, [plat]: 'skipped' }));
-          setResults(prev => [...prev, { platform: plat, success: false, error: 'API not yet connected — add token to Railway' }]);
-          continue;
         }
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        setStatuses(prev => ({ ...prev, [plat]: 'done' }));
-        setResults(prev => [...prev, { platform: plat, success: true, url: data.url }]);
-      } catch (e) {
-        setStatuses(prev => ({ ...prev, [plat]: 'failed' }));
-        setResults(prev => [...prev, { platform: plat, success: false, error: e.message }]);
+        data = await res.json();
+        setResults(prev => [...prev, { platform:plat, success:!!data.success || res.ok, url:data.url, error:data.error }]);
+      } catch(e) {
+        setResults(prev => [...prev, { platform:plat, success:false, error:e.message }]);
       }
     }
     setSub(false);
@@ -114,146 +93,135 @@ export default function PostSubmitter() {
   }
 
   const S = {
-    card:  { background:'rgba(16,45,79,.9)', border:'1px solid rgba(29,158,117,.2)', borderRadius:12, overflow:'hidden', marginBottom:14 },
-    hdr:   { padding:'12px 16px', borderBottom:'1px solid rgba(29,158,117,.15)', fontSize:13, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', gap:8 },
-    body:  { padding:'16px' },
-    inp:   { width:'100%', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', color:'#E8F4F0', background:'rgba(22,61,106,.6)', outline:'none', marginBottom:12, boxSizing:'border-box' },
-    label: { fontSize:10, color:'#4A7A72', fontWeight:500, textTransform:'uppercase', letterSpacing:.5, marginBottom:5, display:'block' },
+    card: { background:'rgba(16,45,79,.9)', border:'1px solid rgba(29,158,117,.2)', borderRadius:12, overflow:'hidden', marginBottom:12 },
+    hdr:  { padding:'11px 15px', borderBottom:'1px solid rgba(29,158,117,.12)', fontSize:13, fontWeight:500, color:'#E8F4F0' },
+    body: { padding:'14px 15px' },
+    inp:  { width:'100%', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', color:'#E8F4F0', background:'rgba(22,61,106,.6)', outline:'none', marginBottom:10, boxSizing:'border-box' },
+    lbl:  { fontSize:10, color:'#4A7A72', fontWeight:600, textTransform:'uppercase', letterSpacing:.5, display:'block', marginBottom:5 },
   };
 
   return (
-    <div style={{ padding:24, maxWidth:800, fontFamily:'inherit' }}>
-      <div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:22, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', gap:10 }}>
-          📤 Post Submitter
-          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:'rgba(29,158,117,.2)', color:'#5DCAA5' }}>Multi-platform</span>
-        </div>
-        <div style={{ fontSize:13, color:'#7BAAA0', marginTop:4 }}>Publish posts and videos directly to your connected social accounts</div>
+    <div style={{ padding:20, maxWidth:760, fontFamily:'inherit' }}>
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontSize:20, fontWeight:600, color:'#E8F4F0' }}>📤 Post <span style={{color:'#5DCAA5'}}>Submitter</span></div>
+        <div style={{ fontSize:12, color:'#7BAAA0', marginTop:3 }}>Publish directly to your connected social accounts</div>
       </div>
 
-      {/* Step indicators */}
-      <div style={{ display:'flex', alignItems:'center', gap:0, marginBottom:20 }}>
-        {[['1','Content'],['2','Platforms'],['3','Results']].map(([n,label], i) => (
+      {/* Steps */}
+      <div style={{ display:'flex', alignItems:'center', marginBottom:20 }}>
+        {[['1','Content'],['2','Platforms'],['3','Results']].map(([n,label],i) => (
           <React.Fragment key={n}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:28, height:28, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:600,
-                background: step >= parseInt(n) ? '#1D9E75' : 'rgba(29,158,117,.15)',
-                color: step >= parseInt(n) ? 'white' : '#4A7A72' }}>{n}</div>
-              <span style={{ fontSize:12, color: step >= parseInt(n) ? '#E8F4F0' : '#4A7A72' }}>{label}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <div style={{ width:26,height:26,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,
+                background:step>=parseInt(n)?'#1D9E75':'rgba(29,158,117,.15)',
+                color:step>=parseInt(n)?'white':'#4A7A72' }}>{n}</div>
+              <span style={{ fontSize:12, color:step>=parseInt(n)?'#E8F4F0':'#4A7A72' }}>{label}</span>
             </div>
-            {i < 2 && <div style={{ flex:1, height:1, background: step > i+1 ? '#1D9E75' : 'rgba(29,158,117,.2)', margin:'0 10px' }} />}
+            {i<2 && <div style={{ flex:1, height:1, background:step>i+1?'#1D9E75':'rgba(29,158,117,.15)', margin:'0 8px' }}/>}
           </React.Fragment>
         ))}
       </div>
 
-      {/* Step 1 — Content */}
-      {step === 1 && (
+      {/* Step 1 */}
+      {step===1 && (
         <div>
           <div style={S.card}>
             <div style={S.hdr}>✦ Post content</div>
             <div style={S.body}>
-              <span style={S.label}>Post title (optional — for YouTube & Pinterest)</span>
-              <input style={S.inp} placeholder="Enter a title for your post..." value={title} onChange={e => setTitle(e.target.value)} />
+              <span style={S.lbl}>Title (YouTube & Pinterest)</span>
+              <input style={S.inp} placeholder="Enter post title..." value={title} onChange={e=>setTitle(e.target.value)} />
 
-              <span style={S.label}>Post caption / text</span>
-              <textarea style={{ ...S.inp, minHeight:120, resize:'vertical', lineHeight:1.6 }}
-                placeholder="Write your post caption here, or paste from AI Composer..."
-                value={content}
-                onChange={e => { setContent(e.target.value); if(e.target.value.length > 20) checkCompliance(e.target.value); }}
+              <span style={S.lbl}>Caption / Post text</span>
+              <textarea style={{ ...S.inp, minHeight:130, resize:'vertical', lineHeight:1.7 }}
+                placeholder="Write your post here or paste from AI Composer..."
+                value={content} onChange={e => handleContentChange(e.target.value)}
               />
 
-              {/* Compliance indicator */}
-              {compliance && (
-                <div style={{ marginBottom:12, padding:'8px 12px', borderRadius:8,
-                  background: compliance.safe ? 'rgba(29,158,117,.08)' : 'rgba(245,166,35,.08)',
-                  border: `1px solid ${compliance.safe ? 'rgba(29,158,117,.2)' : 'rgba(245,166,35,.2)'}` }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: compliance.issues.length ? 6 : 0 }}>
-                    <div style={{ height:4, width:60, background:'rgba(255,255,255,.1)', borderRadius:2, overflow:'hidden' }}>
-                      <div style={{ height:'100%', width:compliance.score+'%', background: compliance.safe ? '#1D9E75' : '#F5A623', borderRadius:2 }} />
+              {/* Char count + compliance */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                <span style={{ fontSize:11, color:'#4A7A72' }}>{charCount} characters</span>
+                {compliance && (
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <div style={{ height:4, width:50, background:'rgba(255,255,255,.08)', borderRadius:2, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:compliance.score+'%', background:compliance.safe?'#1D9E75':'#F5A623', borderRadius:2 }} />
                     </div>
-                    <span style={{ fontSize:11, color: compliance.safe ? '#5DCAA5' : '#FAC775' }}>
-                      {compliance.safe ? '✓ Compliant' : `${compliance.issues.length} issue${compliance.issues.length>1?'s':''} found`}
+                    <span style={{ fontSize:11, color:compliance.safe?'#5DCAA5':'#FAC775' }}>
+                      {compliance.safe?'✓ Compliant':`⚠ ${compliance.issues[0]}`}
                     </span>
                   </div>
-                  {compliance.issues.length > 0 && (
-                    <div style={{ fontSize:11, color:'#7BAAA0' }}>⚠ {compliance.issues.join(' · ')}</div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
 
-              <span style={S.label}>Media URL (image or video — optional)</span>
-              <input style={S.inp} placeholder="https://your-image-or-video-url.com/file.mp4" value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} />
-
-              <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+              <span style={S.lbl}>Media URL (optional)</span>
+              <input style={S.inp} placeholder="https://your-image-or-video-url.mp4" value={mediaUrl} onChange={e=>setMediaUrl(e.target.value)} />
+              <div style={{ display:'flex', gap:6, marginBottom:10 }}>
                 {['image','video'].map(t => (
-                  <button key={t} onClick={() => setMediaType(t)}
-                    style={{ padding:'6px 14px', borderRadius:6, cursor:'pointer', fontFamily:'inherit', fontSize:12,
-                      border: `1px solid ${mediaType===t ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
-                      background: mediaType===t ? 'rgba(29,158,117,.15)' : 'transparent',
-                      color: mediaType===t ? '#5DCAA5' : '#7BAAA0' }}>
-                    {t === 'image' ? '🖼 Image' : '🎬 Video'}
+                  <button key={t} onClick={() => setMType(t)}
+                    style={{ padding:'5px 14px', borderRadius:6, cursor:'pointer', fontFamily:'inherit', fontSize:12,
+                      border:`1px solid ${mediaType===t?'#1D9E75':'rgba(29,158,117,.2)'}`,
+                      background:mediaType===t?'rgba(29,158,117,.15)':'transparent',
+                      color:mediaType===t?'#5DCAA5':'#7BAAA0' }}>
+                    {t==='image'?'🖼 Image':'🎬 Video'}
                   </button>
                 ))}
               </div>
 
-              <span style={S.label}>Schedule</span>
-              <div style={{ display:'flex', gap:8, marginBottom: scheduling==='later' ? 10 : 0 }}>
-                {[['now','Post now'],['later','Schedule']].map(([id,label]) => (
+              <span style={S.lbl}>Schedule</span>
+              <div style={{ display:'flex', gap:6, marginBottom: sched==='later'?10:0 }}>
+                {[['now','Post now'],['later','Schedule for later']].map(([id,label]) => (
                   <button key={id} onClick={() => setSched(id)}
-                    style={{ padding:'7px 16px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', fontSize:12,
-                      border: `1px solid ${scheduling===id ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
-                      background: scheduling===id ? 'rgba(29,158,117,.15)' : 'transparent',
-                      color: scheduling===id ? '#5DCAA5' : '#7BAAA0' }}>
+                    style={{ padding:'6px 14px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', fontSize:12,
+                      border:`1px solid ${sched===id?'#1D9E75':'rgba(29,158,117,.2)'}`,
+                      background:sched===id?'rgba(29,158,117,.15)':'transparent',
+                      color:sched===id?'#5DCAA5':'#7BAAA0' }}>
                     {label}
                   </button>
                 ))}
               </div>
-              {scheduling === 'later' && (
+              {sched==='later' && (
                 <div style={{ display:'flex', gap:8, marginTop:10 }}>
-                  <input type="date" style={{ ...S.inp, marginBottom:0, flex:1 }} value={schedDate} onChange={e => setSchedDate(e.target.value)} />
-                  <input type="time" style={{ ...S.inp, marginBottom:0, flex:1 }} value={schedTime} onChange={e => setSchedTime(e.target.value)} />
+                  <input type="date" style={{ ...S.inp, marginBottom:0, flex:1 }} value={schedDate} onChange={e=>setSchedD(e.target.value)} />
+                  <input type="time" style={{ ...S.inp, marginBottom:0, flex:1 }} value={schedTime} onChange={e=>setSchedT(e.target.value)} />
                 </div>
               )}
             </div>
           </div>
-
           <button onClick={() => setStep(2)} disabled={!content.trim()}
-            style={{ width:'100%', padding:'12px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:!content.trim()?0.5:1 }}>
+            style={{ width:'100%', padding:'11px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit', opacity:!content.trim()?0.5:1 }}>
             Next — Choose Platforms →
           </button>
         </div>
       )}
 
-      {/* Step 2 — Platforms */}
-      {step === 2 && (
+      {/* Step 2 */}
+      {step===2 && (
         <div>
           <div style={S.card}>
-            <div style={S.hdr}>📤 Select platforms to post to</div>
+            <div style={S.hdr}>📤 Select platforms</div>
             <div style={S.body}>
-              {Object.entries(PLATFORMS).map(([key, plat]) => {
-                const isConnected = connected[key];
-                const isSelected  = platforms[key];
+              {Object.entries(PLATFORMS).map(([k,v]) => {
+                const isConn = connected[k];
+                const isSel  = plats[k];
                 return (
-                  <div key={key} onClick={() => isConnected && setPlatforms(prev => ({ ...prev, [key]: !prev[key] }))}
-                    style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:10, marginBottom:8, cursor: isConnected ? 'pointer' : 'not-allowed',
-                      border: `1px solid ${isSelected && isConnected ? plat.color+'66' : 'rgba(29,158,117,.15)'}`,
-                      background: isSelected && isConnected ? `${plat.color}11` : 'rgba(22,61,106,.3)',
-                      opacity: isConnected ? 1 : 0.5 }}>
-                    <span style={{ fontSize:20, flexShrink:0 }}>{plat.icon}</span>
+                  <div key={k} onClick={() => isConn && setPlats(p=>({...p,[k]:!p[k]}))}
+                    style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:10, marginBottom:8,
+                      cursor:isConn?'pointer':'not-allowed',
+                      border:`1px solid ${isSel&&isConn?v.color+'66':'rgba(29,158,117,.15)'}`,
+                      background:isSel&&isConn?`${v.color}11`:'rgba(22,61,106,.3)',
+                      opacity:isConn?1:0.5 }}>
+                    <span style={{ fontSize:22 }}>{v.icon}</span>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', gap:8 }}>
-                        {plat.label}
-                        {isConnected
-                          ? <span style={{ fontSize:10, color:'#1D9E75', background:'rgba(29,158,117,.15)', padding:'1px 6px', borderRadius:8 }}>✓ Connected</span>
-                          : <span style={{ fontSize:10, color:'#7BAAA0', background:'rgba(255,255,255,.05)', padding:'1px 6px', borderRadius:8 }}>Not connected</span>}
+                        {v.label}
+                        <span style={{ fontSize:10, padding:'1px 6px', borderRadius:8, background:isConn?'rgba(29,158,117,.15)':'rgba(255,255,255,.05)', color:isConn?'#1D9E75':'#7BAAA0' }}>
+                          {isConn?'✓ Connected':'Not connected'}
+                        </span>
                       </div>
-                      <div style={{ fontSize:11, color:'#7BAAA0', marginTop:2 }}>{plat.desc}</div>
-                      {!isConnected && (
-                        <div style={{ fontSize:10, color:'#4A7A72', marginTop:3 }}>Add token to Railway to enable auto-posting</div>
-                      )}
+                      <div style={{ fontSize:11, color:'#7BAAA0' }}>{v.desc}</div>
+                      {!isConn && <div style={{ fontSize:10, color:'#4A7A72', marginTop:2 }}>Add token to Railway to enable</div>}
                     </div>
-                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${isSelected&&isConnected?plat.color:'rgba(29,158,117,.3)'}`, background: isSelected&&isConnected?plat.color:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      {isSelected && isConnected && <span style={{ fontSize:11, color:'white' }}>✓</span>}
+                    <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${isSel&&isConn?v.color:'rgba(29,158,117,.3)'}`, background:isSel&&isConn?v.color:'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      {isSel && isConn && <span style={{ fontSize:10, color:'white' }}>✓</span>}
                     </div>
                   </div>
                 );
@@ -261,70 +229,59 @@ export default function PostSubmitter() {
             </div>
           </div>
 
-          {/* Content preview */}
+          {/* Preview */}
           <div style={S.card}>
-            <div style={S.hdr}>📋 Post preview</div>
+            <div style={S.hdr}>📋 Preview</div>
             <div style={S.body}>
               {title && <div style={{ fontSize:14, fontWeight:600, color:'#E8F4F0', marginBottom:6 }}>{title}</div>}
               <div style={{ fontSize:13, color:'#7BAAA0', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{content}</div>
-              {mediaUrl && (
-                <div style={{ marginTop:10, padding:'8px 10px', background:'rgba(22,61,106,.4)', borderRadius:6, fontSize:11, color:'#5DCAA5' }}>
-                  {mediaType === 'video' ? '🎬' : '🖼'} Media attached: {mediaUrl.slice(0,60)}...
-                </div>
-              )}
+              {mediaUrl && <div style={{ marginTop:8, fontSize:11, color:'#5DCAA5' }}>{mediaType==='video'?'🎬':'🖼'} Media attached</div>}
             </div>
           </div>
 
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={() => setStep(1)} style={{ padding:'12px 20px', borderRadius:10, border:'1px solid rgba(29,158,117,.2)', background:'transparent', color:'#7BAAA0', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-              ← Back
-            </button>
-            <button onClick={submit} disabled={submitting || !Object.values(platforms).some(Boolean)}
-              style={{ flex:1, padding:'12px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-                opacity: submitting||!Object.values(platforms).some(Boolean) ? 0.5 : 1,
-                display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-              {submitting ? <><span style={{ width:16,height:16,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'white',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block' }} />Posting...</> : '📤 Publish Now'}
+            <button onClick={() => setStep(1)} style={{ padding:'11px 18px', borderRadius:10, border:'1px solid rgba(29,158,117,.2)', background:'transparent', color:'#7BAAA0', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>← Back</button>
+            <button onClick={submit} disabled={submitting || !Object.values(plats).some(Boolean)}
+              style={{ flex:1, padding:'11px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                opacity:submitting||!Object.values(plats).some(Boolean)?0.5:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              {submitting?<><span style={{width:16,height:16,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'white',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/>Posting...</>:'📤 Publish Now'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3 — Results */}
-      {step === 3 && (
+      {/* Step 3 */}
+      {step===3 && (
         <div>
           <div style={S.card}>
-            <div style={S.hdr}>📊 Publishing results</div>
+            <div style={S.hdr}>📊 Results</div>
             <div style={S.body}>
-              {results.map((r, i) => {
-                const plat = PLATFORMS[r.platform];
+              {results.map((r,i) => {
+                const meta = PLATFORMS[r.platform];
                 return (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:10, marginBottom:8,
-                    background: r.success ? 'rgba(29,158,117,.08)' : 'rgba(226,75,74,.08)',
-                    border: `1px solid ${r.success ? 'rgba(29,158,117,.2)' : 'rgba(226,75,74,.2)'}` }}>
-                    <span style={{ fontSize:20 }}>{plat?.icon}</span>
+                    background:r.success?'rgba(29,158,117,.08)':'rgba(226,75,74,.08)',
+                    border:`1px solid ${r.success?'rgba(29,158,117,.2)':'rgba(226,75,74,.2)'}` }}>
+                    <span style={{ fontSize:22 }}>{meta?.icon}</span>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:13, fontWeight:500, color:'#E8F4F0' }}>
-                        {plat?.label} — {r.success ? '✅ Posted successfully' : '❌ Failed'}
+                        {meta?.label} — {r.success?'✅ Posted!':'❌ Failed'}
                       </div>
-                      {r.success && r.url && (
-                        <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'#5DCAA5' }}>View post ↗</a>
-                      )}
-                      {!r.success && <div style={{ fontSize:11, color:'#F09595' }}>{r.error}</div>}
+                      {r.success && r.url && <a href={r.url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:'#5DCAA5' }}>View post ↗</a>}
+                      {!r.success && <div style={{ fontSize:11, color:'#F09595', marginTop:2 }}>{r.error}</div>}
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-
-          <button onClick={() => { setStep(1); setResults([]); setStatuses({}); setContent(''); setMediaUrl(''); setTitle(''); }}
-            style={{ width:'100%', padding:'12px', borderRadius:10, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={() => { setStep(1); setResults([]); setContent(''); setTitle(''); setMediaUrl(''); }}
+            style={{ width:'100%', padding:'11px', borderRadius:10, border:'1px solid rgba(29,158,117,.2)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
             ↻ Create another post
           </button>
         </div>
       )}
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
     </div>
   );
 }
