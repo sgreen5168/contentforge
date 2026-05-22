@@ -60,7 +60,9 @@ console.log('ContentForge Video Engine starting...');
 console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? '✅' : '❌');
 console.log('ELEVENLABS_API_KEY:', process.env.ELEVENLABS_API_KEY ? '✅' : '❌');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
+console.log('PEXELS_API_KEY:', process.env.PEXELS_API_KEY ? '✅' : '❌');
 console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
+console.log('PEXELS_API_KEY:', process.env.PEXELS_API_KEY ? '✅' : '❌');
 console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
 console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
@@ -70,7 +72,9 @@ console.log('YOUTUBE_CLIENT_ID:', process.env.YOUTUBE_CLIENT_ID ? '✅' : '❌')
 console.log('YOUTUBE_REFRESH_TOKEN:', process.env.YOUTUBE_REFRESH_TOKEN ? '✅' : '❌');
 console.log('LUMA_API_KEY:', process.env.LUMA_API_KEY ? '✅' : '❌');
 console.log('FAL_API_KEY:', process.env.FAL_API_KEY ? '✅' : '❌');
+console.log('PEXELS_API_KEY:', process.env.PEXELS_API_KEY ? '✅' : '❌');
 console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
+console.log('PEXELS_API_KEY:', process.env.PEXELS_API_KEY ? '✅' : '❌');
 console.log('REPLICATE_API_KEY:', process.env.REPLICATE_API_KEY ? '✅' : '❌');
 console.log('MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? '✅' : '❌');
 console.log('RUNWAY_API_KEY:', process.env.RUNWAY_API_KEY ? '✅' : '❌');
@@ -172,41 +176,70 @@ async function generateVoiceover(script, persona, jobId) {
 }
 async function generateClip(prompt, duration) {
   const fetch = (await import('node-fetch')).default;
-  try {
-    console.log(`🎬 ZSky AI: "${prompt.slice(0, 60)}..."`);
-    const res = await fetch('https://zsky.ai/api/v1/video/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt,
-        duration:   Math.min(duration || 5, 10),
-        resolution: '1080p',
-        audio:      true,
-        style:      'cinematic',
-        ratio:      '9:16',
-      }),
-    });
-    if (res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('video') || contentType.includes('octet')) {
-        // Direct video bytes returned
-        const buffer = await res.buffer();
-        const base64 = buffer.toString('base64');
-        const dataUrl = `data:video/mp4;base64,${base64}`;
-        console.log(`✅ ZSky video generated (${(buffer.length/1024/1024).toFixed(1)}MB)`);
-        return dataUrl;
+
+  // ── Pexels Stock Video (FREE — no credits needed) ─────────────────────────
+  if (process.env.PEXELS_API_KEY) {
+    try {
+      console.log(`🎬 Pexels: searching for "${prompt.slice(0, 60)}..."`);
+
+      // Extract keywords from scene description for search
+      const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','up','about','into','through','during','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','close','quick','person','people']);
+      const keywords = prompt
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !stopWords.has(w))
+        .slice(0, 3)
+        .join(' ');
+
+      const query = keywords || 'lifestyle productivity';
+      console.log(`Pexels search query: "${query}"`);
+
+      const res = await fetch(
+        `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&orientation=portrait&size=medium&per_page=10&min_duration=4&max_duration=15`,
+        { headers: { 'Authorization': process.env.PEXELS_API_KEY } }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const videos = data.videos || [];
+        if (videos.length > 0) {
+          // Pick a random video from results
+          const video = videos[Math.floor(Math.random() * Math.min(videos.length, 5))];
+          // Get HD quality file
+          const files = video.video_files || [];
+          const hd = files.find(f => f.quality === 'hd' && f.width >= 720) ||
+                     files.find(f => f.quality === 'sd') ||
+                     files[0];
+          if (hd?.link) {
+            console.log(`✅ Pexels video found: ${hd.width}x${hd.height} ${hd.quality} — ${video.duration}s`);
+            return hd.link;
+          }
+        }
+        console.warn('Pexels: no suitable video found for query:', query);
+        // Try broader search
+        const broadRes = await fetch(
+          `https://api.pexels.com/videos/search?query=lifestyle&orientation=portrait&per_page=10`,
+          { headers: { 'Authorization': process.env.PEXELS_API_KEY } }
+        );
+        if (broadRes.ok) {
+          const broadData = await broadRes.json();
+          const vid = broadData.videos?.[Math.floor(Math.random() * 5)];
+          const file = vid?.video_files?.find(f => f.quality === 'hd') || vid?.video_files?.[0];
+          if (file?.link) {
+            console.log(`✅ Pexels fallback video: ${file.link}`);
+            return file.link;
+          }
+        }
+      } else {
+        console.warn(`Pexels ${res.status}:`, (await res.text()).slice(0, 100));
       }
-      // JSON response with URL
-      const data = await res.json();
-      const url = data.url || data.video_url || data.output;
-      if (url) { console.log(`✅ ZSky video URL: ${url}`); return url; }
+    } catch (e) {
+      console.warn('Pexels failed:', e.message);
     }
-    const errText = await res.text().catch(() => res.status);
-    console.warn(`ZSky ${res.status}:`, String(errText).slice(0, 150));
-    throw new Error(`ZSky ${res.status}: ${String(errText).slice(0, 100)}`);
-  } catch (e) {
-    console.warn('ZSky failed — trying RunwayML:', e.message);
   }
+
+  // ── Replicate/Kling (paid fallback) ────────────────────────────────────────
   if (process.env.REPLICATE_API_KEY) {
     console.log(`🎬 Replicate/Kling: "${prompt.slice(0, 60)}..."`);
     const createRes = await fetch('https://api.replicate.com/v1/models/klingai/kling-video-3.0/predictions', {
@@ -214,27 +247,16 @@ async function generateClip(prompt, duration) {
       headers: {
         'Authorization': `Bearer ${process.env.REPLICATE_API_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait',
       },
-      body: JSON.stringify({
-        input: {
-          prompt,
-          duration:     5,
-          aspect_ratio: '9:16',
-        },
-      }),
+      body: JSON.stringify({ input: { prompt, duration: 5, aspect_ratio: '9:16' } }),
     });
     const createText = await createRes.text();
-    console.log(`Replicate create ${createRes.status}:`, createText.slice(0, 200));
-
+    console.log(`Replicate ${createRes.status}:`, createText.slice(0, 200));
     if (!createRes.ok) {
       console.warn('Replicate failed — trying next provider');
     } else {
       const prediction = JSON.parse(createText);
       const predId = prediction.id;
-      console.log(`⏳ Replicate prediction: ${predId} status: ${prediction.status}`);
-
-      // Poll for completion
       for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 5000));
         const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${predId}`, {
@@ -242,47 +264,30 @@ async function generateClip(prompt, duration) {
         });
         const t = await pollRes.json();
         console.log(`Replicate: ${t.status} (${i+1}/60)`);
-
         if (t.status === 'succeeded') {
           const url = Array.isArray(t.output) ? t.output[0] : t.output;
-          if (url) { console.log(`✅ Replicate video ready: ${url}`); return url; }
-          console.warn('Replicate succeeded but no output URL');
+          if (url) { console.log(`✅ Replicate video ready`); return url; }
           break;
         }
-        if (t.status === 'failed' || t.status === 'canceled') {
-          console.warn(`Replicate ${t.status}: ${t.error || 'unknown'}`);
-          break;
-        }
+        if (t.status === 'failed' || t.status === 'canceled') { console.warn(`Replicate ${t.status}`); break; }
       }
     }
   }
+
+  // ── MiniMax Hailuo (paid fallback) ─────────────────────────────────────────
   if (process.env.MINIMAX_API_KEY) {
-    console.log(`🎬 MiniMax Hailuo: "${prompt.slice(0, 60)}..."`);
+    console.log(`🎬 MiniMax: "${prompt.slice(0, 60)}..."`);
     const res = await fetch('https://api.minimax.io/v1/video_generation', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model:       'MiniMax-Hailuo-02',
-        prompt,
-        duration:    6,
-        resolution:  '768p',
-        aspect_ratio: '9:16',
-      }),
+      headers: { 'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'MiniMax-Hailuo-02', prompt, duration: 6, resolution: '768P', aspect_ratio: '9:16' }),
     });
     const resText = await res.text();
-    console.log(`MiniMax ${res.status}:`, resText.slice(0, 300));
-    if (!res.ok) {
-      console.warn('MiniMax failed — trying next provider');
-    } else {
+    console.log(`MiniMax ${res.status}:`, resText.slice(0, 200));
+    if (res.ok) {
       const data = JSON.parse(resText);
       const taskId = data.task_id;
-      if (!taskId) {
-        console.warn('MiniMax no task_id:', resText.slice(0, 150));
-      } else {
-        console.log(`⏳ MiniMax task: ${taskId}`);
+      if (taskId) {
         for (let i = 0; i < 72; i++) {
           await new Promise(r => setTimeout(r, 5000));
           const poll = await fetch(`https://api.minimax.io/v1/query/video_generation?task_id=${taskId}`, {
@@ -291,134 +296,26 @@ async function generateClip(prompt, duration) {
           const t = await poll.json();
           console.log(`MiniMax: ${t.status} (${i+1}/72)`);
           if (t.status === 'Success') {
-            // Download video file using file_id
             if (t.file_id) {
               const fileRes = await fetch(`https://api.minimax.io/v1/files/retrieve?file_id=${t.file_id}`, {
                 headers: { 'Authorization': `Bearer ${process.env.MINIMAX_API_KEY}` },
               });
               const fileData = await fileRes.json();
               const url = fileData.file?.download_url;
-              if (url) { console.log(`✅ MiniMax video ready`); return url; }
+              if (url) return url;
             }
-            if (t.video_url) { console.log(`✅ MiniMax video ready`); return t.video_url; }
-            console.warn('MiniMax success but no URL:', JSON.stringify(t).slice(0,200));
+            if (t.video_url) return t.video_url;
             break;
           }
-          if (t.status === 'Fail') {
-            console.warn(`MiniMax failed: ${t.message || 'unknown'}`);
-            break;
-          }
+          if (t.status === 'Fail') { console.warn('MiniMax failed'); break; }
         }
       }
     }
-  }
-  if (process.env.RUNWAY_API_KEY) {
-    console.log(`🎬 RunwayML gen4.5: "${prompt.slice(0, 60)}..."`);
-    const res = await fetch('https://api.dev.runwayml.com/v1/text_to_video', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
-        'Content-Type': 'application/json',
-        'X-Runway-Version': '2024-11-06',
-      },
-      body: JSON.stringify({
-        model:      'gen4.5',
-        promptText: prompt,
-        duration:   Math.min(duration || 5, 5),
-        ratio:      '720:1280',
-      }),
-    });
-    const resText = await res.text();
-    console.log(`RunwayML ${res.status}:`, resText.slice(0, 200));
-    if (res.ok) {
-      const task = JSON.parse(resText);
-      console.log(`⏳ RunwayML task: ${task.id}`);
-      for (let i = 0; i < 90; i++) {
-        await new Promise(r => setTimeout(r, 8000));
-        try {
-          const poll = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task.id}`, {
-            headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': '2024-11-06' },
-          });
-          const t = await poll.json();
-          console.log(`RunwayML: ${t.status} (${i+1}/90)`);
-          if (t.status === 'SUCCEEDED') {
-            const url = t.output?.[0] || t.artifacts?.[0]?.url;
-            if (url) { console.log(`✅ RunwayML clip ready`); return url; }
-            break;
-          }
-          if (t.status === 'FAILED') { console.warn(`RunwayML failed: ${t.failure || 'unknown'}`); break; }
-        } catch (e) {
-          console.warn(`RunwayML poll error:`, e.message);
-        }
-      }
-    } else {
-      let errMsg;
-      try { errMsg = JSON.parse(resText)?.error || resText; } catch { errMsg = resText; }
-      console.warn(`RunwayML failed: ${errMsg} — trying next provider`);
-    }
-  }
-  if (process.env.LUMA_API_KEY) {
-    console.log(`🎬 Luma: "${prompt.slice(0, 60)}..."`);
-    const res = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.LUMA_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt,
-        model:        'ray-2',
-        resolution:   '720p',
-        duration:     duration <= 5 ? '5s' : '9s',
-        aspect_ratio: '9:16',
-      }),
-    });
-    const resText = await res.text();
-    if (!res.ok) throw new Error(`Luma ${res.status}: ${resText.slice(0, 200)}`);
-    const gen = JSON.parse(resText);
-    for (let i = 0; i < 90; i++) {
-      await new Promise(r => setTimeout(r, 8000));
-      const poll = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${gen.id}`, {
-        headers: { 'Authorization': `Bearer ${process.env.LUMA_API_KEY}` },
-      });
-      const t = await poll.json();
-      console.log(`Luma: ${t.state} (${i+1}/90)`);
-      if (t.state === 'completed') {
-        const url = t.assets?.video;
-        if (url) return url;
-        throw new Error('Luma completed but no video URL');
-      }
-      if (t.state === 'failed') throw new Error(`Luma failed: ${t.failure_reason || 'unknown'}`);
-    }
-    throw new Error('Luma timed out');
-  }
-  if (process.env.FAL_API_KEY) {
-    console.log(`🎬 fal.ai: "${prompt.slice(0, 60)}..."`);
-    const res = await fetch('https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video', {
-      method: 'POST',
-      headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, duration: '5', aspect_ratio: '9:16' }),
-    });
-    if (!res.ok) throw new Error(`fal.ai ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const data = await res.json();
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 5000));
-      const poll = await fetch(`https://fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${data.request_id}`, {
-        headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}` },
-      });
-      const t = await poll.json();
-      if (t.status === 'COMPLETED') {
-        const url = t.output?.video?.url || t.output?.[0]?.url;
-        if (url) return url;
-        throw new Error('fal.ai no video URL');
-      }
-      if (t.status === 'FAILED') throw new Error(`fal.ai failed: ${t.error}`);
-    }
-    throw new Error('fal.ai timed out');
   }
 
-  throw new Error('All video providers failed or have no credits. Check Replicate billing at replicate.com/account/billing');
+  throw new Error('No video provider available — add PEXELS_API_KEY to Railway for free video clips');
 }
+
 
 async function tryUploadToR2(localPath, key) {
   try {
@@ -459,7 +356,7 @@ async function runPipeline(jobId, params) {
     }
 
     const clips = [];
-    const hasVideoKey = !!(process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
+    const hasVideoKey = !!(process.env.PEXELS_API_KEY || process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY || process.env.RUNWAY_API_KEY);
     const hasScenes = !!(script.sceneDescriptions?.length);
     console.log(`🎬 Video clip check: hasKey=${hasVideoKey} hasScenes=${hasScenes} sceneCount=${script.sceneDescriptions?.length || 0}`);
 
@@ -695,7 +592,7 @@ async function runBulkBatch(batchId, topics, settings) {
         batch.jobs[idx].progress = 40;
         batch.jobs[idx].step = 'Script ready...';
         let clipUrl = null;
-        if ((process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.RUNWAY_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
+        if ((process.env.PEXELS_API_KEY || process.env.REPLICATE_API_KEY || process.env.MINIMAX_API_KEY || process.env.RUNWAY_API_KEY || process.env.LUMA_API_KEY || process.env.FAL_API_KEY) && script.sceneDescriptions?.[0]) {
           try { clipUrl = await generateClip(script.sceneDescriptions[0].visual, 5); } catch (e) { console.warn(`Bulk clip failed:`, e.message); }
         }
         batch.jobs[idx].status = 'completed';
