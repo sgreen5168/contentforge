@@ -1,656 +1,489 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styles from './VideoEngine.module.css';
 
 const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 const VIDEO_TYPES = [
-  { id: 'ugc-persona',  name: 'UGC Persona',          desc: 'Authentic conversational review' },
-  { id: 'ai-vsl',       name: 'AI VSL',                desc: 'Video sales letter' },
-  { id: 'hybrid-vsl',   name: 'Hybrid VSL',            desc: 'Avatar + B-roll mix',             badge: 'New' },
-  { id: 'reel-ads',     name: 'Reel Ads',              desc: 'Short vertical TikTok ads' },
-  { id: 'product-ads',  name: 'Product Ads',           desc: 'Direct-response e-commerce' },
-  { id: 'commercial',   name: 'Commercial',            desc: 'Brand cinematic format' },
-  { id: 'competitor',   name: 'Competitor Replicator', desc: 'Replicate competitor structure',  badge: 'New', wide: true },
+  { id:'ugc-persona',  icon:'👤', label:'UGC Persona',    desc:'Authentic first-person review' },
+  { id:'ai-vsl',       icon:'💰', label:'AI VSL',          desc:'Video sales letter' },
+  { id:'reel-ads',     icon:'⚡', label:'Reel Ads',        desc:'Short punchy vertical ad' },
+  { id:'product-ads',  icon:'🛍', label:'Product Ad',      desc:'Direct-response product' },
+  { id:'commercial',   icon:'🎬', label:'Commercial',      desc:'Cinematic brand video' },
+  { id:'educator',     icon:'📚', label:'Educational',     desc:'Expert tips format' },
 ];
 
 const PERSONAS = [
-  { id: 'testimonial', name: 'Testimonial',  desc: 'Personal experience' },
-  { id: 'demo',        name: 'Product Demo', desc: 'Step-by-step' },
-  { id: 'influencer',  name: 'Influencer',   desc: 'High energy' },
-  { id: 'educator',    name: 'Educator',     desc: 'Expert tips' },
-  { id: 'ugc',         name: 'UGC Creator',  desc: 'Authentic raw' },
+  { id:'ugc',         label:'UGC Creator',  desc:'Authentic & raw' },
+  { id:'testimonial', label:'Testimonial',  desc:'Personal experience' },
+  { id:'demo',        label:'Product Demo', desc:'Step-by-step' },
+  { id:'influencer',  label:'Influencer',   desc:'High energy' },
+  { id:'educator',    label:'Educator',     desc:'Expert tips' },
 ];
 
 const PLATFORMS = [
-  { id: 'tiktok',     label: 'TikTok',           maxSec: 600,   maxSize: '4GB',   personal: false },
-  { id: 'instagram',  label: 'Instagram Reels',  maxSec: 90,    maxSize: '1GB',   personal: true  },
-  { id: 'youtube',    label: 'YouTube Shorts',   maxSec: 60,    maxSize: '256GB', personal: false },
-  { id: 'fb-reels',   label: 'Facebook Reels',   maxSec: 90,    maxSize: '4GB',   personal: true  },
-  { id: 'fb-feed',    label: 'Facebook Feed',    maxSec: 14400, maxSize: '10GB',  personal: true  },
-  { id: 'reddit',     label: 'Reddit',           maxSec: 900,   maxSize: '1GB',   personal: false },
+  { id:'tiktok',    label:'TikTok',          icon:'🎵', limit:'Max 10m' },
+  { id:'instagram', label:'Instagram Reels', icon:'📷', limit:'Max 90s' },
+  { id:'youtube',   label:'YouTube Shorts',  icon:'▶',  limit:'Max 60s' },
+  { id:'facebook',  label:'Facebook Reels',  icon:'📘', limit:'Max 90s' },
 ];
 
-const STYLES = ['ugc', 'cinematic', 'lifestyle', 'studio', 'talking_head'];
+const DURATIONS = ['15s','30s','45s','60s'];
 
-function fmt(s) {
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60), r = s % 60;
-  return r === 0 ? `${m}m` : `${m}m ${r}s`;
-}
-function scenes(s) { return Math.max(3, Math.round(s / 5)); }
-function costRunway(s) { return (scenes(s) * 5 * 0.05).toFixed(2); }
-function costEleven(s) { return (s / 30 * 0.05).toFixed(2); }
-function costTotal(s) { return (parseFloat(costRunway(s)) + parseFloat(costEleven(s)) + 0.01).toFixed(2); }
+const PIPELINE_STEPS = [
+  { n:'1', label:'Script',    sub:'Claude AI writes hook + scenes',    icon:'✦', color:'#5DCAA5' },
+  { n:'2', label:'Voiceover', sub:'OpenAI TTS persona-matched voice',  icon:'🎙', color:'#7BAAA0' },
+  { n:'3', label:'Video clips',sub:'Pexels stock HD clips — FREE',     icon:'🎬', color:'#1D9E75' },
+  { n:'4', label:'Complete',  sub:'Download or publish to platforms',  icon:'✅', color:'#1D9E75' },
+];
 
 export default function VideoEngine() {
-  const [tab, setTab]           = useState('generate');
-  const [rightTab, setRTab]     = useState('pipeline');
-  const [smartMode, setSmart]   = useState(true);
-  const [videoType, setVType]   = useState('ugc-persona');
-  const [inputMode, setMode]    = useState('topic');
-  const [topic, setTopic]       = useState('');
-  const [url, setUrl]           = useState('');
-  const [affiliateUrl, setAff]  = useState('');
-  const [persona, setPersona]   = useState('ugc');
-  const [duration, setDur]      = useState(30);
-  const [style, setStyle]       = useState('ugc');
-  const [platforms, setPlats]   = useState(['tiktok']);
-  const [autoUpload, setAuto]   = useState(false);
-  const [generating, setGen]    = useState(false);
-  const [job, setJob]           = useState(null);
-  const [jobs, setJobs]         = useState([]);
-  const [vslForm, setVsl]       = useState({ product:'', price:'', audience:'', pain:'', solution:'' });
-  const [vslResult, setVR]      = useState(null);
-  const pollRef                 = useRef(null);
-  const [pendingScript, setPendingScript] = useState(null);
-  const [editedScript, setEditedScript]   = useState('');
-  const [reviewMode, setReviewMode]       = useState(false);
+  const [tab, setTab]         = useState('generate');
+  const [mode, setMode]       = useState('topic');
+  const [topic, setTopic]     = useState('');
+  const [url, setUrl]         = useState('');
+  const [affUrl, setAffUrl]   = useState('');
+  const [videoType, setVType] = useState('ugc-persona');
+  const [persona, setPersona] = useState('ugc');
+  const [duration, setDur]    = useState('30s');
+  const [platforms, setPlats] = useState(['tiktok']);
+  const [loading, setLoad]    = useState(false);
+  const [jobId, setJobId]     = useState(null);
+  const [job, setJob]         = useState(null);
+  const [error, setError]     = useState('');
+  const [jobs, setJobs]       = useState([]);
+  const [editScript, setEditS] = useState('');
+  const [showEdit, setShowEdit] = useState(false);
+  const pollRef               = useRef(null);
 
-  const maxDur = platforms.length
-    ? Math.min(...platforms.map(id => PLATFORMS.find(p => p.id === id)?.maxSec || 600))
-    : 600;
-
-  useEffect(() => { if (duration > maxDur) setDur(maxDur); }, [maxDur]);
-
-  const warnings = PLATFORMS.filter(p => platforms.includes(p.id) && duration > p.maxSec)
-    .map(p => `${p.label} max is ${fmt(p.maxSec)}`);
-
-  function togglePlat(id) {
-    setPlats(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
-  }
-
-  const hasInput = inputMode === 'topic' ? topic.trim() : inputMode === 'url' ? url.trim() : affiliateUrl.trim();
-
-  async function generate() {
-    if (!hasInput || !platforms.length) return;
-    setGen(true); setJob(null); setRTab('result');
-    try {
-      // Step 1: Generate script only first for review
-      const scriptRes = await fetch(`${API}/api/video/script`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inputMode, topic, url, affiliateUrl, persona,
-          duration: `${duration}s`, durationSeconds: duration,
-          style, platforms, videoType: smartMode ? 'auto' : videoType,
-        }),
-      });
-
-      // Fallback: if script endpoint doesn't exist, go straight to full generate
-      if (!scriptRes.ok || scriptRes.status === 404) {
-        const res = await fetch(`${API}/api/video/generate`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            inputMode, topic, url, affiliateUrl, persona,
-            duration: `${duration}s`, durationSeconds: duration,
-            style, platforms, autoUpload,
-            videoType: smartMode ? 'auto' : videoType,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        setGen(false);
-        startPolling(data.jobId);
-        return;
-      }
-
-      const scriptData = await scriptRes.json();
-      if (scriptData.script) {
-        // Pause for review
-        setPendingScript({ ...scriptData, inputMode, topic, url, affiliateUrl, persona, duration, style, platforms, autoUpload, videoType: smartMode ? 'auto' : videoType });
-        setEditedScript(scriptData.script.fullScript || '');
-        setReviewMode(true);
-        setGen(false);
-        setRTab('result');
-        return;
-      }
-
-      // No script preview available — full generate
-      const res = await fetch(`${API}/api/video/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inputMode, topic, url, affiliateUrl, persona,
-          duration: `${duration}s`, durationSeconds: duration,
-          style, platforms, autoUpload,
-          videoType: smartMode ? 'auto' : videoType,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      startPolling(data.jobId);
-    } catch (e) { setGen(false); alert('Generation failed: ' + e.message); }
-  }
-
-  function startPolling(jobId) {
-    pollRef.current = setInterval(async () => {
-      try {
-        const r = await fetch(`${API}/api/video/job/${jobId}`);
-        const j = await r.json();
-        setJob(j);
-        if (j.status === 'completed' || j.status === 'failed') {
-          clearInterval(pollRef.current);
-          setGen(false);
-          loadJobs();
-        }
-      } catch {}
-    }, 2000);
-  }
-
-  async function approveScript() {
-    if (!pendingScript) return;
-    setGen(true); setReviewMode(false);
-    try {
-      const res = await fetch(`${API}/api/video/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...pendingScript,
-          editedScript: editedScript,
-          duration: pendingScript.duration,
-          durationSeconds: parseInt(pendingScript.duration),
-          autoUpload: pendingScript.autoUpload,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setPendingScript(null);
-      startPolling(data.jobId);
-    } catch (e) { setGen(false); alert('Generation failed: ' + e.message); }
-  }
-
-  async function generateVSL() {
-    if (!vslForm.product) return;
-    setGen(true);
-    try {
-      const res = await fetch(`${API}/api/vsl/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...vslForm, duration, affiliateUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setVR(data.script);
-    } catch (e) { alert('VSL failed: ' + e.message); }
-    finally { setGen(false); }
-  }
+  useEffect(() => { if (tab==='history') loadJobs(); }, [tab]);
+  useEffect(() => { return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
 
   async function loadJobs() {
     try {
-      const res = await fetch(`${API}/api/video/jobs`);
-      setJobs(await res.json());
+      const r = await fetch(`${API}/api/video/jobs`);
+      const d = await r.json();
+      setJobs(Array.isArray(d) ? d : []);
     } catch {}
   }
 
-  useEffect(() => { loadJobs(); return () => clearInterval(pollRef.current); }, []);
+  async function generate() {
+    const input = mode==='topic'?topic:mode==='url'?url:affUrl;
+    if (!input.trim()) return;
+    setLoad(true); setJob(null); setError(''); setJobId(null); setShowEdit(false);
+    try {
+      const res = await fetch(`${API}/api/video/generate`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          inputMode: mode,
+          topic: mode==='topic'?topic:undefined,
+          url: mode==='url'?url:undefined,
+          affiliateUrl: mode==='affiliate'?affUrl:undefined,
+          videoType, persona, duration,
+          platforms,
+          editedScript: showEdit ? editScript : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setJobId(data.jobId);
+      setTab('result');
+      pollRef.current = setInterval(() => pollJob(data.jobId), 3000);
+    } catch(e) {
+      setError(e.message);
+    } finally {
+      setLoad(false);
+    }
+  }
+
+  async function pollJob(id) {
+    try {
+      const r = await fetch(`${API}/api/video/job/${id}`);
+      const d = await r.json();
+      setJob(d);
+      if (d.status === 'completed' || d.status === 'failed') {
+        clearInterval(pollRef.current);
+        loadJobs();
+      }
+    } catch {}
+  }
+
+  function togglePlatform(id) {
+    setPlats(prev => prev.includes(id) ? prev.filter(p=>p!==id) : [...prev, id]);
+  }
+
+  function download(url) {
+    const a = document.createElement('a');
+    a.href = url; a.download = 'contentforge-video.mp4'; a.target = '_blank'; a.click();
+  }
+
+  const S = {
+    card: { background:'rgba(16,45,79,.9)', border:'1px solid rgba(29,158,117,.2)', borderRadius:12, overflow:'hidden', marginBottom:12 },
+    hdr:  { padding:'10px 14px', borderBottom:'1px solid rgba(29,158,117,.12)', fontSize:13, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', justifyContent:'space-between' },
+    body: { padding:'12px 14px' },
+    inp:  { width:'100%', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, padding:'8px 11px', fontSize:13, fontFamily:'inherit', color:'#E8F4F0', background:'rgba(22,61,106,.6)', outline:'none', marginBottom:10, boxSizing:'border-box' },
+    lbl:  { fontSize:10, color:'#4A7A72', fontWeight:600, textTransform:'uppercase', letterSpacing:.5, display:'block', marginBottom:6 },
+    chip: (on) => ({ padding:'5px 11px', borderRadius:20, fontSize:11, cursor:'pointer', fontFamily:'inherit', fontWeight:500, border:`1px solid ${on?'#1D9E75':'rgba(29,158,117,.2)'}`, background:on?'rgba(29,158,117,.15)':'transparent', color:on?'#5DCAA5':'#7BAAA0', margin:'0 4px 4px 0', display:'inline-block' }),
+  };
+
+  const input = mode==='topic'?topic:mode==='url'?url:affUrl;
 
   return (
-    <div className={styles.page}>
-      {/* ── Header ── */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.brandIcon}>▶</div>
-          <div>
-            <div className={styles.brandName}>AI Video Engine <span className={styles.brandVer}>2.0</span></div>
-            <div className={styles.brandSub}>Multi-format · Smart mode · 6 platforms</div>
+    <div style={{ padding:20, maxWidth:1100, fontFamily:'inherit' }}>
+
+      {/* Header */}
+      <div style={{ marginBottom:16, display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:600, color:'#E8F4F0', display:'flex', alignItems:'center', gap:10 }}>
+            🎬 AI Video <span style={{color:'#5DCAA5'}}>Engine</span>
+            <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, background:'rgba(29,158,117,.2)', color:'#5DCAA5', fontWeight:400 }}>3.0</span>
           </div>
+          <div style={{ fontSize:12, color:'#7BAAA0', marginTop:3 }}>Script · Voiceover · FREE Pexels stock clips · Multi-platform</div>
         </div>
-        <div className={styles.headerRight}>
-          <span className={styles.pillLive}>● Claude live</span>
-          <span className={styles.pillR2}>☁ R2</span>
-          <span className={styles.pillDb}>◈ Supabase</span>
-        </div>
-      </div>
-
-      {/* ── Metrics ── */}
-      <div className={styles.metrics}>
-        {[
-          { val: jobs.length || '0', lbl: 'Videos generated', delta: `↑ ${jobs.filter(j=>j.status==='completed').length} completed` },
-          { val: `$${costTotal(duration)}`, lbl: 'Est. cost per video', delta: `${scenes(duration)} scenes · ${fmt(duration)}` },
-          { val: jobs.length ? Math.round(jobs.filter(j=>j.status==='completed').length/jobs.length*100)+'%' : '—', lbl: 'Success rate', delta: 'All time' },
-          { val: '~4m', lbl: 'Avg generation time', delta: 'Script + voice + clips' },
-        ].map((m, i) => (
-          <div key={i} className={styles.metric}>
-            <div className={styles.metricVal}>{m.val}</div>
-            <div className={styles.metricLbl}>{m.lbl}</div>
-            <div className={styles.metricDelta}>{m.delta}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Nav tabs ── */}
-      <div className={styles.navTabs}>
-        {[['generate','Generate'],['vsl','VSL Builder'],['jobs','Job History'],['upload','API Setup']].map(([t,l]) => (
-          <button key={t} className={`${styles.navTab} ${tab===t?styles.navTabActive:''}`} onClick={()=>setTab(t)}>{l}</button>
-        ))}
-      </div>
-
-      {tab === 'generate' && (
-        <div className={styles.grid}>
-          {/* ── LEFT ── */}
-          <div className={styles.panel}>
-            <div className={styles.panelHdr}>
-              <span className={styles.panelTitle}>Source & mode</span>
-              <span className={styles.panelSub} id="smartLbl">{smartMode ? 'Smart mode on' : 'Manual mode'}</span>
+        {/* Cost badge */}
+        <div style={{ display:'flex', gap:8 }}>
+          {[['Claude','Script','#5DCAA5'],['OpenAI TTS','Voice','#7BAAA0'],['Pexels','Clips FREE','#1D9E75']].map(([name,type,color]) => (
+            <div key={name} style={{ padding:'6px 10px', background:'rgba(16,45,79,.8)', border:'1px solid rgba(29,158,117,.15)', borderRadius:8, textAlign:'center' }}>
+              <div style={{ fontSize:9, color:'#4A7A72', marginBottom:2 }}>{type}</div>
+              <div style={{ fontSize:11, fontWeight:600, color }}>{name}</div>
             </div>
-            <div className={styles.panelBody}>
-              <div className={styles.inputTabs}>
-                {[['topic','Topic'],['url','URL'],['affiliate','Affiliate']].map(([m,l]) => (
-                  <button key={m} className={`${styles.itab} ${inputMode===m?styles.itabActive:''}`} onClick={()=>setMode(m)}>{l}</button>
-                ))}
-              </div>
+          ))}
+        </div>
+      </div>
 
-              {inputMode==='topic'    && <input className={styles.inp} placeholder='"morning productivity habits"' value={topic} onChange={e=>setTopic(e.target.value)} />}
-              {inputMode==='url'      && <input className={styles.inp} placeholder='https://example.com/product' value={url} onChange={e=>setUrl(e.target.value)} />}
-              {inputMode==='affiliate'&& <input className={styles.inp} placeholder='https://affiliate.link/product' value={affiliateUrl} onChange={e=>setAff(e.target.value)} />}
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:4, marginBottom:16 }}>
+        {[['generate','⚡ Generate'],['result','📊 Result'],['history','📋 History']].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)}
+            style={{ padding:'7px 14px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:500,
+              border:`1px solid ${tab===id?'#1D9E75':'rgba(29,158,117,.2)'}`,
+              background:tab===id?'rgba(29,158,117,.15)':'transparent',
+              color:tab===id?'#5DCAA5':'#7BAAA0' }}>
+            {label}
+            {id==='result' && job && (
+              <span style={{ marginLeft:6, width:7, height:7, borderRadius:'50%', background:job.status==='completed'?'#1D9E75':job.status==='failed'?'#E24B4A':'#F5A623', display:'inline-block', verticalAlign:'middle' }} />
+            )}
+          </button>
+        ))}
+      </div>
 
-              <div className={styles.smartRow}>
-                <div>
-                  <div className={styles.smartTitle}>Smart mode</div>
-                  <div className={styles.smartDesc}>{smartMode ? 'Auto-selects best format for your input' : 'Manually choose a video type below'}</div>
+      {/* Generate tab */}
+      {tab==='generate' && (
+        <div style={{ display:'grid', gridTemplateColumns:'300px 1fr', gap:14 }}>
+          {/* Left */}
+          <div>
+            <div style={S.card}>
+              <div style={S.hdr}>Source</div>
+              <div style={S.body}>
+                <div style={{ display:'flex', gap:4, marginBottom:10 }}>
+                  {[['topic','Topic'],['url','URL'],['affiliate','Affiliate']].map(([id,label]) => (
+                    <button key={id} onClick={() => setMode(id)} style={S.chip(mode===id)}>{label}</button>
+                  ))}
                 </div>
-                <label className={styles.tog}>
-                  <input type="checkbox" checked={smartMode} onChange={e=>setSmart(e.target.checked)} />
-                  <span className={styles.togS} />
-                </label>
+                {mode==='topic' && <input style={S.inp} placeholder='"morning productivity tips"' value={topic} onChange={e=>setTopic(e.target.value)} />}
+                {mode==='url' && <input style={S.inp} placeholder="https://article-url.com" value={url} onChange={e=>setUrl(e.target.value)} />}
+                {mode==='affiliate' && <input style={S.inp} placeholder="https://affiliate-link.com" value={affUrl} onChange={e=>setAffUrl(e.target.value)} />}
               </div>
+            </div>
 
-              <div className={styles.fieldLbl}>Video type</div>
-              <div className={styles.vtypeGrid}>
-                {VIDEO_TYPES.map(vt => (
-                  <button key={vt.id} className={`${styles.vtype} ${vt.wide?styles.vtypeWide:''} ${!smartMode&&videoType===vt.id?styles.vtypeSel:''} ${smartMode?styles.vtypeDim:''}`}
-                    onClick={() => !smartMode && setVType(vt.id)}>
-                    <div className={styles.vtypeName}>{vt.name}{vt.badge&&<span className={styles.vtypeBadge}>{vt.badge}</span>}</div>
-                    <div className={styles.vtypeDesc}>{vt.desc}</div>
+            <div style={S.card}>
+              <div style={S.hdr}>Video type</div>
+              <div style={{ padding:'6px 8px' }}>
+                {VIDEO_TYPES.map(t => (
+                  <button key={t.id} onClick={() => setVType(t.id)}
+                    style={{ display:'flex', alignItems:'center', gap:8, width:'100%', padding:'7px 10px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', textAlign:'left', marginBottom:3,
+                      border:`1px solid ${videoType===t.id?'#1D9E75':'transparent'}`,
+                      background:videoType===t.id?'rgba(29,158,117,.1)':'transparent' }}>
+                    <span style={{ fontSize:16, flexShrink:0 }}>{t.icon}</span>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:500, color:'#E8F4F0' }}>{t.label}</div>
+                      <div style={{ fontSize:10, color:'#7BAAA0' }}>{t.desc}</div>
+                    </div>
+                    {videoType===t.id && <span style={{ marginLeft:'auto', color:'#1D9E75', fontSize:12 }}>✓</span>}
                   </button>
                 ))}
               </div>
+            </div>
 
-              <div className={styles.fieldLbl}>Persona</div>
-              <div className={styles.personaGrid}>
+            <div style={S.card}>
+              <div style={S.hdr}>Persona</div>
+              <div style={{ padding:'6px 8px', display:'flex', flexWrap:'wrap', gap:4 }}>
                 {PERSONAS.map(p => (
-                  <button key={p.id} className={`${styles.persona} ${persona===p.id?styles.personaSel:''}`} onClick={()=>setPersona(p.id)}>
-                    <div className={styles.personaName}>{p.name}</div>
-                    <div className={styles.personaDesc}>{p.desc}</div>
+                  <button key={p.id} onClick={() => setPersona(p.id)} style={{ ...S.chip(persona===p.id), margin:0 }}>
+                    {p.label}
                   </button>
                 ))}
               </div>
+            </div>
 
-              <div className={styles.fieldLbl}>Duration</div>
-              <div className={styles.sliderCard}>
-                <div className={styles.sliderTop}>
-                  <div>
-                    <span className={styles.durBig}>{fmt(duration)}</span>
-                    <span className={styles.durSub}>{scenes(duration)} scenes</span>
+            <div style={S.card}>
+              <div style={S.hdr}>Duration</div>
+              <div style={{ padding:'10px 14px', display:'flex', gap:6 }}>
+                {DURATIONS.map(d => (
+                  <button key={d} onClick={() => setDur(d)}
+                    style={{ flex:1, padding:'8px 4px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:500, textAlign:'center',
+                      border:`1px solid ${duration===d?'#1D9E75':'rgba(29,158,117,.2)'}`,
+                      background:duration===d?'rgba(29,158,117,.15)':'transparent',
+                      color:duration===d?'#5DCAA5':'#7BAAA0' }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={S.card}>
+              <div style={S.hdr}>Publish to</div>
+              <div style={{ padding:'8px 10px' }}>
+                {PLATFORMS.map(p => (
+                  <div key={p.id} onClick={() => togglePlatform(p.id)}
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 8px', borderRadius:8, cursor:'pointer', marginBottom:4,
+                      background:platforms.includes(p.id)?'rgba(29,158,117,.08)':'transparent',
+                      border:`1px solid ${platforms.includes(p.id)?'rgba(29,158,117,.3)':'transparent'}` }}>
+                    <span style={{ fontSize:16 }}>{p.icon}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:12, color:'#E8F4F0' }}>{p.label}</div>
+                      <div style={{ fontSize:10, color:'#4A7A72' }}>{p.limit}</div>
+                    </div>
+                    <div style={{ width:16, height:16, borderRadius:4, border:`2px solid ${platforms.includes(p.id)?'#1D9E75':'rgba(29,158,117,.3)'}`, background:platforms.includes(p.id)?'#1D9E75':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      {platforms.includes(p.id) && <span style={{ fontSize:9, color:'white' }}>✓</span>}
+                    </div>
                   </div>
-                  <div className={styles.presets}>
-                    {[15,30,45,60].map(v => (
-                      <button key={v} className={`${styles.preset} ${duration===v?styles.presetOn:''}`}
-                        onClick={()=>setDur(Math.min(v,maxDur))}>{v}s</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right */}
+          <div>
+            {/* Pipeline overview */}
+            <div style={S.card}>
+              <div style={S.hdr}>
+                <span>Video pipeline</span>
+                <span style={{ fontSize:11, color:'#1D9E75', fontWeight:500 }}>✅ FREE with Pexels API key</span>
+              </div>
+              <div style={{ padding:'14px 16px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                {PIPELINE_STEPS.map((step, i) => (
+                  <div key={i} style={{ padding:'12px', background:'rgba(22,61,106,.4)', borderRadius:10, border:'1px solid rgba(29,158,117,.1)' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                      <div style={{ width:22, height:22, borderRadius:'50%', background:'rgba(29,158,117,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:step.color }}>
+                        {step.n}
+                      </div>
+                      <span style={{ fontSize:13, fontWeight:500, color:'#E8F4F0' }}>{step.label}</span>
+                    </div>
+                    <div style={{ fontSize:11, color:'#7BAAA0', paddingLeft:30 }}>{step.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cost breakdown */}
+            <div style={S.card}>
+              <div style={S.hdr}>💰 Cost per video</div>
+              <div style={S.body}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+                  {[
+                    ['Claude script','~$0.01','per video'],
+                    ['OpenAI voiceover','~$0.02','per minute'],
+                    ['Pexels clips','FREE','unlimited'],
+                  ].map(([name,cost,unit]) => (
+                    <div key={name} style={{ padding:'10px', background:'rgba(22,61,106,.4)', borderRadius:8, textAlign:'center' }}>
+                      <div style={{ fontSize:11, color:'#7BAAA0', marginBottom:4 }}>{name}</div>
+                      <div style={{ fontSize:16, fontWeight:700, color:cost==='FREE'?'#1D9E75':'#5DCAA5' }}>{cost}</div>
+                      <div style={{ fontSize:10, color:'#4A7A72' }}>{unit}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding:'10px 12px', background:'rgba(29,158,117,.08)', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#E8F4F0' }}>Total per video</div>
+                    <div style={{ fontSize:11, color:'#7BAAA0' }}>With Pexels free tier</div>
+                  </div>
+                  <div style={{ fontSize:22, fontWeight:700, color:'#1D9E75' }}>~$0.03</div>
+                </div>
+                <div style={{ marginTop:8, fontSize:11, color:'#4A7A72' }}>
+                  ⚠ Get your free Pexels API key at <span style={{ color:'#5DCAA5' }}>pexels.com/api</span> and add PEXELS_API_KEY to Railway
+                </div>
+              </div>
+            </div>
+
+            {/* Script editor toggle */}
+            <div style={S.card}>
+              <div style={{ ...S.hdr, cursor:'pointer' }} onClick={() => setShowEdit(!showEdit)}>
+                <span>✎ Custom script (optional)</span>
+                <span style={{ fontSize:11, color:'#4A7A72' }}>{showEdit?'▲ Hide':'▼ Show'}</span>
+              </div>
+              {showEdit && (
+                <div style={S.body}>
+                  <div style={{ fontSize:11, color:'#7BAAA0', marginBottom:8 }}>Paste your own script — Claude will use it as a base and improve it</div>
+                  <textarea value={editScript} onChange={e=>setEditS(e.target.value)}
+                    placeholder="Paste your script here..."
+                    style={{ ...S.inp, minHeight:100, resize:'vertical', lineHeight:1.6, marginBottom:0 }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {error && <div style={{ padding:'10px 12px', background:'rgba(226,75,74,.1)', border:'1px solid rgba(226,75,74,.2)', borderRadius:10, color:'#F09595', fontSize:12, marginBottom:10 }}>⚠ {error}</div>}
+
+            <button onClick={generate} disabled={loading || !input.trim()}
+              style={{ width:'100%', padding:'13px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+                opacity:loading||!input.trim()?0.5:1, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+              {loading ? <><span style={{width:18,height:18,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'white',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/>Queuing...</> : '⚡ Generate Video'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Result tab */}
+      {tab==='result' && (
+        <div style={{ maxWidth:700 }}>
+          {!job && !jobId && (
+            <div style={{ ...S.card, textAlign:'center', padding:'50px' }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>🎬</div>
+              <div style={{ fontSize:14, color:'#E8F4F0' }}>Generate a video to see results here</div>
+            </div>
+          )}
+
+          {job && (
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              {/* Progress */}
+              <div style={S.card}>
+                <div style={S.hdr}>
+                  <span>Generation progress</span>
+                  <span style={{ fontSize:11, fontWeight:600, color:job.status==='completed'?'#1D9E75':job.status==='failed'?'#F09595':'#F5A623' }}>
+                    {job.status==='completed'?'✅ Complete':job.status==='failed'?'❌ Failed':'⏳ Processing'}
+                  </span>
+                </div>
+                <div style={S.body}>
+                  {/* Progress bar */}
+                  <div style={{ height:6, background:'rgba(255,255,255,.08)', borderRadius:3, overflow:'hidden', marginBottom:8 }}>
+                    <div style={{ height:'100%', width:(job.progress||0)+'%', background:job.status==='failed'?'#E24B4A':'#1D9E75', borderRadius:3, transition:'width .5s' }} />
+                  </div>
+                  <div style={{ fontSize:12, color:'#7BAAA0', marginBottom:12 }}>{job.step || 'Waiting...'}</div>
+
+                  {/* Pipeline steps */}
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {PIPELINE_STEPS.map((step, i) => {
+                      const prog = job.progress || 0;
+                      const thresholds = [30, 50, 85, 100];
+                      const done = prog >= thresholds[i];
+                      const active = prog >= (thresholds[i-1]||0) && prog < thresholds[i];
+                      return (
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:8, background:done?'rgba(29,158,117,.08)':active?'rgba(29,158,117,.04)':'transparent' }}>
+                          <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11,
+                            background:done?'#1D9E75':active?'rgba(29,158,117,.2)':'rgba(255,255,255,.05)',
+                            color:done?'white':active?'#5DCAA5':'#4A7A72' }}>
+                            {done?'✓':active?<span style={{width:10,height:10,border:'1.5px solid rgba(29,158,117,.5)',borderTopColor:'#1D9E75',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/>:step.n}
+                          </div>
+                          <div>
+                            <div style={{ fontSize:12, fontWeight:500, color:done?'#E8F4F0':'#7BAAA0' }}>{step.label}</div>
+                            <div style={{ fontSize:10, color:'#4A7A72' }}>{step.sub}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Script result */}
+              {job.result?.script && (
+                <div style={S.card}>
+                  <div style={S.hdr}>✦ Generated script</div>
+                  <div style={S.body}>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#5DCAA5', marginBottom:6 }}>Hook</div>
+                    <div style={{ fontSize:13, color:'#E8F4F0', marginBottom:12, padding:'8px 10px', background:'rgba(29,158,117,.06)', borderRadius:6 }}>{job.result.script.hook}</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'#5DCAA5', marginBottom:6 }}>Full script</div>
+                    <div style={{ fontSize:12, color:'#7BAAA0', lineHeight:1.7, whiteSpace:'pre-wrap', maxHeight:150, overflow:'auto', padding:'8px 10px', background:'rgba(22,61,106,.4)', borderRadius:6 }}>
+                      {job.result.script.fullScript}
+                    </div>
+                    {job.result.script.hashtags?.length > 0 && (
+                      <div style={{ marginTop:10, fontSize:12, color:'#5DCAA5' }}>{job.result.script.hashtags.join(' ')}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Clips */}
+              {job.result?.clips?.length > 0 && (
+                <div style={S.card}>
+                  <div style={S.hdr}>🎬 Video clips</div>
+                  <div style={S.body}>
+                    {job.result.clips.map((clip, i) => (
+                      <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:8, marginBottom:6,
+                        background:clip.status==='success'?'rgba(29,158,117,.08)':'rgba(226,75,74,.06)',
+                        border:`1px solid ${clip.status==='success'?'rgba(29,158,117,.2)':'rgba(226,75,74,.15)'}` }}>
+                        <span style={{ fontSize:18 }}>{clip.status==='success'?'✅':'❌'}</span>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:12, color:'#E8F4F0' }}>Scene {clip.scene}</div>
+                          {clip.status!=='success' && <div style={{ fontSize:11, color:'#F09595' }}>{clip.error}</div>}
+                        </div>
+                        {clip.videoUrl && (
+                          <button onClick={() => download(clip.videoUrl)}
+                            style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'#1D9E75', color:'white', cursor:'pointer', fontFamily:'inherit' }}>
+                            ⬇ Download
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
-                <input type="range" min="10" max={maxDur} step="1" value={duration}
-                  onChange={e=>setDur(Number(e.target.value))} className={styles.slider} />
-                <div className={styles.sliderTicks}><span>10s</span><span>30s</span><span>1m</span><span>{fmt(maxDur)}</span></div>
-              </div>
-
-              <div className={styles.costCard}>
-                <div className={styles.costRow}><span>RunwayML clips</span><span>${costRunway(duration)}</span></div>
-                <div className={styles.costRow}><span>ElevenLabs voice</span><span>${costEleven(duration)}</span></div>
-                <div className={styles.costRow}><span>Claude script</span><span>$0.01</span></div>
-                <div className={styles.costTotal}><span>Estimated total</span><span>${costTotal(duration)}</span></div>
-              </div>
-
-              <div className={styles.fieldLbl}>Publish to</div>
-              <div className={styles.platGrid}>
-                {PLATFORMS.map(p => (
-                  <button key={p.id} className={`${styles.plat} ${platforms.includes(p.id)?styles.platOn:''}`} onClick={()=>togglePlat(p.id)}>
-                    <div className={styles.platTop}>
-                      <span className={styles.platName}>{p.label}</span>
-                      <span className={`${styles.platCheck} ${platforms.includes(p.id)?styles.platCheckOn:''}`}>{platforms.includes(p.id)?'✓':''}</span>
-                    </div>
-                    <div className={styles.platMeta}>
-                      <span>Max {fmt(p.maxSec)}</span>
-                      <span>{p.maxSize}</span>
-                    </div>
-                    {p.personal && <span className={styles.platPersonal}>Your account</span>}
-                  </button>
-                ))}
-              </div>
-
-              {warnings.length > 0 && (
-                <div className={styles.warnBox}>{warnings.map((w,i)=><div key={i}>⚠ {w}</div>)}</div>
-              )}
-              {platforms.length === 0 && (
-                <div className={styles.warnBox}>⚠ Select at least one platform to generate a video</div>
               )}
 
-              <div className={styles.genBar}>
-                <label className={styles.togRow}>
-                  <label className={styles.tog}>
-                    <input type="checkbox" checked={autoUpload} onChange={e=>setAuto(e.target.checked)} />
-                    <span className={styles.togS} />
-                  </label>
-                  Auto-upload
-                </label>
-                <button className={styles.genBtn} onClick={generate} disabled={generating||!hasInput||!platforms.length}>
-                  {generating ? <><span className={styles.spinner} /> Generating…</> : 'Generate ⚡'}
+              {/* Clip error */}
+              {job.clipError && (
+                <div style={{ padding:'12px 14px', background:'rgba(245,166,35,.06)', border:'1px solid rgba(245,166,35,.2)', borderRadius:10 }}>
+                  <div style={{ fontSize:13, fontWeight:500, color:'#FAC775', marginBottom:4 }}>⚠ Video clips skipped</div>
+                  <div style={{ fontSize:12, color:'#7BAAA0', marginBottom:8 }}>{job.clipError}</div>
+                  <div style={{ fontSize:11, color:'#4A7A72' }}>
+                    Add <span style={{color:'#5DCAA5'}}>PEXELS_API_KEY</span> to Railway for free stock video clips — get your key at pexels.com/api
+                  </div>
+                </div>
+              )}
+
+              {/* Final download */}
+              {job.result?.finalVideoUrl && (
+                <button onClick={() => download(job.result.finalVideoUrl)}
+                  style={{ width:'100%', padding:'13px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                  ⬇ Download Video
                 </button>
-              </div>
-            </div>
-          </div>
-
-          {/* ── RIGHT ── */}
-          <div className={styles.panel}>
-            <div className={styles.rightTabs}>
-              {[['pipeline','Pipeline'],['features','Features'],['result','Result']].map(([t,l]) => (
-                <button key={t} className={`${styles.rtab} ${rightTab===t?styles.rtabActive:''}`} onClick={()=>setRTab(t)}>{l}</button>
-              ))}
-            </div>
-
-            {rightTab === 'pipeline' && (
-              <div className={styles.panelBody}>
-                {[
-                  {n:1,done:true, title:'Script generation',  tag:'Claude AI',    desc:'Hook · problem · solution · CTA · scene descriptions'},
-                  {n:2,done:true, title:'Voiceover',          tag:'ElevenLabs',   desc:'Persona-matched voice · MP3 saved to R2'},
-                  {n:3,idle:true, title:'Video clips',        tag:'RunwayML',     desc:'AI scene generation · 9:16 vertical · gen4_turbo'},
-                  {n:4,idle:true, title:'Cloud storage',      tag:'Cloudflare R2',desc:'Permanent video URL · zero egress fees'},
-                  {n:5,idle:true, title:'Publish',            tag:'6 platforms',  desc:'TikTok · Instagram · YouTube · Facebook · Reddit'},
-                ].map(s => (
-                  <div key={s.n} className={styles.step}>
-                    <div className={`${styles.stepNum} ${s.done?styles.stepDone:styles.stepIdle}`}>{s.n}</div>
-                    <div>
-                      <div className={styles.stepTitle}>
-                        {s.title}
-                        <span className={`${styles.stepTag} ${s.done?styles.tagDone:styles.tagWait}`}>{s.tag}</span>
-                      </div>
-                      <div className={styles.stepDesc}>{s.desc}</div>
-                    </div>
-                  </div>
-                ))}
-
-                <div className={styles.apiGrid}>
-                  {[
-                    {name:'Claude AI',      ok:true,  desc:'Scripts'},
-                    {name:'ElevenLabs',     ok:true,  desc:'Voice'},
-                    {name:'RunwayML',       ok:true,  desc:'Video'},
-                    {name:'Cloudflare R2',  ok:true,  desc:'Storage'},
-                    {name:'Supabase',       ok:true,  desc:'Database'},
-                    {name:'Reddit',         ok:false, desc:'Not connected'},
-                  ].map((a,i) => (
-                    <div key={i} className={styles.apiRow}>
-                      <span className={styles.apiName}>{a.name}</span>
-                      <span className={`${styles.apiDot} ${a.ok?styles.apiOk:styles.apiOff}`} />
-                      <span className={styles.apiDesc}>{a.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {rightTab === 'features' && (
-              <div className={styles.panelBody}>
-                <div className={styles.featSection}>
-                  <div className={styles.featTitle}>Visual style</div>
-                  <select className={styles.sel} value={style} onChange={e=>setStyle(e.target.value)}>
-                    {STYLES.map(s => <option key={s} value={s}>{s.replace('_',' ')}</option>)}
-                  </select>
-                </div>
-                <div className={styles.featSection}>
-                  <div className={styles.featTitle}>Personal accounts</div>
-                  {[
-                    {name:'Facebook', handle:'Your Page', connected:true},
-                    {name:'Instagram', handle:'Your account', connected:true},
-                    {name:'Reddit', handle:'Not connected', connected:false},
-                  ].map((a,i) => (
-                    <div key={i} className={styles.socialRow}>
-                      <div className={styles.socialAvatar}>{a.name.slice(0,2)}</div>
-                      <div className={styles.socialInfo}>
-                        <div className={styles.socialName}>{a.name}</div>
-                        <div className={styles.socialHandle}>{a.handle}</div>
-                      </div>
-                      <span className={`${styles.socialStatus} ${a.connected?styles.statusOk:styles.statusOff}`}>
-                        {a.connected ? '● Connected' : '○ Connect'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {rightTab === 'result' && (
-              <div className={styles.panelBody}>
-                {generating && !job && (
-                  <div className={styles.genBox}>
-                    <span className={styles.spinner} style={{width:20,height:20,borderWidth:3}} />
-                    <span className={styles.genBoxText}>Starting generation…</span>
-                  </div>
-                )}
-                {job && (
-                  <div className={styles.jobCard}>
-                    {/* Status + step */}
-                    <div className={styles.jobCardTop}>
-                      <span className={`${styles.badge} ${styles['badge_'+job.status]}`}>{job.status}</span>
-                      <span className={styles.jobStep}>{job.step}</span>
-                    </div>
-                    {/* Progress bar */}
-                    <div className={styles.progBar}>
-                      <div className={styles.progFill} style={{width:(job.progress||0)+'%'}} />
-                    </div>
-                    <div className={styles.progPct}>{Math.round(job.progress||0)}%</div>
-
-                    {/* Pipeline steps — always visible */}
-                    <div style={{display:'flex',flexDirection:'column',gap:6,margin:'12px 0'}}>
-                      {[
-                        {label:'Script generation',   done:(job.progress||0)>=30, active:(job.progress||0)>0&&(job.progress||0)<30},
-                        {label:'Voiceover creation',  done:(job.progress||0)>=50, active:(job.progress||0)>=30&&(job.progress||0)<50},
-                        {label:'Video clip assembly', done:(job.progress||0)>=90, active:(job.progress||0)>=50&&(job.progress||0)<90},
-                        {label:'Cloud upload',        done:(job.progress||0)>=100,active:(job.progress||0)>=90&&(job.progress||0)<100},
-                      ].map((s,i)=>(
-                        <div key={i} style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>
-                          <div style={{width:18,height:18,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:600,
-                            background:s.done?'rgba(29,158,117,.2)':s.active?'rgba(93,202,165,.15)':'rgba(255,255,255,.05)',
-                            color:s.done?'#1D9E75':s.active?'#5DCAA5':'#7BAAA0'}}>
-                            {s.done?'✓':i+1}
-                          </div>
-                          <span style={{color:s.done?'#5DCAA5':s.active?'#E8F4F0':'#7BAAA0'}}>{s.label}</span>
-                          {s.active&&<span className={styles.spinner} style={{width:10,height:10,borderWidth:2,marginLeft:'auto'}}/>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Script — show as soon as available (progress>=30 OR completed) */}
-                    {((job.progress>=30||job.status==='completed') && (job.script||job.result?.script)) && (
-                      <div className={styles.scriptCard}>
-                        <div className={styles.scriptLbl}>Hook</div>
-                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.hook}</div>
-                        <div className={styles.scriptLbl} style={{marginTop:8}}>Full script</div>
-                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.fullScript}</div>
-                        <div className={styles.scriptLbl} style={{marginTop:8}}>CTA</div>
-                        <div className={styles.scriptTxt}>{(job.script||job.result?.script)?.cta}</div>
-                        {(job.script||job.result?.script)?.hashtags && (
-                          <div className={styles.hashtags}>{(job.script||job.result?.script).hashtags.join(' ')}</div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Download button */}
-                    {job.status==='completed' && job.result?.finalVideoUrl && (
-                      <a className={styles.downloadBtn} href={job.result.finalVideoUrl} target="_blank" rel="noreferrer">
-                        ⬇ Download Video
-                      </a>
-                    )}
-
-                    {/* No video but completed — explain why */}
-                    {job.status==='completed' && !job.result?.finalVideoUrl && (
-                      <div style={{marginTop:10,padding:'10px 12px',background:'rgba(245,166,35,.08)',border:'0.5px solid rgba(245,166,35,.25)',borderRadius:8,fontSize:12,color:'#FAC775',lineHeight:1.6}}>
-                        ⚠ Script generated — video clips were skipped.<br/>
-                        <span style={{color:'#7BAAA0'}}>
-                          {job.clipError
-                            ? job.clipError
-                            : 'Video clips were skipped. Check RUNWAY_API_KEY is set in Railway Variables and credits are available at app.dev.runwayml.com'}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Voiceover note */}
-                    {job.status==='completed' && !job.result?.audioUrl && !job.result?.audioPath && (
-                      <div style={{marginTop:8,fontSize:11,color:'#4A7A72'}}>
-                        💡 No voiceover generated — check OPENAI_API_KEY is set in Railway Variables.
-                      </div>
-                    )}
-
-                    {job.clipError && (
-                      <div className={styles.errorBox} style={{marginTop:8}}>
-                        🎬 RunwayML error: {job.clipError}
-                      </div>
-                    )}
-                    {job.status==='failed' && (
-                      <div className={styles.errorBox}>⚠ {job.error}</div>
-                    )}
-                  </div>
-                )}
-                {/* Script review mode */}
-                {reviewMode && pendingScript && !generating && !job && (
-                  <div className={styles.jobCard}>
-                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                      <span style={{fontSize:13,fontWeight:500,color:'var(--color-text-primary,#E8F4F0)'}}>
-                        ✦ Script ready — review and edit before generating
-                      </span>
-                    </div>
-                    <div style={{fontSize:11,color:'rgba(93,202,165,.8)',marginBottom:8}}>
-                      Edit the script below then click Approve to start video generation
-                    </div>
-                    <textarea
-                      value={editedScript}
-                      onChange={e => setEditedScript(e.target.value)}
-                      style={{
-                        width:'100%', minHeight:200, resize:'vertical',
-                        background:'rgba(22,61,106,.6)',
-                        border:'0.5px solid rgba(29,158,117,.3)',
-                        borderRadius:8, padding:'10px 12px', fontSize:13,
-                        fontFamily:'inherit', color:'#E8F4F0', lineHeight:1.6,
-                        outline:'none', boxSizing:'border-box', marginBottom:10,
-                      }}
-                    />
-                    <div style={{display:'flex',gap:8}}>
-                      <button onClick={approveScript}
-                        style={{flex:1,padding:'9px',borderRadius:8,border:'none',background:'#1D9E75',color:'white',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}}>
-                        ✓ Approve &amp; Generate Video ⚡
-                      </button>
-                      <button onClick={() => { setReviewMode(false); setPendingScript(null); }}
-                        style={{padding:'9px 14px',borderRadius:8,border:'0.5px solid rgba(29,158,117,.2)',background:'transparent',color:'#7BAAA0',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>
-                        Discard
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {!job && !generating && !reviewMode && (
-                  <div className={styles.emptyResult}>
-                    <div className={styles.emptyIcon}>▶</div>
-                    <div className={styles.emptyText}>Your video will appear here</div>
-                    <div className={styles.emptySub}>Fill in the form and click Generate</div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {tab === 'jobs' && (
-        <div className={styles.panel} style={{maxWidth:'100%'}}>
-          <div className={styles.panelHdr}><span className={styles.panelTitle}>Job history</span></div>
-          <div className={styles.panelBody}>
-            {jobs.length === 0
-              ? <div className={styles.emptyResult}>No jobs yet — generate your first video!</div>
-              : jobs.map(j => (
-                <div key={j.id} className={styles.jobRow} onClick={()=>{setJob(j);setTab('generate');setRTab('result')}}>
-                  <span className={`${styles.jobDot} ${styles['dot_'+j.status]}`} />
-                  <span className={styles.jobText}>{j.data?.topic||j.data?.url||'Video job'}</span>
-                  <div className={styles.jobProgMini}><div className={styles.jobProgFill} style={{width:j.progress+'%'}} /></div>
-                  <span className={styles.jobMeta}>{j.data?.persona} · {j.data?.duration} · {j.status}</span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      )}
-
-      {tab === 'vsl' && (
-        <div style={{maxWidth:680}}>
-          <div className={styles.panel}>
-            <div className={styles.panelHdr}><span className={styles.panelTitle}>VSL Builder</span></div>
-            <div className={styles.panelBody}>
-              <div className={styles.fieldLbl}>Product name</div>
-              <input className={styles.inp} placeholder='"ProSkin Serum"' value={vslForm.product} onChange={e=>setVsl(v=>({...v,product:e.target.value}))} />
-              <div className={styles.row}>
-                <div style={{flex:1}}><div className={styles.fieldLbl}>Price</div><input className={styles.inp} placeholder='$49.99' value={vslForm.price} onChange={e=>setVsl(v=>({...v,price:e.target.value}))} /></div>
-                <div style={{flex:2}}><div className={styles.fieldLbl}>Target audience</div><input className={styles.inp} placeholder='Women 25-45 with dry skin' value={vslForm.audience} onChange={e=>setVsl(v=>({...v,audience:e.target.value}))} /></div>
-              </div>
-              <div className={styles.fieldLbl}>Main pain point</div>
-              <input className={styles.inp} placeholder='Struggling with dry, dull skin' value={vslForm.pain} onChange={e=>setVsl(v=>({...v,pain:e.target.value}))} />
-              <div className={styles.fieldLbl}>Your solution</div>
-              <input className={styles.inp} placeholder='24-hour hydration formula' value={vslForm.solution} onChange={e=>setVsl(v=>({...v,solution:e.target.value}))} />
-              <button className={styles.genBtn} style={{width:'100%',marginTop:8}} onClick={generateVSL} disabled={generating||!vslForm.product}>
-                {generating?<><span className={styles.spinner}/> Writing…</>:'Generate VSL ⚡'}
-              </button>
-            </div>
-          </div>
-          {vslResult && (
-            <div className={styles.scriptCard} style={{marginTop:12}}>
-              {[['Hook',vslResult.hook],['Problem',vslResult.problemAgitation],['Solution',vslResult.solutionReveal],['CTA',vslResult.cta]].map(([l,v])=>v&&(
-                <div key={l} style={{marginBottom:10}}><div className={styles.scriptLbl}>{l}</div><div className={styles.scriptTxt}>{v}</div></div>
-              ))}
-              <div className={styles.scriptLbl}>Full script</div>
-              <div className={styles.scriptTxt}>{vslResult.fullScript}</div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {tab === 'upload' && (
-        <div style={{maxWidth:580}}>
-          <div className={styles.panel}>
-            <div className={styles.panelHdr}><span className={styles.panelTitle}>API keys needed</span></div>
-            <div className={styles.panelBody}>
-              {[
-                ['RunwayML','RUNWAY_API_KEY','Video generation'],
-                ['OpenAI','OPENAI_API_KEY','Voiceover (primary)'],
-              ['ElevenLabs','ELEVENLABS_API_KEY','Voiceover (fallback)'],
-                ['TikTok','TIKTOK_ACCESS_TOKEN','Auto-upload'],
-                ['Instagram','INSTAGRAM_ACCESS_TOKEN','Reels upload'],
-                ['Facebook','FACEBOOK_ACCESS_TOKEN','Feed + Reels'],
-                ['Reddit','REDDIT_CLIENT_ID + SECRET','Auto-post'],
-                ['YouTube','YOUTUBE_ACCESS_TOKEN','Shorts upload'],
-              ].map(([name,key,desc])=>(
-                <div key={key} className={styles.credRow}>
-                  <span className={styles.credName}>{name}</span>
-                  <div style={{flex:1}}><code className={styles.credKey}>{key}</code><div className={styles.credDesc}>{desc}</div></div>
-                </div>
-              ))}
+      {/* History tab */}
+      {tab==='history' && (
+        <div style={{ maxWidth:700 }}>
+          {jobs.length === 0 && (
+            <div style={{ ...S.card, textAlign:'center', padding:'40px' }}>
+              <div style={{ fontSize:13, color:'#7BAAA0' }}>No videos generated yet</div>
             </div>
-          </div>
+          )}
+          {jobs.map((j, i) => (
+            <div key={i} style={S.card}>
+              <div style={{ padding:'10px 14px', display:'flex', alignItems:'center', gap:10 }}>
+                <div style={{ width:10, height:10, borderRadius:'50%', flexShrink:0, background:j.status==='completed'?'#1D9E75':j.status==='failed'?'#E24B4A':'#F5A623' }} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, color:'#E8F4F0' }}>{j.data?.topic || j.data?.url || 'Video'}</div>
+                  <div style={{ fontSize:11, color:'#4A7A72' }}>{new Date(j.createdAt).toLocaleString()} · {j.status}</div>
+                </div>
+                {j.result?.finalVideoUrl && (
+                  <button onClick={() => download(j.result.finalVideoUrl)}
+                    style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'#1D9E75', color:'white', cursor:'pointer', fontFamily:'inherit' }}>
+                    ⬇
+                  </button>
+                )}
+                <button onClick={() => { setJob(j); setTab('result'); }}
+                  style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'1px solid rgba(29,158,117,.2)', background:'transparent', color:'#7BAAA0', cursor:'pointer', fontFamily:'inherit' }}>
+                  View
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
     </div>
   );
 }
