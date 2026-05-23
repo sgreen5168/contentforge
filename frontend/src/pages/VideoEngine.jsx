@@ -439,12 +439,37 @@ export default function VideoEngine() {
                 </div>
               )}
 
-              {/* Final download */}
+              {/* Video preview + download */}
               {job.result?.finalVideoUrl && (
-                <button onClick={() => download(job.result.finalVideoUrl)}
-                  style={{ width:'100%', padding:'13px', borderRadius:10, border:'none', background:'#1D9E75', color:'white', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                  ⬇ Download Video
-                </button>
+                <div style={S.card}>
+                  <div style={S.hdr}>
+                    <span>✅ Final video</span>
+                    <span style={{ fontSize:11, color:'#1D9E75' }}>Ready to download or publish</span>
+                  </div>
+                  <div style={{ padding:'12px' }}>
+                    {job.result.finalVideoUrl.startsWith('data:') || job.result.finalVideoUrl.startsWith('http') ? (
+                      <video
+                        src={job.result.finalVideoUrl}
+                        controls
+                        style={{ width:'100%', maxHeight:400, borderRadius:8, background:'#000', display:'block', marginBottom:10 }}
+                        playsInline
+                      />
+                    ) : null}
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                      <button onClick={() => download(job.result.finalVideoUrl)}
+                        style={{ padding:'11px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        ⬇ Download MP4
+                      </button>
+                      <button onClick={() => { navigator.clipboard.writeText(job.result.finalVideoUrl); }}
+                        style={{ padding:'11px', borderRadius:8, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                        🔗 Copy URL
+                      </button>
+                    </div>
+                    <div style={{ marginTop:10, fontSize:11, color:'#4A7A72', textAlign:'center' }}>
+                      Right-click the video → Save As to download · Or use Download button above
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
