@@ -334,6 +334,71 @@ async function tryUploadToR2(localPath, key) {
     return null;
   }
 }
+// ── FFmpeg video assembly ─────────────────────────────────────────────────────
+async function assembleVideo(clips, audioPath, jobId) {
+  try {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+    const fs = (await import('fs')).default;
+    const fetch = (await import('node-fetch')).default;
+    const path = (await import('path')).default;
+
+    const tmpDir = `/tmp/job_${jobId}`;
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+    // Check FFmpeg is available
+    try { await execAsync('ffmpeg -version'); }
+    catch(e) {
+      console.warn('FFmpeg not available — returning first clip URL');
+      return clips.find(c => c.videoUrl)?.videoUrl || null;
+    }
+
+    // Download each clip
+    const clipPaths = [];
+    for (let i = 0; i < clips.length; i++) {
+      const clip = clips[i];
+      if (!clip.videoUrl || clip.status !== 'success') continue;
+      try {
+        const res = await fetch(clip.videoUrl);
+        if (!res.ok) continue;
+        const buffer = await res.buffer();
+        const clipPath = path.join(tmpDir, `clip_${i}.mp4`);
+        fs.writeFileSync(clipPath, buffer);
+        clipPaths.push(clipPath);
+        console.log(`✅ Downloaded clip ${i+1}: ${(buffer.length/1024/1024).toFixed(1)}MB`);
+      } catch(e) { console.warn(`Clip ${i+1} download failed:`, e.message); }
+    }
+
+    if (clipPaths.length === 0) return null;
+
+    const outputPath = path.join(tmpDir, 'final.mp4');
+
+    if (clipPaths.length === 1 && audioPath && fs.existsSync(audioPath)) {
+      await execAsync(`ffmpeg -y -i "${clipPaths[0]}" -i "${audioPath}" -c:v copy -c:a aac -shortest "${outputPath}"`);
+    } else if (clipPaths.length === 1) {
+      fs.copyFileSync(clipPaths[0], outputPath);
+    } else {
+      const concatFile = path.join(tmpDir, 'concat.txt');
+      fs.writeFileSync(concatFile, clipPaths.map(p => `file '${p}'`).join('\n'));
+      const concatPath = path.join(tmpDir, 'concat.mp4');
+      await execAsync(`ffmpeg -y -f concat -safe 0 -i "${concatFile}" -c:v libx264 -preset fast -crf 23 "${concatPath}"`);
+      if (audioPath && fs.existsSync(audioPath)) {
+        await execAsync(`ffmpeg -y -i "${concatPath}" -i "${audioPath}" -c:v copy -c:a aac -shortest "${outputPath}"`);
+      } else {
+        fs.copyFileSync(concatPath, outputPath);
+      }
+    }
+
+    if (!fs.existsSync(outputPath)) return clips.find(c => c.videoUrl)?.videoUrl || null;
+    console.log(`✅ Final video assembled: ${(fs.statSync(outputPath).size/1024/1024).toFixed(1)}MB`);
+    return outputPath;
+  } catch(e) {
+    console.warn('Assembly failed:', e.message);
+    return clips.find(c => c.videoUrl)?.videoUrl || null;
+  }
+}
+
 async function runPipeline(jobId, params) {
   const { inputMode, topic, url, affiliateUrl, persona, duration, durationSeconds, style, platforms, autoUpload, videoType, editedScript } = params;
 
@@ -384,10 +449,34 @@ async function runPipeline(jobId, params) {
       await updateJob(jobId, { clipError: 'Script did not return scene descriptions — try regenerating' });
     }
 
-    const finalVideoUrl = clips.find(c => c.videoUrl)?.videoUrl || null;
+    // Assemble clips + voiceover into final video using FFmpeg
+    let finalVideoUrl = null;
     let r2Url = null;
-    if (finalVideoUrl && process.env.R2_BUCKET_NAME) {
-      r2Url = await tryUploadToR2(finalVideoUrl, `videos/${jobId}.mp4`);
+
+    if (clips.some(c => c.status === 'success')) {
+      await updateJob(jobId, { progress: 88, step: 'Assembling final video with voiceover...' });
+      const assembled = await assembleVideo(clips, audioPath, jobId);
+
+      if (assembled) {
+        if (assembled.startsWith('/tmp/')) {
+          // Try R2 upload first
+          if (process.env.R2_BUCKET_NAME) {
+            r2Url = await tryUploadToR2(assembled, `videos/${jobId}.mp4`);
+            if (r2Url) { finalVideoUrl = r2Url; console.log(`✅ Uploaded to R2`); }
+          }
+          // Fallback: base64 data URL (works without R2)
+          if (!finalVideoUrl) {
+            const fs = (await import('fs')).default;
+            if (fs.existsSync(assembled)) {
+              const buffer = fs.readFileSync(assembled);
+              finalVideoUrl = `data:video/mp4;base64,${buffer.toString('base64')}`;
+              console.log(`✅ Video ready as data URL (${(buffer.length/1024/1024).toFixed(1)}MB)`);
+            }
+          }
+        } else {
+          finalVideoUrl = assembled;
+        }
+      }
     }
 
     await updateJob(jobId, {
