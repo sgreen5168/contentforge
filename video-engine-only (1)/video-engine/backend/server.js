@@ -426,7 +426,7 @@ async function runPipeline(jobId, params) {
     console.log(`🎬 Video clip check: hasKey=${hasVideoKey} hasScenes=${hasScenes} sceneCount=${script.sceneDescriptions?.length || 0}`);
 
     if (hasVideoKey && hasScenes) {
-      await updateJob(jobId, { progress: 55, step: 'Generating video scenes with Luma...' });
+      await updateJob(jobId, { progress: 55, step: 'Fetching Pexels stock video clips...' });
       const scenes = script.sceneDescriptions.slice(0, 3);
       for (const scene of scenes) {
         try {
@@ -454,7 +454,7 @@ async function runPipeline(jobId, params) {
     let r2Url = null;
 
     if (clips.some(c => c.status === 'success')) {
-      await updateJob(jobId, { progress: 88, step: 'Assembling final video with voiceover...' });
+      await updateJob(jobId, { progress: 88, step: 'Assembling clips + voiceover with FFmpeg...' });
       const assembled = await assembleVideo(clips, audioPath, jobId);
 
       if (assembled) {
@@ -482,14 +482,14 @@ async function runPipeline(jobId, params) {
     await updateJob(jobId, {
       status: 'completed',
       progress: 100,
-      step: 'Complete!',
+      step: finalVideoUrl ? '✅ Complete! Video ready to download.' : '⚠ Script + voice ready. Add PEXELS_API_KEY to Railway for video clips.',
       result: {
         script,
         clips,
         finalVideoUrl: r2Url || finalVideoUrl,
         audioPath,
-        audioUrl: audioPath ? 'generated' : null,  // flag for frontend
         hasAudio: !!audioPath,
+        clipsCount: clips.filter(c => c.status==='success').length,
       },
     });
 
