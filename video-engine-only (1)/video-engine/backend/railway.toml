@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+nixpacksConfigPath = "nixpacks.toml"
+
+[deploy]
+startCommand = "node server.js"
+restartPolicyType = "on_failure"
