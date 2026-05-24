@@ -545,18 +545,30 @@ app.post('/api/video/assemble', async (req, res) => {
     const tmpDir = `/tmp/assemble_${jobId || Date.now()}`;
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    // Check FFmpeg — try to install if missing
-    try { await execAsync('ffmpeg -version'); }
-    catch(e) {
-      console.log('FFmpeg not found — trying apt-get install...');
+    // Find FFmpeg — check multiple locations
+    let ffmpegPath = 'ffmpeg';
+    const ffmpegLocations = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/nix/store/*/bin/ffmpeg'];
+    let ffmpegFound = false;
+    for (const loc of ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']) {
       try {
-        await execAsync('apt-get install -y ffmpeg 2>/dev/null || true');
-        await execAsync('ffmpeg -version');
-        console.log('✅ FFmpeg installed successfully');
-      } catch(e2) {
-        console.error('FFmpeg install failed:', e2.message);
-        return res.status(500).json({ error: 'FFmpeg not available. Add nixpacks.toml with ffmpeg to Railway.' });
-      }
+        await execAsync(`${loc} -version`);
+        ffmpegPath = loc;
+        ffmpegFound = true;
+        console.log(`✅ FFmpeg found at: ${loc}`);
+        break;
+      } catch {}
+    }
+    // Try finding via which
+    if (!ffmpegFound) {
+      try {
+        const { stdout } = await execAsync('which ffmpeg || find /nix -name ffmpeg -type f 2>/dev/null | head -1');
+        const p = stdout.trim();
+        if (p) { ffmpegPath = p; ffmpegFound = true; console.log(`✅ FFmpeg found via which: ${p}`); }
+      } catch {}
+    }
+    if (!ffmpegFound) {
+      console.error('FFmpeg not found anywhere on system');
+      return res.status(500).json({ error: 'FFmpeg not installed. Check Build Logs — nixpacks.toml should show ffmpeg installing.' });
     }
 
     console.log(`🎬 Assembling ${clipUrls.length} clips + audio...`);
@@ -595,7 +607,7 @@ app.post('/api/video/assemble', async (req, res) => {
 
     if (clipPaths.length === 1) {
       if (audioPath) {
-        await execAsync(`ffmpeg -y -i "${clipPaths[0]}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
+        await execAsync(`${ffmpegPath} -y -i "${clipPaths[0]}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
       } else {
         fs.copyFileSync(clipPaths[0], outputPath);
       }
@@ -604,7 +616,7 @@ app.post('/api/video/assemble', async (req, res) => {
       const reencoded = [];
       for (let i = 0; i < clipPaths.length; i++) {
         const rePath = path.join(tmpDir, `re_${i}.mp4`);
-        await execAsync(`ffmpeg -y -i "${clipPaths[i]}" -vf "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset fast -crf 23 -an "${rePath}"`);
+        await execAsync(`${ffmpegPath} -y -i "${clipPaths[i]}" -vf "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset fast -crf 23 -an "${rePath}"`);
         reencoded.push(rePath);
       }
 
@@ -612,11 +624,11 @@ app.post('/api/video/assemble', async (req, res) => {
       const concatFile = path.join(tmpDir, 'list.txt');
       fs.writeFileSync(concatFile, reencoded.map(p => `file '${p}'`).join('\n'));
       const concatPath = path.join(tmpDir, 'concat.mp4');
-      await execAsync(`ffmpeg -y -f concat -safe 0 -i "${concatFile}" -c copy "${concatPath}"`);
+      await execAsync(`${ffmpegPath} -y -f concat -safe 0 -i "${concatFile}" -c copy "${concatPath}"`);
 
       // Add audio
       if (audioPath) {
-        await execAsync(`ffmpeg -y -i "${concatPath}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
+        await execAsync(`${ffmpegPath} -y -i "${concatPath}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
       } else {
         fs.copyFileSync(concatPath, outputPath);
       }
