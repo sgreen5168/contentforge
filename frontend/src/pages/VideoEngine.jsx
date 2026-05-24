@@ -53,6 +53,7 @@ export default function VideoEngine() {
   const [editScript, setEditS] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const pollRef               = useRef(null);
+  const [assembling, setAssembling] = useState(false);
 
   useEffect(() => { if (tab==='history') loadJobs(); }, [tab]);
   useEffect(() => { return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
@@ -104,6 +105,47 @@ export default function VideoEngine() {
         loadJobs();
       }
     } catch {}
+  }
+
+  async function assembleAndDownload() {
+    if (!job?.result?.clips) return;
+    const successClips = job.result.clips.filter(c => c.status==='success' && c.videoUrl);
+    if (successClips.length === 0) return;
+
+    setAssembling(true);
+    try {
+      const res = await fetch(`${API}/api/video/assemble`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clipUrls: successClips.map(c => c.videoUrl),
+          audioUrl: job.result?.audioUrl || null,
+          jobId: jobId,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Assembly failed');
+      }
+
+      // Download the assembled video
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contentforge-${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+      console.log('✅ Assembled video downloaded');
+    } catch(e) {
+      console.error('Assembly error:', e.message);
+      alert(`Assembly failed: ${e.message}
+
+Make sure FFmpeg is installed on Railway (nixpacks.toml)`);
+    } finally {
+      setAssembling(false);
+    }
   }
 
   function togglePlatform(id) {
@@ -456,17 +498,17 @@ export default function VideoEngine() {
                       />
                     ) : null}
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                      <button onClick={() => download(job.result.finalVideoUrl)}
-                        style={{ padding:'11px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                        ⬇ Download MP4
+                      <button onClick={assembleAndDownload} disabled={assembling}
+                        style={{ padding:'11px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity:assembling?0.6:1 }}>
+                        {assembling ? <><span style={{width:14,height:14,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'white',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/> Assembling...</> : '⬇ Download Combined MP4'}
                       </button>
-                      <button onClick={() => { navigator.clipboard.writeText(job.result.finalVideoUrl); }}
+                      <button onClick={() => download(job.result.finalVideoUrl)}
                         style={{ padding:'11px', borderRadius:8, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-                        🔗 Copy URL
+                        📥 Individual clips
                       </button>
                     </div>
-                    <div style={{ marginTop:10, fontSize:11, color:'#4A7A72', textAlign:'center' }}>
-                      Right-click the video → Save As to download · Or use Download button above
+                    <div style={{ marginTop:8, padding:'8px 10px', background:'rgba(29,158,117,.06)', borderRadius:6, fontSize:11, color:'#7BAAA0' }}>
+                      ✦ <strong style={{color:'#5DCAA5'}}>Download Combined MP4</strong> — combines all clips + voiceover into one video file
                     </div>
                   </div>
                 </div>
