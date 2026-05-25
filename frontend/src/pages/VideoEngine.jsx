@@ -114,12 +114,18 @@ export default function VideoEngine() {
 
     setAssembling(true);
     try {
+      // Build audio URL - use base64 if available, otherwise use serve endpoint
+      const audioUrl = job.result?.audioBase64 || 
+                       (job.result?.hasAudio ? `${API}/api/video/audio/${jobId}` : null);
+      
+      console.log('Audio available:', !!audioUrl, job.result?.hasAudio);
+
       const res = await fetch(`${API}/api/video/assemble`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clipUrls: successClips.map(c => c.videoUrl),
-          audioUrl: job.result?.audioUrl || null,
+          audioUrl: audioUrl,
           jobId: jobId,
         }),
       });
