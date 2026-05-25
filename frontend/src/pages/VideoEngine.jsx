@@ -487,34 +487,41 @@ Make sure FFmpeg is installed on Railway (nixpacks.toml)`);
                 </div>
               )}
 
-              {/* Video preview + download */}
-              {job.result?.finalVideoUrl && (
+              {/* Inline video preview — shows automatically when ready */}
+              {(job.previewUrl || job.result?.finalVideoUrl || job.result?.previewUrl) && (
                 <div style={S.card}>
                   <div style={S.hdr}>
-                    <span>✅ Final video</span>
-                    <span style={{ fontSize:11, color:'#1D9E75' }}>Ready to download or publish</span>
+                    <span>🎬 Video preview</span>
+                    <span style={{ fontSize:11, color:'#1D9E75', fontWeight:600 }}>
+                      {job.result?.finalVideoUrl?.startsWith('https://') ? '☁ Saved to cloud' : '✅ Ready'}
+                    </span>
                   </div>
                   <div style={{ padding:'12px' }}>
-                    {job.result.finalVideoUrl.startsWith('data:') || job.result.finalVideoUrl.startsWith('http') ? (
-                      <video
-                        src={job.result.finalVideoUrl}
-                        controls
-                        style={{ width:'100%', maxHeight:400, borderRadius:8, background:'#000', display:'block', marginBottom:10 }}
-                        playsInline
-                      />
-                    ) : null}
+                    <video
+                      key={job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl}
+                      src={job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl}
+                      controls
+                      autoPlay={false}
+                      style={{ width:'100%', maxHeight:500, borderRadius:8, background:'#000', display:'block', marginBottom:10 }}
+                      playsInline
+                    />
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                      <button onClick={assembleAndDownload} disabled={assembling}
-                        style={{ padding:'11px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6, opacity:assembling?0.6:1 }}>
-                        {assembling ? <><span style={{width:14,height:14,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'white',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/> Assembling...</> : '⬇ Download Combined MP4'}
+                      <button onClick={() => download(job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl)}
+                        style={{ padding:'11px', borderRadius:8, border:'none', background:'#1D9E75', color:'white', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        ⬇ Download MP4
                       </button>
-                      <button onClick={() => download(job.result.finalVideoUrl)}
-                        style={{ padding:'11px', borderRadius:8, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-                        📥 Individual clips
-                      </button>
+                      {job.result?.clips?.some(c=>c.status==='success') && (
+                        <button onClick={() => {
+                          const clip = job.result.clips.find(c=>c.status==='success');
+                          if (clip?.videoUrl) download(clip.videoUrl);
+                        }}
+                          style={{ padding:'11px', borderRadius:8, border:'1px solid rgba(29,158,117,.3)', background:'transparent', color:'#5DCAA5', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                          📥 Individual clips
+                        </button>
+                      )}
                     </div>
-                    <div style={{ marginTop:8, padding:'8px 10px', background:'rgba(29,158,117,.06)', borderRadius:6, fontSize:11, color:'#7BAAA0' }}>
-                      ✦ <strong style={{color:'#5DCAA5'}}>Download Combined MP4</strong> — combines all clips + voiceover into one video file
+                    <div style={{ marginTop:8, fontSize:11, color:'#4A7A72', textAlign:'center' }}>
+                      Right-click video → Save As · or use Download button
                     </div>
                   </div>
                 </div>
