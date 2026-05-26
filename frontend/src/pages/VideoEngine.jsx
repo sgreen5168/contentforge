@@ -136,13 +136,18 @@ export default function VideoEngine() {
   async function pollJob(id) {
     try {
       const r = await fetch(`${API}/api/video/job/${id}`);
+      if (!r.ok) return;
       const d = await r.json();
-      setJob(d);
-      if (d.status === 'completed' || d.status === 'failed') {
-        clearInterval(pollRef.current);
-        loadJobs();
+      if (d && typeof d === 'object') {
+        setJob(prev => ({ ...prev, ...d }));
+        if (d.status === 'completed' || d.status === 'failed') {
+          clearInterval(pollRef.current);
+          loadJobs();
+        }
       }
-    } catch {}
+    } catch(e) {
+      console.warn('Poll error:', e.message);
+    }
   }
 
   // Fetch alternative clips for a scene based on selected keywords
@@ -218,7 +223,7 @@ export default function VideoEngine() {
 
   async function assembleAndDownload() {
     if (!job?.result?.clips) return;
-    const successClips = job.result.clips.filter(c => c.status === 'success' && c.videoUrl);
+    const successClips = (job.result?.clips || []).filter(c => c?.status === 'success' && c?.videoUrl);
     if (successClips.length === 0) { alert('No clips available to assemble'); return; }
     setAssembling(true);
     try {
@@ -344,6 +349,20 @@ export default function VideoEngine() {
     { label: 'Assembly',  thresh: 96  },
     { label: 'Complete',  thresh: 100 },
   ];
+
+  if (fatalError) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', background: '#0D2137', minHeight: '100vh', borderRadius: 12 }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontSize: 16, color: '#E8F4F0', marginBottom: 8 }}>Something went wrong</div>
+        <div style={{ fontSize: 12, color: '#7BAAA0', marginBottom: 16 }}>{fatalError}</div>
+        <button onClick={() => { setFatalError(null); setJob(null); setTab('generate'); }}
+          style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
+          ↻ Start over
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: 20, maxWidth: 1100, fontFamily: 'inherit', background: C, minHeight: '100vh', borderRadius: 12 }}>
@@ -647,7 +666,7 @@ export default function VideoEngine() {
                   <div style={S.hdr}>
                     <span>🎬 Clips ready</span>
                     <span style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500 }}>
-                      {job.result.clips.filter(c => c?.status === 'success').length} clips · {aspectRatio}
+                      {(job.result?.clips || []).filter(c => c?.status === 'success').length} clips · {aspectRatio}
                     </span>
                   </div>
                   <div style={{ padding: 12 }}>
@@ -668,7 +687,7 @@ export default function VideoEngine() {
                         : `⬇ Download Combined MP4 (${aspectRatio}${music !== 'none' ? ' + ' + music : ''}${captions ? ' + captions' : ''})`}
                     </button>
                     <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      <button onClick={() => { const c = job.result.clips.find(c => c?.videoUrl); if(c) download(c.videoUrl); }}
+                      <button onClick={() => { const c = (job.result?.clips || []).find(c => c?.videoUrl); if(c) download(c.videoUrl); }}
                         style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                         📥 Individual clip
                       </button>
