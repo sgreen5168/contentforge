@@ -66,20 +66,24 @@ export default function VideoEngine() {
   // When job completes build scene editor
   useEffect(() => {
     if (job?.status === 'completed' && job.result?.script && !scenesReady) {
-      const scriptScenes = job.result.script.sceneDescriptions || [];
-      const clips = job.result.clips || [];
-      const built = scriptScenes.map((s, i) => ({
-        sceneNum:    s.scene || i + 1,
-        scriptText:  s.visual || '',
-        duration:    s.duration || 5,
-        keywords:    extractKeywords(s.visual || ''),
-        selectedKw:  [],
-        clipUrl:     clips[i]?.videoUrl || null,
-        clipStatus:  clips[i]?.status || 'none',
-        situation:   '',
-      }));
-      setScenes(built);
-      setScenesR(true);
+      try {
+        const scriptScenes = job.result.script?.sceneDescriptions || [];
+        const clips = job.result?.clips || [];
+        const built = scriptScenes.map((s, i) => ({
+          sceneNum:    s?.scene || i + 1,
+          scriptText:  s?.visual || '',
+          duration:    s?.duration || 5,
+          keywords:    extractKeywords(s?.visual || ''),
+          selectedKw:  [],
+          clipUrl:     clips[i]?.videoUrl || null,
+          clipStatus:  clips[i]?.status || 'none',
+          situation:   '',
+        }));
+        setScenes(built);
+        setScenesR(true);
+      } catch(e) {
+        console.warn('Scene build failed:', e.message);
+      }
     }
   }, [job?.status]);
 
@@ -569,11 +573,13 @@ export default function VideoEngine() {
 
           {job && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
               {/* Progress */}
               <div style={S.card}>
                 <div style={S.hdr}>
                   <span>Generation progress</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: job.status === 'completed' ? '#1D9E75' : job.status === 'failed' ? '#F09595' : '#F5A623' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600,
+                    color: job.status === 'completed' ? '#1D9E75' : job.status === 'failed' ? '#F09595' : '#F5A623' }}>
                     {job.status === 'completed' ? '✅ Complete' : job.status === 'failed' ? '❌ Failed' : '⏳ Processing'}
                   </span>
                 </div>
@@ -593,7 +599,7 @@ export default function VideoEngine() {
                           background: done ? 'rgba(29,158,117,.08)' : active ? 'rgba(29,158,117,.04)' : 'transparent' }}>
                           <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11,
                             background: done ? '#1D9E75' : active ? 'rgba(29,158,117,.2)' : 'rgba(255,255,255,.05)',
-                            color: done ? 'white' : active ? '#5DCAA5' : '#4A7A72' }}>
+                            color: done ? 'white' : active ? '#5DCAA5' : '#4A7A72', flexShrink: 0 }}>
                             {done ? '✓' : active
                               ? <span style={{ width: 10, height: 10, border: '1.5px solid rgba(29,158,117,.5)', borderTopColor: '#1D9E75', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
                               : i + 1}
@@ -606,7 +612,7 @@ export default function VideoEngine() {
                 </div>
               </div>
 
-              {/* Script preview */}
+              {/* Script */}
               {job.result?.script && (
                 <div style={S.card}>
                   <div style={S.hdr}>
@@ -614,77 +620,83 @@ export default function VideoEngine() {
                     {scenesReady && (
                       <button onClick={() => setTab('scenes')}
                         style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: 'none', background: '#1D9E75', color: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        🎬 Open Scene Editor
+                        🎬 Scene Editor
                       </button>
                     )}
                   </div>
                   <div style={S.body}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#5DCAA5', marginBottom: 4 }}>Hook</div>
-                    <div style={{ fontSize: 13, color: '#E8F4F0', marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.06)', borderRadius: 6 }}>{job.result.script.hook}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#5DCAA5', marginBottom: 4 }}>Full script</div>
-                    <div style={{ fontSize: 12, color: '#7BAAA0', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto', padding: '8px 10px', background: 'rgba(22,61,106,.4)', borderRadius: 6 }}>
-                      {job.result.script.fullScript}
+                    <div style={{ fontSize: 13, color: '#E8F4F0', marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.06)', borderRadius: 6 }}>
+                      {job.result.script.hook || ''}
                     </div>
-                    {job.result.script.hashtags?.length > 0 && (
-                      <div style={{ marginTop: 8, fontSize: 12, color: '#5DCAA5' }}>{job.result.script.hashtags.join(' ')}</div>
+                    <div style={{ fontSize: 12, color: '#7BAAA0', lineHeight: 1.7, maxHeight: 100, overflow: 'auto', padding: '8px 10px', background: 'rgba(22,61,106,.4)', borderRadius: 6 }}>
+                      {job.result.script.fullScript || ''}
+                    </div>
+                    {(job.result.script.hashtags?.length > 0) && (
+                      <div style={{ marginTop: 8, fontSize: 12, color: '#5DCAA5' }}>
+                        {job.result.script.hashtags.join(' ')}
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Clips ready — show previews + assemble button */}
-              {job.status === 'completed' && job.result?.clips?.some(c => c.status === 'success') && (
+              {/* Clips ready */}
+              {job.status === 'completed' && job.result?.clips?.some(c => c?.status === 'success' && c?.videoUrl) && (
                 <div style={S.card}>
                   <div style={S.hdr}>
                     <span>🎬 Clips ready</span>
                     <span style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500 }}>
-                      {job.result.clips.filter(c => c.status === 'success').length} clips · {aspectRatio}
+                      {job.result.clips.filter(c => c?.status === 'success').length} clips · {aspectRatio}
                     </span>
                   </div>
                   <div style={{ padding: 12 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 10 }}>
-                      {job.result.clips.filter(c => c.status === 'success').map((clip, i) => (
-                        <video key={i} src={clip.videoUrl} muted loop controls
-                          style={{ width: '100%', aspectRatio: '9/16', maxHeight: 130, borderRadius: 6, background: '#000', objectFit: 'cover', display: 'block' }}
-                        />
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                      <button onClick={() => download(job.result.clips.find(c => c.status === 'success')?.videoUrl)}
-                        style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        📥 Download clip
-                      </button>
-                      {scenesReady && (
-                        <button onClick={() => setTab('scenes')}
-                          style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          🎬 Edit Scenes
-                        </button>
-                      )}
+                      {job.result.clips
+                        .filter(c => c?.status === 'success' && c?.videoUrl)
+                        .map((clip, i) => (
+                          <video key={i} src={clip.videoUrl} muted loop
+                            style={{ width: '100%', aspectRatio: '9/16', maxHeight: 130, borderRadius: 6, background: '#000', objectFit: 'cover', display: 'block' }}
+                          />
+                        ))
+                      }
                     </div>
                     <button onClick={assembleAndDownload} disabled={assembling}
                       style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: assembling ? 0.6 : 1 }}>
                       {assembling
-                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />Assembling + adding audio...</>
+                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />Assembling with audio...</>
                         : `⬇ Download Combined MP4 (${aspectRatio}${music !== 'none' ? ' + ' + music : ''}${captions ? ' + captions' : ''})`}
                     </button>
-                    <div style={{ marginTop: 8, fontSize: 11, color: '#4A7A72', textAlign: 'center' }}>
-                      Assembly combines all clips + voiceover + music into one MP4
+                    <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <button onClick={() => { const c = job.result.clips.find(c => c?.videoUrl); if(c) download(c.videoUrl); }}
+                        style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        📥 Individual clip
+                      </button>
+                      {scenesReady && (
+                        <button onClick={() => setTab('scenes')}
+                          style={{ padding: 8, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          🎬 Edit Scenes
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* Clip error */}
               {job.clipError && (
                 <div style={{ padding: '12px 14px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 10 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: '#FAC775', marginBottom: 4 }}>⚠ Video clips skipped</div>
                   <div style={{ fontSize: 12, color: '#7BAAA0' }}>{job.clipError}</div>
                 </div>
               )}
+
             </div>
           )}
         </div>
       )}
 
-      {/* ── SCENE EDITOR TAB ── */}
+            {/* ── SCENE EDITOR TAB ── */}
       {tab === 'scenes' && (
         <div>
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
