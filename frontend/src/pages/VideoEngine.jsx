@@ -41,8 +41,10 @@ export default function VideoEngine() {
   const [persona, setPersona]   = useState('ugc');
   const [duration, setDur]      = useState('30s');
   const [platforms, setPlats]   = useState(['tiktok']);
-  const [captions, setCaptions] = useState(true);
+  const [captions, setCaptions]     = useState(true);
   const [captionStyle, setCapStyle] = useState('bottom');
+  const [aspectRatio, setAspect]    = useState('9:16');
+  const [music, setMusic]           = useState('none');
   const [loading, setLoad]      = useState(false);
   const [jobId, setJobId]       = useState(null);
   const [job, setJob]           = useState(null);
@@ -208,6 +210,47 @@ export default function VideoEngine() {
       i === sceneIdx ? { ...s, clipUrl, clipStatus: 'success' } : s
     ));
     setAlts(prev => ({ ...prev, [sceneIdx]: [] }));
+  }
+
+  async function assembleAndDownload() {
+    if (!job?.result?.clips) return;
+    const successClips = job.result.clips.filter(c => c.status === 'success' && c.videoUrl);
+    if (successClips.length === 0) { alert('No clips available to assemble'); return; }
+    setAssembling(true);
+    try {
+      const audioUrl = job.result?.audioBase64 ||
+                       (job.result?.hasAudio ? `${API}/api/video/audio/${jobId}` : null);
+      console.log('Assembling with audio:', !!audioUrl, 'ratio:', aspectRatio, 'music:', music);
+      const res = await fetch(`${API}/api/video/assemble`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clipUrls:    successClips.map(c => c.videoUrl),
+          audioUrl,
+          jobId,
+          aspectRatio,
+          music,
+          captions,
+          captionStyle,
+          captionText: job.result?.script?.fullScript || '',
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Assembly failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `contentforge-${aspectRatio.replace(':','-')}-${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch(e) {
+      alert(`Assembly failed: ${e.message}`);
+    } finally {
+      setAssembling(false);
+    }
   }
 
   function togglePlatform(id) {
@@ -441,6 +484,40 @@ export default function VideoEngine() {
               )}
             </div>
 
+            {/* Aspect ratio panel */}
+            <div style={S.card}>
+              <div style={S.hdr}>📐 Video size & format</div>
+              <div style={S.body}>
+                <span style={S.lbl}>Aspect ratio</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+                  {[
+                    ['9:16','9:16','TikTok · Reels · Shorts'],
+                    ['16:9','16:9','YouTube · Landscape'],
+                    ['1:1','1:1','Instagram Feed · Square'],
+                    ['4:5','4:5','Instagram Portrait'],
+                    ['4:3','4:3','Facebook · Standard'],
+                  ].map(([id, label, desc]) => (
+                    <button key={id} onClick={() => setAspect(id)}
+                      style={{ padding: '8px 6px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                        border: `1px solid ${aspectRatio === id ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
+                        background: aspectRatio === id ? 'rgba(29,158,117,.15)' : 'transparent' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: aspectRatio === id ? '#5DCAA5' : '#E8F4F0' }}>{label}</div>
+                      <div style={{ fontSize: 9, color: '#4A7A72', marginTop: 2 }}>{desc}</div>
+                    </button>
+                  ))}
+                </div>
+                <span style={S.lbl}>Background music</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {[['none','No music'],['upbeat','Upbeat'],['calm','Calm'],['motivational','Motivational'],['corporate','Corporate']].map(([id, label]) => (
+                    <button key={id} onClick={() => setMusic(id)} style={S.chip(music === id)}>{label}</button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: '#4A7A72', padding: '6px 8px', background: 'rgba(29,158,117,.05)', borderRadius: 6 }}>
+                  ✅ Music mixes quietly behind voiceover · All FREE
+                </div>
+              </div>
+            </div>
+
             {/* Pipeline overview */}
             <div style={S.card}>
               <div style={S.hdr}>
@@ -572,7 +649,7 @@ export default function VideoEngine() {
                       style={{ width: '100%', maxHeight: 500, borderRadius: 8, background: '#000', display: 'block', marginBottom: 10 }}
                       playsInline
                     />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                       <button onClick={() => download(job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl)}
                         style={{ padding: 11, borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         ⬇ Download MP4
@@ -584,6 +661,12 @@ export default function VideoEngine() {
                         </button>
                       )}
                     </div>
+                    <button onClick={assembleAndDownload} disabled={assembling}
+                      style={{ width: '100%', padding: 11, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'rgba(29,158,117,.08)', color: '#5DCAA5', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: assembling ? 0.6 : 1 }}>
+                      {assembling
+                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(93,202,165,.3)', borderTopColor: '#5DCAA5', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />Assembling with audio + {aspectRatio} sizing...</>
+                        : `⚡ Re-assemble: ${aspectRatio}${music !== 'none' ? ' + ' + music + ' music' : ''}${captions ? ' + captions' : ''}`}
+                    </button>
                   </div>
                 </div>
               )}
