@@ -632,45 +632,47 @@ export default function VideoEngine() {
                 </div>
               )}
 
-              {/* Inline video preview */}
-              {(job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl) && (
+              {/* Clips ready — show previews + assemble button */}
+              {job.status === 'completed' && job.result?.clips?.some(c => c.status === 'success') && (
                 <div style={S.card}>
                   <div style={S.hdr}>
-                    <span>🎬 Final video</span>
+                    <span>🎬 Clips ready</span>
                     <span style={{ fontSize: 11, color: '#1D9E75', fontWeight: 500 }}>
-                      {captions ? '💬 Captions included' : 'No captions'}
+                      {job.result.clips.filter(c => c.status === 'success').length} clips · {aspectRatio}
                     </span>
                   </div>
                   <div style={{ padding: 12 }}>
-                    <video
-                      key={job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl}
-                      src={job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl}
-                      controls autoPlay={false}
-                      style={{ width: '100%', maxHeight: 500, borderRadius: 8, background: '#000', display: 'block', marginBottom: 10 }}
-                      playsInline
-                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 10 }}>
+                      {job.result.clips.filter(c => c.status === 'success').map((clip, i) => (
+                        <video key={i} src={clip.videoUrl} muted loop controls
+                          style={{ width: '100%', aspectRatio: '9/16', maxHeight: 130, borderRadius: 6, background: '#000', objectFit: 'cover', display: 'block' }}
+                        />
+                      ))}
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                      <button onClick={() => download(job.previewUrl || job.result?.previewUrl || job.result?.finalVideoUrl)}
-                        style={{ padding: 11, borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ⬇ Download MP4
+                      <button onClick={() => download(job.result.clips.find(c => c.status === 'success')?.videoUrl)}
+                        style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        📥 Download clip
                       </button>
                       {scenesReady && (
                         <button onClick={() => setTab('scenes')}
-                          style={{ padding: 11, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: '#5DCAA5', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
                           🎬 Edit Scenes
                         </button>
                       )}
                     </div>
                     <button onClick={assembleAndDownload} disabled={assembling}
-                      style={{ width: '100%', padding: 11, borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'rgba(29,158,117,.08)', color: '#5DCAA5', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: assembling ? 0.6 : 1 }}>
+                      style={{ width: '100%', padding: 12, borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: assembling ? 0.6 : 1 }}>
                       {assembling
-                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(93,202,165,.3)', borderTopColor: '#5DCAA5', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />Assembling with audio + {aspectRatio} sizing...</>
-                        : `⚡ Re-assemble: ${aspectRatio}${music !== 'none' ? ' + ' + music + ' music' : ''}${captions ? ' + captions' : ''}`}
+                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }} />Assembling + adding audio...</>
+                        : `⬇ Download Combined MP4 (${aspectRatio}${music !== 'none' ? ' + ' + music : ''}${captions ? ' + captions' : ''})`}
                     </button>
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#4A7A72', textAlign: 'center' }}>
+                      Assembly combines all clips + voiceover + music into one MP4
+                    </div>
                   </div>
                 </div>
               )}
-
               {job.clipError && (
                 <div style={{ padding: '12px 14px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 10 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: '#FAC775', marginBottom: 4 }}>⚠ Video clips skipped</div>
