@@ -127,7 +127,9 @@ export default function Composer() {
       };
       const seoPrompt = [prompt, styleMap[style]||'lifestyle', 'no text, no watermarks, high quality'].join(', ');
       // Standard social media post size — 1:1 square 600px (loads faster, right size for posts)
-      const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(seoPrompt)}?width=600&height=600&seed=${seed}&nologo=true&enhance=true`;
+      // 600x600 standard post size — timestamp prevents browser caching old large images
+      const ts = Date.now();
+      const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(seoPrompt)}?width=600&height=600&seed=${seed}&nologo=true&enhance=true&t=${ts}`;
       const seoName = prompt.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40);
       setImgs({ url:imgUrl, alt:`${prompt} social media image`, fileName:`${seoName}-social.png` });
     } catch(e) {
@@ -338,7 +340,10 @@ export default function Composer() {
                 {imgLoad && <div style={{ fontSize:12, color:'#5DCAA5', display:'flex', alignItems:'center', gap:8 }}><span style={{width:14,height:14,border:'2px solid rgba(29,158,117,.3)',borderTopColor:'#1D9E75',borderRadius:'50%',animation:'spin 1s linear infinite',display:'inline-block'}}/>Generating image...</div>}
                 {imgs?.url && !imgLoad && (
                   <div>
-                    <img src={imgs.url} alt={imgs.alt} style={{ width:'100%', maxHeight:160, objectFit:'cover', borderRadius:8, display:'block', marginBottom:6 }} onError={e=>e.target.style.display='none'} />
+                    <img src={imgs.url} alt={imgs.alt} 
+                      style={{ width:150, height:150, objectFit:'cover', borderRadius:8, display:'block', marginBottom:6, border:'1px solid rgba(29,158,117,.2)' }} 
+                      onError={e=>e.target.style.display='none'} />
+                    <div style={{ fontSize:10, color:'#4A7A72' }}>600×600px — standard post size</div>
                     <div style={{ fontSize:10, color:'#4A7A72' }}>Alt: {imgs.alt} · File: {imgs.fileName}</div>
                     <div style={{ marginTop:6, display:'flex', gap:6 }}>
                       <input placeholder="Custom image prompt..." id="imgCustom"
