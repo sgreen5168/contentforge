@@ -3,6 +3,7 @@ import Login from './pages/Login.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import Composer from './pages/Composer.jsx';
 import VideoEngine from './pages/VideoEngine.jsx';
+import ContentCalendar from './pages/ContentCalendar.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import BulkGenerator from './pages/BulkGenerator.jsx';
 import EmailSettings from './pages/EmailSettings.jsx';
@@ -524,6 +525,7 @@ export default function App() {
           {page === 'submitter'  && <PostSubmitter />}
           {page === 'brand'      && <Brand />}
           {page === 'compliance' && <Compliance />}
+          {page === 'calendar'   && <ContentCalendar />}
         </main>
       </div>
     </div>
@@ -568,6 +570,10 @@ function LoginPage({ onLogin }) {
           <button type="submit" disabled={loading || !password.trim()}
             style={{ background:'#1D9E75', color:'white', border:'none', borderRadius:8, padding:12, fontSize:15, fontWeight:500, cursor:'pointer', fontFamily:'inherit', marginTop:4, opacity: loading||!password.trim() ? 0.5 : 1 }}>
             {loading ? '⏳ Checking…' : 'Sign in →'}
+          </button>
+          <button onClick={() => setPage('calendar')} style={{ display:'flex', alignItems:'center', gap:9, padding:'8px 10px', borderRadius:'var(--rs)', cursor:'pointer', fontSize:13, color: page==='calendar'?'var(--accent)':'var(--text2)', transition:'all .15s', marginBottom:2, border: page==='calendar'?'1px solid rgba(124,107,255,.2)':'none', background: page==='calendar'?'var(--ag)':'none', width:'100%', textAlign:'left', fontFamily:'DM Sans,sans-serif', minHeight:40 }}>
+            <span style={{fontSize:13,flexShrink:0}}>📅</span>
+            <span style={{flex:1}}>Content Calendar</span>
           </button>
         </form>
         <div style={{ fontSize:11, color:'#4A7A72', marginTop:20 }}>Private — not publicly accessible</div>
