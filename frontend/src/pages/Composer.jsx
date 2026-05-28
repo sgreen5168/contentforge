@@ -306,7 +306,7 @@ export default function Composer() {
                 value={importedMedia || ''} onChange={e => setImportedMedia(e.target.value)} />
               {importedMedia && (
                 <div style={{ marginTop: 4 }}>
-                  {importedMedia.match(/\.(mp4|mov|webm)$/i)
+                  {(importedMedia.endsWith('.mp4') || importedMedia.endsWith('.mov') || importedMedia.endsWith('.webm') || importedMedia.includes('.mp4') || importedMedia.includes('/video/'))
                     ? <video src={importedMedia} controls muted style={{ width: '100%', maxHeight: 120, borderRadius: 6, background: '#000' }} />
                     : <img src={importedMedia} alt="imported" style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 6 }} onError={e => e.target.style.display='none'} />
                   }
