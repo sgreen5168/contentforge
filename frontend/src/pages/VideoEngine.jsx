@@ -19,7 +19,8 @@ const PERSONAS = [
   { id:'educator',    label:'Educator' },
 ];
 
-const DURATIONS = ['15s','30s','45s','60s'];
+const DURATIONS_SHORT = ['15s','30s','45s','60s'];
+const DURATIONS_LONG  = ['2m','5m','10m','15m'];
 
 const PLATFORMS = [
   { id:'tiktok',    label:'TikTok',          icon:'T' },
@@ -60,6 +61,8 @@ export default function VideoEngine() {
   const [error, setError]       = useState('');
   const [jobs, setJobs]         = useState([]);
   const [assembling, setAssembling] = useState(false);
+  const [voice, setVoice]           = useState('nova');
+  const [durMode, setDurMode]       = useState('short');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -95,6 +98,7 @@ export default function VideoEngine() {
           persona,
           duration,
           platforms,
+          voice,
         }),
       });
       const data = await res.json();
@@ -344,9 +348,23 @@ export default function VideoEngine() {
             </div>
 
             <div style={card()}>
-              <div style={hdr()}>Duration</div>
+              <div style={hdr()}>
+                <span>Duration</span>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  <button onClick={function() { setDurMode('short'); setDur('30s'); }}
+                    style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+                      border: '1px solid ' + (durMode === 'short' ? ACC : BORD),
+                      background: durMode === 'short' ? 'rgba(29,158,117,.15)' : 'transparent',
+                      color: durMode === 'short' ? ACCH : TXT2 }}>Short</button>
+                  <button onClick={function() { setDurMode('long'); setDur('5m'); }}
+                    style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+                      border: '1px solid ' + (durMode === 'long' ? '#FF0000' : BORD),
+                      background: durMode === 'long' ? 'rgba(255,0,0,.1)' : 'transparent',
+                      color: durMode === 'long' ? '#FF6B6B' : TXT2 }}>Long (YouTube)</button>
+                </div>
+              </div>
               <div style={{ padding: '10px 14px', display: 'flex', gap: 6 }}>
-                {DURATIONS.map(function(d) {
+                {(durMode === 'long' ? DURATIONS_LONG : DURATIONS_SHORT).map(function(d) {
                   return (
                     <button key={d} onClick={function() { setDur(d); }}
                       style={{
@@ -360,6 +378,11 @@ export default function VideoEngine() {
                   );
                 })}
               </div>
+              {durMode === 'long' && (
+                <div style={{ padding: '0 14px 10px', fontSize: 11, color: '#FF6B6B' }}>
+                  Long videos generate more scenes + longer voiceover — YouTube only
+                </div>
+              )}
             </div>
 
             <div style={card()}>
@@ -430,6 +453,42 @@ export default function VideoEngine() {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Voice selector */}
+            <div style={card()}>
+              <div style={hdr()}>Voiceover</div>
+              <div style={body()}>
+                <span style={lbl}>Female voices</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                  {[['nova','Nova','Warm & friendly'],['shimmer','Shimmer','Professional'],['alloy','Alloy','Versatile']].map(function(v) {
+                    return (
+                      <button key={v[0]} onClick={function() { setVoice(v[0]); }}
+                        style={{ padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                          border: '1px solid ' + (voice === v[0] ? '#E1306C' : BORD),
+                          background: voice === v[0] ? 'rgba(225,48,108,.1)' : 'transparent' }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: voice === v[0] ? '#E1306C' : TXT }}>{v[1]}</div>
+                        <div style={{ fontSize: 9, color: TXT3 }}>{v[2]}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <span style={lbl}>Male voices</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {[['onyx','Onyx','Deep & authoritative'],['echo','Echo','Confident & clear'],['fable','Fable','Warm & expressive']].map(function(v) {
+                    return (
+                      <button key={v[0]} onClick={function() { setVoice(v[0]); }}
+                        style={{ padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                          border: '1px solid ' + (voice === v[0] ? '#1877F2' : BORD),
+                          background: voice === v[0] ? 'rgba(24,119,242,.1)' : 'transparent' }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: voice === v[0] ? '#5B9BD5' : TXT }}>{v[1]}</div>
+                        <div style={{ fontSize: 9, color: TXT3 }}>{v[2]}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: TXT3 }}>Selected: <span style={{ color: ACCH }}>{voice}</span> — OpenAI TTS-1 HD</div>
               </div>
             </div>
 
