@@ -71,7 +71,9 @@ export default function Composer() {
   const [error, setError]       = useState('');
   const [compliance, setComp]   = useState(null);
   const [publishRes, setPubRes] = useState({});
-  const [publishing, setPub]    = useState({});
+  const [publishing, setPub]      = useState({});
+  const [importedMedia, setImportedMedia] = useState('');
+  const [publishedUrl, setPublishedUrl]   = useState('');
 
   const active = Object.keys(plats).filter(p => plats[p]);
   const input  = tab === 'topic' ? topic : url;
