@@ -260,8 +260,11 @@ export default function Composer() {
             </div>
             {affOn && (
               <div style={S.body}>
-                <span style={S.lbl}>Affiliate URL</span>
-                <input style={S.inp} placeholder="https://yourlink.com/product?ref=code" value={affUrl} onChange={e => setAffUrl(e.target.value)} />
+                <span style={S.lbl}>Affiliate URL or Landing Page URL</span>
+                <input style={S.inp} placeholder="https://yourlink.com or your /lp/xxxxx URL" value={affUrl} onChange={e => setAffUrl(e.target.value)} />
+                <div style={{ fontSize: 10, color: '#4A7A72', marginBottom: 8, padding: '5px 8px', background: 'rgba(29,158,117,.04)', borderRadius: 6 }}>
+                  Use your ContentForge landing page URL for higher conversions — it pre-sells before the ClickBank page
+                </div>
                 <span style={S.lbl}>Embed mode</span>
                 <div style={{ display:'flex', gap:4, marginBottom:10 }}>
                   {[['auto','✦ Auto'],['keyword','🔑 Keyword'],['manual','✎ Manual']].map(([m,l]) => (
@@ -283,12 +286,32 @@ export default function Composer() {
             <div style={S.hdr}>
               <div>
                 <div style={{ fontSize:13, fontWeight:500 }}>🖼 Auto-generate image</div>
-                <div style={{ fontSize:10, color:'#4A7A72', marginTop:2 }}>Free · Pollinations.ai · SEO-optimized</div>
+                <div style={{ fontSize:10, color:'#4A7A72', marginTop:2 }}>Free · Pollinations.ai · 600x600px</div>
               </div>
               <div style={{ width:36, height:20, borderRadius:10, background:autoImg?'#1D9E75':'rgba(255,255,255,.1)', position:'relative', cursor:'pointer' }}
                 onClick={() => setAutoImg(!autoImg)}>
                 <div style={{ width:16, height:16, borderRadius:'50%', background:'white', position:'absolute', top:2, left:autoImg?18:2, transition:'left .2s' }} />
               </div>
+            </div>
+          </div>
+
+          {/* Import media */}
+          <div style={S.card}>
+            <div style={S.hdr}>
+              <span>📎 Import image or video</span>
+            </div>
+            <div style={S.body}>
+              <div style={{ fontSize: 11, color: '#7BAAA0', marginBottom: 8 }}>Paste a URL from Media Library or AI Video Engine</div>
+              <input style={S.inp} placeholder="https://image-or-video-url.mp4"
+                value={importedMedia || ''} onChange={e => setImportedMedia(e.target.value)} />
+              {importedMedia && (
+                <div style={{ marginTop: 4 }}>
+                  {importedMedia.match(/\.(mp4|mov|webm)$/i)
+                    ? <video src={importedMedia} controls muted style={{ width: '100%', maxHeight: 120, borderRadius: 6, background: '#000' }} />
+                    : <img src={importedMedia} alt="imported" style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 6 }} onError={e => e.target.style.display='none'} />
+                  }
+                </div>
+              )}
             </div>
           </div>
 
