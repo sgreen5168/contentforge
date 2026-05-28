@@ -105,9 +105,12 @@ Return ONLY valid JSON with this exact structure:
   "cta": "call to action",
   "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
   "sceneDescriptions": [
-    {"scene": 1, "visual": "detailed visual description for AI video generation", "duration": 5},
-    {"scene": 2, "visual": "detailed visual description for AI video generation", "duration": 5},
-    {"scene": 3, "visual": "detailed visual description for AI video generation", "duration": 5}
+    {"scene": 1, "visual": "specific visual description matching the script hook — include setting, person type, action, mood", "duration": 5},
+    {"scene": 2, "visual": "specific visual description matching the script body — include setting, person type, action, mood", "duration": 5},
+    {"scene": 3, "visual": "specific visual description matching the script solution — include setting, person type, action, mood", "duration": 5},
+    {"scene": 4, "visual": "specific visual description matching the script CTA — include setting, person type, action, mood", "duration": 5},
+    {"scene": 5, "visual": "optional scene for longer videos — include setting, person type, action, mood", "duration": 5},
+    {"scene": 6, "visual": "optional scene for longer videos — include setting, person type, action, mood", "duration": 5}
   ]
 }`;
 
@@ -121,18 +124,19 @@ Return ONLY valid JSON with this exact structure:
   const raw = msg.content[0].text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   return JSON.parse(raw);
 }
-async function generateVoiceover(script, persona, jobId) {
+async function generateVoiceover(script, persona, jobId, voiceOverride) {
   const fetch = (await import('node-fetch')).default;
   const fs = (await import('fs')).default;
   const audioPath = `/tmp/voice_${jobId}_${Date.now()}.mp3`;
 
   if (process.env.OPENAI_API_KEY) {
     const voices = { ugc: 'nova', testimonial: 'shimmer', demo: 'onyx', influencer: 'alloy', educator: 'echo' };
-    const voice = voices[persona] || 'nova';
+    const voice = voiceOverride || voices[persona] || 'nova';
+    console.log(`🎙 Voice: ${voice} (${voiceOverride ? 'user selected' : 'persona default'})`);
     const res = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts-1', input: script.slice(0, 4096), voice }),
+      body: JSON.stringify({ model: 'tts-1-hd', input: script.slice(0, 4096), voice, speed: 0.95 }),
     });
     if (!res.ok) throw new Error(`OpenAI TTS: ${res.status}`);
     const buffer = await res.buffer();
@@ -173,15 +177,16 @@ async function generateClip(prompt, duration) {
       console.log(`🎬 Pexels: searching for "${prompt.slice(0, 60)}..."`);
 
       // Extract keywords from scene description for search
-      const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','up','about','into','through','during','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','close','quick','person','people']);
-      const keywords = prompt
-        .toLowerCase()
-        .replace(/[^a-z\s]/g, '')
-        .split(/\s+/)
-        .filter(w => w.length > 3 && !stopWords.has(w))
-        .slice(0, 3)
-        .join(' ');
-
+      // Smart keyword extraction — prioritize nouns and action words
+      const stopWords = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','up','about','into','through','during','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','close','quick','showing','style','split','screen','side','camera','shot','view','cuts','hands']);
+      const actionWords = ['working','sitting','standing','walking','running','typing','using','holding','smiling','talking','cooking','exercising','reading','writing','driving','eating'];
+      const words = prompt.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+      const meaningful = words.filter(w => w.length > 3 && !stopWords.has(w));
+      // Prioritize action words for better video match
+      const actions = meaningful.filter(w => actionWords.includes(w));
+      const nouns = meaningful.filter(w => !actionWords.includes(w));
+      const topWords = [...actions.slice(0,1), ...nouns.slice(0,2)].slice(0,3);
+      const keywords = topWords.join(' ');
       const query = keywords || 'lifestyle productivity';
       console.log(`Pexels search query: "${query}"`);
 
@@ -419,7 +424,7 @@ async function runPipeline(jobId, params) {
     let audioPath = null;
     if (process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY) {
       try {
-        audioPath = await generateVoiceover(script.fullScript, persona, jobId);
+        audioPath = await generateVoiceover(script.fullScript, persona, jobId, params.voice);
         await updateJob(jobId, { progress: 50, step: 'Voiceover ready — generating video scenes...' });
       } catch (e) {
         console.warn('Voiceover failed:', e.message);
@@ -436,7 +441,11 @@ async function runPipeline(jobId, params) {
 
     if (hasVideoKey && hasScenes) {
       await updateJob(jobId, { progress: 55, step: 'Fetching Pexels stock video clips...' });
-      const scenes = script.sceneDescriptions.slice(0, 3);
+      // More scenes for longer videos
+      const durationSecs = parseInt((params.duration || '30s').replace('s','').replace('m','')) * (params.duration?.includes('m') ? 60 : 1);
+      const maxScenes = durationSecs >= 60 ? 8 : durationSecs >= 45 ? 6 : durationSecs >= 30 ? 4 : 3;
+      const scenes = script.sceneDescriptions.slice(0, maxScenes);
+      console.log(`🎬 Duration: ${durationSecs}s → ${maxScenes} max scenes, got ${scenes.length}`);
       for (const scene of scenes) {
         try {
           console.log(`🎬 Generating scene ${scene.scene}: "${scene.visual?.slice(0,60)}..."`);
@@ -743,6 +752,22 @@ app.get('/api/pexels/search', async (req, res) => {
     }).filter(v => v.url);
     res.json({ videos, total: data.total_results });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Voice options endpoint ───────────────────────────────────────────────────
+app.get('/api/voice/options', (_req, res) => {
+  res.json({
+    voices: [
+      // Female voices
+      { id:'nova',    label:'Nova',    gender:'Female', style:'Warm & friendly',    sample:'Great for UGC and lifestyle content' },
+      { id:'shimmer', label:'Shimmer', gender:'Female', style:'Clear & professional',sample:'Great for educational and VSL content' },
+      { id:'alloy',   label:'Alloy',   gender:'Female', style:'Versatile & neutral', sample:'Great for any content type' },
+      // Male voices
+      { id:'onyx',    label:'Onyx',    gender:'Male',   style:'Deep & authoritative',sample:'Great for product demos and commercials' },
+      { id:'echo',    label:'Echo',    gender:'Male',   style:'Confident & clear',   sample:'Great for tutorials and reviews' },
+      { id:'fable',   label:'Fable',   gender:'Male',   style:'Expressive & warm',   sample:'Great for storytelling content' },
+    ]
+  });
 });
 
 app.get('/health', (_req, res) => {
