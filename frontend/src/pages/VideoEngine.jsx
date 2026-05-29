@@ -594,21 +594,24 @@ export default function VideoEngine() {
                         );
                       })}
                     </div>
-                    <button onClick={assembleAndDownload} disabled={assembling}
-                      style={{
-                        width: '100%', padding: 12, borderRadius: 8, border: 'none', background: ACC, color: 'white', fontSize: 13, fontWeight: 600,
-                        cursor: assembling ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                        opacity: assembling ? 0.6 : 1, marginBottom: 8,
-                      }}>
-                      {assembling ? 'Assembling with audio...' : 'Download Combined MP4 (' + aspectRatio + (music !== 'none' ? ' + ' + music : '') + (captions ? ' + captions' : '') + ')'}
-                    </button>
-                    <button onClick={function() { download(safeClips[0].videoUrl); }}
-                      style={{
-                        width: '100%', padding: 10, borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 12,
-                        cursor: 'pointer', fontFamily: 'inherit',
-                      }}>
-                      Download individual clip
-                    </button>
+                    {/* Scene-by-scene exports */}
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: TXT3, marginBottom: 6 }}>Download individual scenes (raw footage):</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {safeClips.map(function(clip, i) {
+                          return (
+                            <button key={i} onClick={function() { download(clip.videoUrl); }}
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid ' + BORD, background: 'rgba(22,61,106,.4)', color: TXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 14 }}>⬇</span>
+                              <span>Scene {i+1} — raw HD clip ({aspectRatio})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ padding: '8px 10px', background: 'rgba(29,158,117,.05)', border: '1px solid rgba(29,158,117,.1)', borderRadius: 8, fontSize: 11, color: TXT3 }}>
+                      Import these clips into your video editor (CapCut, DaVinci Resolve, Premiere) to arrange scenes, add text overlays and sync to your script
+                    </div>
                   </div>
                 </div>
               )}
