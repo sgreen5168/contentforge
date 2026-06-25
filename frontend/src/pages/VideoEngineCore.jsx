@@ -44,7 +44,7 @@ const MUSIC_OPTIONS = [
   { id:'corporate',   label:'Corporate' },
 ];
 
-export default function VideoEngineCore() {
+export default function VideoEngineCore({ jumpToTab } = {}) {
   const [tab, setTab]           = useState('generate');
   const [topic, setTopic]       = useState('');
   const [videoType, setVType]   = useState('ugc-persona');
@@ -64,6 +64,10 @@ export default function VideoEngineCore() {
   const [voice, setVoice]           = useState('nova');
   const [durMode, setDurMode]       = useState('short');
   const pollRef = useRef(null);
+
+  useEffect(() => {
+    if (jumpToTab && jumpToTab.tab) setTab(jumpToTab.tab);
+  }, [jumpToTab]);
 
   useEffect(() => {
     if (tab === 'history') loadJobs();
@@ -594,9 +598,35 @@ export default function VideoEngineCore() {
                         );
                       })}
                     </div>
+
+                    {/* Combine into one final video */}
+                    <div style={{ marginBottom: 14, padding: 12, background: 'rgba(29,158,117,.06)', border: '1px solid ' + BORD, borderRadius: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
+                      <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                        Merges all scenes with your voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
+                      </div>
+                      <button onClick={assembleAndDownload} disabled={assembling}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                          background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white',
+                          fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer',
+                          fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        }}>
+                        {assembling ? (
+                          <>
+                            <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                            Combining clips, audio &amp; captions…
+                          </>
+                        ) : (
+                          <>⬇ Combine &amp; Download Final Video</>
+                        )}
+                      </button>
+                    </div>
+                    <style>{'@keyframes cf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
+
                     {/* Scene-by-scene exports */}
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, color: TXT3, marginBottom: 6 }}>Download individual scenes (raw footage):</div>
+                      <div style={{ fontSize: 11, color: TXT3, marginBottom: 6 }}>Or download individual scenes for manual editing (raw footage):</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {safeClips.map(function(clip, i) {
                           return (
