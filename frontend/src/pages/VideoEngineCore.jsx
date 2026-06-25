@@ -63,6 +63,10 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
   const [assembling, setAssembling] = useState(false);
   const [voice, setVoice]           = useState('nova');
   const [durMode, setDurMode]       = useState('short');
+  const [selectedPhrases, setSelectedPhrases] = useState([]);
+  const [phraseClips, setPhraseClips]         = useState([]);
+  const [generatingPhraseClips, setGenPhraseClips] = useState(false);
+  const [phraseClipError, setPhraseClipError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -169,6 +173,48 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
       alert('Assembly failed: ' + e.message);
     } finally {
       setAssembling(false);
+    }
+  }
+
+  function splitIntoPhrases(text) {
+    if (!text) return [];
+    // Split on sentence-ending punctuation, keep punctuation, trim, drop empties
+    return text
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  function togglePhrase(phrase) {
+    setSelectedPhrases(prev =>
+      prev.includes(phrase) ? prev.filter(p => p !== phrase) : [...prev, phrase]
+    );
+  }
+
+  async function generateClipsFromSelectedPhrases() {
+    if (selectedPhrases.length === 0) {
+      setPhraseClipError('Select at least one phrase from the script first.');
+      return;
+    }
+    setGenPhraseClips(true);
+    setPhraseClipError('');
+    setPhraseClips([]);
+    try {
+      const res = await fetch(API + '/api/video/clips-from-phrases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrases: selectedPhrases, jobId: jobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Clip generation failed');
+      setPhraseClips(data.clips || []);
+      if (data.matched < data.total) {
+        setPhraseClipError(`${data.matched} of ${data.total} phrases matched footage — the rest had no relevant clip found.`);
+      }
+    } catch (e) {
+      setPhraseClipError(e.message);
+    } finally {
+      setGenPhraseClips(false);
     }
   }
 
@@ -575,6 +621,97 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
                     {job.result.script.hashtags && job.result.script.hashtags.length > 0 && (
                       <div style={{ marginTop: 8, fontSize: 12, color: ACCH }}>
                         {job.result.script.hashtags.join(' ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Phrase-based scene selector */}
+              {job.result && job.result.script && job.result.script.fullScript && (
+                <div style={card()}>
+                  <div style={hdr()}>
+                    <span>Pick scenes from your script</span>
+                    <span style={{ fontSize: 11, color: TXT3 }}>{selectedPhrases.length} selected</span>
+                  </div>
+                  <div style={body()}>
+                    <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                      Click any sentence below to turn it into a scene. Each selected phrase gets matched to its own clip — pick as many as you want, no limit.
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                      {splitIntoPhrases(job.result.script.fullScript).map(function(phrase, i) {
+                        const isSelected = selectedPhrases.includes(phrase);
+                        return (
+                          <div key={i} onClick={function() { togglePhrase(phrase); }}
+                            style={{
+                              padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, lineHeight: 1.5,
+                              border: '1px solid ' + (isSelected ? ACC : BORD),
+                              background: isSelected ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)',
+                              color: isSelected ? TXT : TXT2,
+                              display: 'flex', alignItems: 'flex-start', gap: 8,
+                            }}>
+                            <span style={{
+                              flexShrink: 0, width: 16, height: 16, borderRadius: 4, marginTop: 1,
+                              border: '2px solid ' + (isSelected ? ACC : BORD),
+                              background: isSelected ? ACC : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {isSelected && <span style={{ fontSize: 9, color: 'white' }}>✓</span>}
+                            </span>
+                            <span>{phrase}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {phraseClipError && (
+                      <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.1)', borderRadius: 8, fontSize: 12, color: '#F09595' }}>
+                        {phraseClipError}
+                      </div>
+                    )}
+
+                    <button onClick={generateClipsFromSelectedPhrases} disabled={generatingPhraseClips || selectedPhrases.length === 0}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                        background: (generatingPhraseClips || selectedPhrases.length === 0) ? 'rgba(29,158,117,.3)' : ACC,
+                        color: 'white', fontSize: 13, fontWeight: 600,
+                        cursor: (generatingPhraseClips || selectedPhrases.length === 0) ? 'default' : 'pointer',
+                        fontFamily: 'inherit',
+                      }}>
+                      {generatingPhraseClips
+                        ? 'Matching clips to selected phrases…'
+                        : `Generate ${selectedPhrases.length || ''} scene${selectedPhrases.length === 1 ? '' : 's'} from selected phrases`}
+                    </button>
+
+                    {phraseClips.length > 0 && (
+                      <div style={{ marginTop: 14 }}>
+                        <div style={{ fontSize: 11, color: TXT3, marginBottom: 8 }}>Matched clips:</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                          {phraseClips.map(function(clip, i) {
+                            return (
+                              <div key={i} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid ' + (clip.status === 'success' ? BORD : 'rgba(226,75,74,.3)') }}>
+                                {clip.status === 'success' && clip.videoUrl ? (
+                                  <video src={clip.videoUrl} muted loop
+                                    style={{ width: '100%', aspectRatio: '9/16', maxHeight: 140, objectFit: 'cover', display: 'block', background: '#000' }}
+                                  />
+                                ) : (
+                                  <div style={{ width: '100%', aspectRatio: '9/16', maxHeight: 140, background: 'rgba(226,75,74,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#F09595', textAlign: 'center', padding: 8 }}>
+                                    No match found
+                                  </div>
+                                )}
+                                <div style={{ padding: '6px 8px', fontSize: 10, color: TXT3, background: 'rgba(22,61,106,.5)' }}>
+                                  Scene {clip.scene}
+                                </div>
+                                {clip.status === 'success' && clip.videoUrl && (
+                                  <button onClick={function() { download(clip.videoUrl); }}
+                                    style={{ width: '100%', padding: '6px', fontSize: 10, border: 'none', borderTop: '1px solid ' + BORD, background: 'rgba(29,158,117,.1)', color: ACCH, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    ⬇ Download
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
