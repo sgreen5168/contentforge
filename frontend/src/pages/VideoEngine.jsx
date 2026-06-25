@@ -18,6 +18,7 @@ const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 export default function VideoEngine() {
   const [recentJobs, setRecentJobs] = useState([]);
+  const [jumpToTab, setJumpToTab] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +37,11 @@ export default function VideoEngine() {
   }, []);
 
   return (
-    <VideoEngineShell recentJobs={recentJobs}>
-      <VideoEngineCore />
+    <VideoEngineShell
+      recentJobs={recentJobs}
+      onNavigate={(tab) => setJumpToTab({ tab, key: Date.now() })}
+    >
+      <VideoEngineCore jumpToTab={jumpToTab} />
     </VideoEngineShell>
   );
 }
