@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 /*
   AI Video Engine 4.0 — Layout Shell
@@ -52,10 +52,22 @@ function StatusDot({ status }) {
   return <span style={{ width:6, height:6, borderRadius:'50%', background:color, display:'inline-block', flexShrink:0 }} />;
 }
 
-export default function VideoEngineShell({ children, recentJobs = [], onSelectQuickStart, onOpenJob }) {
+export default function VideoEngineShell({ children, recentJobs = [], onSelectQuickStart, onOpenJob, onNavigate }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeCategory, setActiveCategory] = useState('UGC Ads');
   const [activeStyle, setActiveStyle] = useState('Cinematic');
+  const sidebarRef = useRef(null);
+
+  function goToTemplates() {
+    setSidebarOpen(true);
+    if (sidebarRef.current) sidebarRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goToWorkspace(tab) {
+    if (onNavigate) onNavigate(tab);
+    const ws = document.getElementById('cf-workspace');
+    if (ws) ws.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   function card(extra) {
     return Object.assign({ background:BG2, border:'1px solid '+BORD, borderRadius:12, overflow:'hidden' }, extra||{});
@@ -65,7 +77,7 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
   }
 
   return (
-    <div style={{ background:BG, minHeight:'100vh', borderRadius:12, fontFamily:'inherit', color:TXT }}>
+    <div id="cf-top" style={{ background:BG, minHeight:'100vh', borderRadius:12, fontFamily:'inherit', color:TXT }}>
 
       {/* ── Top Nav ─────────────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', borderBottom:'1px solid '+BORD }}>
@@ -75,10 +87,23 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
             <span style={{ fontSize:10, marginLeft:6, padding:'2px 7px', borderRadius:10, background:'rgba(29,158,117,.2)', color:ACCH }}>4.0</span>
           </div>
           <nav style={{ display:'flex', gap:4 }}>
-            {['Home','Create Video','Templates','Brand Kits','Analytics'].map(label => (
-              <button key={label}
-                style={{ padding:'6px 12px', borderRadius:8, border:'1px solid transparent', background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                {label}
+            {[
+              { label:'Home',         action: () => { const top = document.getElementById('cf-top'); if (top) top.scrollIntoView({ behavior:'smooth' }); }, enabled:true },
+              { label:'Create Video', action: () => goToWorkspace('generate'), enabled:true },
+              { label:'Templates',    action: goToTemplates, enabled:true },
+              { label:'Brand Kits',   action: null, enabled:false },
+              { label:'Analytics',    action: null, enabled:false },
+            ].map(item => (
+              <button key={item.label}
+                onClick={item.enabled ? item.action : undefined}
+                title={item.enabled ? undefined : 'Not built yet'}
+                style={{
+                  padding:'6px 12px', borderRadius:8, border:'1px solid transparent', background:'transparent',
+                  color: item.enabled ? TXT2 : TXT3,
+                  fontSize:12, cursor: item.enabled ? 'pointer' : 'not-allowed', fontFamily:'inherit',
+                  opacity: item.enabled ? 1 : 0.45,
+                }}>
+                {item.label}{!item.enabled && <span style={{ marginLeft:5, fontSize:9 }}>soon</span>}
               </button>
             ))}
           </nav>
@@ -92,7 +117,7 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
 
         {/* ── Left Sidebar — Templates & Styles ────────────────────────────── */}
         {sidebarOpen && (
-          <div style={{ width:200, flexShrink:0, borderRight:'1px solid '+BORD, padding:'16px 12px' }}>
+          <div ref={sidebarRef} style={{ width:200, flexShrink:0, borderRight:'1px solid '+BORD, padding:'16px 12px' }}>
             <div style={{ fontSize:10, color:TXT3, fontWeight:600, textTransform:'uppercase', letterSpacing:.5, marginBottom:8 }}>Template categories</div>
             <div style={{ display:'flex', flexDirection:'column', gap:2, marginBottom:18 }}>
               {TEMPLATE_CATEGORIES.map(cat => (
@@ -134,13 +159,16 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
               Script → voiceover → matched clips → captions — free Pexels footage, no credits needed
             </div>
             <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-              <button style={{ padding:'10px 18px', borderRadius:10, border:'none', background:ACC, color:'white', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={() => goToWorkspace('generate')}
+                style={{ padding:'10px 18px', borderRadius:10, border:'none', background:ACC, color:'white', fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 Start with an idea
               </button>
-              <button style={{ padding:'10px 18px', borderRadius:10, border:'1px solid '+BORD, background:'transparent', color:TXT, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={() => goToWorkspace('generate')}
+                style={{ padding:'10px 18px', borderRadius:10, border:'1px solid '+BORD, background:'transparent', color:TXT, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 Start with a script
               </button>
-              <button style={{ padding:'10px 18px', borderRadius:10, border:'1px solid '+BORD, background:'transparent', color:TXT2, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              <button onClick={goToTemplates}
+                style={{ padding:'10px 18px', borderRadius:10, border:'1px solid '+BORD, background:'transparent', color:TXT2, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 Browse templates
               </button>
             </div>
@@ -165,7 +193,7 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
           </div>
 
           {/* ── Existing working VideoEngine tabs render here, untouched ──── */}
-          <div style={{ marginBottom:16 }}>
+          <div id="cf-workspace" style={{ marginBottom:16 }}>
             <div style={{ fontSize:13, fontWeight:500, color:TXT, marginBottom:10 }}>Workspace</div>
             {children}
           </div>
