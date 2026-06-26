@@ -67,6 +67,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [phraseClips, setPhraseClips]         = useState([]);
   const [generatingPhraseClips, setGenPhraseClips] = useState(false);
   const [phraseClipError, setPhraseClipError] = useState('');
+  const [combineError, setCombineError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -164,12 +165,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   async function assembleAndDownload() {
     if (!job || !job.result) return;
     const clips = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
-    if (clips.length === 0) { alert('No matched clips yet — select phrases above and click Generate first.'); return; }
+    if (clips.length === 0) { setCombineError('No matched clips yet — select phrases above and click Generate first.'); return; }
     setAssembling(true);
+    setCombineError('');
     try {
       const audioUrl = job.result.audioBase64 ||
         (job.result.hasAudio ? API + '/api/video/audio/' + jobId : null);
-      const res = await fetch(API + '/api/video/assemble', {
+      const assembleUrl = API + '/api/video/assemble';
+      const res = await fetch(assembleUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,8 +187,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Assembly failed');
+        let detail = '';
+        try { const err = await res.json(); detail = err.error || ''; } catch (e2) { detail = await res.text().catch(function() { return ''; }); }
+        throw new Error('HTTP ' + res.status + ' from ' + assembleUrl + (detail ? (' — ' + detail) : ' (no error detail returned)'));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -195,7 +199,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       a.click();
       URL.revokeObjectURL(url);
     } catch(e) {
-      alert('Assembly failed: ' + e.message);
+      setCombineError(e.message);
     } finally {
       setAssembling(false);
     }
@@ -739,6 +743,11 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                             <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
                               Merges your matched scenes with the voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
                             </div>
+                            {combineError && (
+                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
+                                <strong>Combine failed:</strong> {combineError}
+                              </div>
+                            )}
                             <button onClick={assembleAndDownload} disabled={assembling}
                               style={{
                                 width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
