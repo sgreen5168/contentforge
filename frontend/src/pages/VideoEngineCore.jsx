@@ -138,8 +138,8 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
 
   async function assembleAndDownload() {
     if (!job || !job.result) return;
-    const clips = (job.result.clips || []).filter(c => c && c.status === 'success' && c.videoUrl);
-    if (clips.length === 0) { alert('No clips available'); return; }
+    const clips = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
+    if (clips.length === 0) { alert('No matched clips yet — select phrases above and click Generate first.'); return; }
     setAssembling(true);
     try {
       const audioUrl = job.result.audioBase64 ||
@@ -307,11 +307,6 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
     marginBottom: 6,
   };
 
-  const safeClips = job && job.result && Array.isArray(job.result.clips)
-    ? job.result.clips.filter(c => c && c.status === 'success' && c.videoUrl)
-    : [];
-
-  const hasClips = safeClips.length > 0;
   const progress = (job && job.progress) || 0;
 
   return (
@@ -712,82 +707,35 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
                             );
                           })}
                         </div>
+
+                        {phraseClips.some(function(c) { return c.status === 'success' && c.videoUrl; }) && (
+                          <div style={{ marginTop: 14, padding: 12, background: 'rgba(29,158,117,.06)', border: '1px solid ' + BORD, borderRadius: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
+                            <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                              Merges your matched scenes with the voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
+                            </div>
+                            <button onClick={assembleAndDownload} disabled={assembling}
+                              style={{
+                                width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                                background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white',
+                                fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer',
+                                fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                              }}>
+                              {assembling ? (
+                                <>
+                                  <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                                  Combining clips, audio &amp; captions…
+                                </>
+                              ) : (
+                                <>⬇ Combine &amp; Download Final Video</>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                        <style>{'@keyframes cf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
-
-              {/* Clips card */}
-              {job.status === 'completed' && hasClips && (
-                <div style={card()}>
-                  <div style={hdr()}>
-                    <span>Video Clips Ready</span>
-                    <span style={{ fontSize: 11, color: ACC }}>{safeClips.length} clips</span>
-                  </div>
-                  <div style={body()}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
-                      {safeClips.map(function(clip, i) {
-                        return (
-                          <video key={i} src={clip.videoUrl} muted loop
-                            style={{ width: '100%', aspectRatio: '9/16', maxHeight: 140, borderRadius: 6, background: '#000', objectFit: 'cover', display: 'block' }}
-                          />
-                        );
-                      })}
-                    </div>
-
-                    {/* Combine into one final video */}
-                    <div style={{ marginBottom: 14, padding: 12, background: 'rgba(29,158,117,.06)', border: '1px solid ' + BORD, borderRadius: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
-                      <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
-                        Merges all scenes with your voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
-                      </div>
-                      <button onClick={assembleAndDownload} disabled={assembling}
-                        style={{
-                          width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
-                          background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white',
-                          fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer',
-                          fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        }}>
-                        {assembling ? (
-                          <>
-                            <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
-                            Combining clips, audio &amp; captions…
-                          </>
-                        ) : (
-                          <>⬇ Combine &amp; Download Final Video</>
-                        )}
-                      </button>
-                    </div>
-                    <style>{'@keyframes cf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
-
-                    {/* Scene-by-scene exports */}
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 11, color: TXT3, marginBottom: 6 }}>Or download individual scenes for manual editing (raw footage):</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {safeClips.map(function(clip, i) {
-                          return (
-                            <button key={i} onClick={function() { download(clip.videoUrl); }}
-                              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid ' + BORD, background: 'rgba(22,61,106,.4)', color: TXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 14 }}>⬇</span>
-                              <span>Scene {i+1} — raw HD clip ({aspectRatio})</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div style={{ padding: '8px 10px', background: 'rgba(29,158,117,.05)', border: '1px solid rgba(29,158,117,.1)', borderRadius: 8, fontSize: 11, color: TXT3 }}>
-                      Import these clips into your video editor (CapCut, DaVinci Resolve, Premiere) to arrange scenes, add text overlays and sync to your script
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Clip error */}
-              {job.clipError && (
-                <div style={{ padding: '12px 14px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 10, marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: '#FAC775', marginBottom: 4 }}>Video clips skipped</div>
-                  <div style={{ fontSize: 12, color: TXT2 }}>{job.clipError}</div>
                 </div>
               )}
 
