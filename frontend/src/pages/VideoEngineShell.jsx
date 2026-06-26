@@ -108,9 +108,6 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
             ))}
           </nav>
         </div>
-        <button style={{ width:30, height:30, borderRadius:'50%', background:'rgba(29,158,117,.15)', border:'1px solid '+BORD, color:ACCH, fontSize:12, cursor:'pointer' }}>
-          ●
-        </button>
       </div>
 
       <div style={{ display:'flex' }}>
@@ -229,9 +226,6 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
                         <button onClick={() => onOpenJob && onOpenJob(j)}
                           style={{ flex:1, fontSize:10, padding:'4px', borderRadius:6, border:'1px solid '+BORD, background:'transparent', color:TXT2, cursor:'pointer', fontFamily:'inherit' }}>
                           Edit
-                        </button>
-                        <button style={{ flex:1, fontSize:10, padding:'4px', borderRadius:6, border:'1px solid '+BORD, background:'transparent', color:TXT2, cursor:'pointer', fontFamily:'inherit' }}>
-                          Export
                         </button>
                       </div>
                     </div>
