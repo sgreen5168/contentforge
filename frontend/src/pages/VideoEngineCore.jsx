@@ -44,7 +44,7 @@ const MUSIC_OPTIONS = [
   { id:'corporate',   label:'Corporate' },
 ];
 
-export default function VideoEngineCore({ jumpToTab } = {}) {
+export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {}) {
   const [tab, setTab]           = useState('generate');
   const [topic, setTopic]       = useState('');
   const [videoType, setVType]   = useState('ugc-persona');
@@ -72,6 +72,31 @@ export default function VideoEngineCore({ jumpToTab } = {}) {
   useEffect(() => {
     if (jumpToTab && jumpToTab.tab) setTab(jumpToTab.tab);
   }, [jumpToTab]);
+
+  useEffect(() => {
+    if (loadJob && loadJob.job) {
+      const j = loadJob.job;
+      setJob(j);
+      setJobId(j.id || j.jobId || j.job_id || null);
+      setTab('result');
+    }
+  }, [loadJob]);
+
+  useEffect(() => {
+    if (quickStart && quickStart.id) {
+      const QUICK_START_TO_VIDEO_TYPE = {
+        ugc:        'ugc-persona',
+        vsl:        'ai-vsl',
+        reel:       'reel-ads',
+        demo:       'product-ads',
+        educator:   'educator',
+        commercial: 'commercial',
+      };
+      const mapped = QUICK_START_TO_VIDEO_TYPE[quickStart.id];
+      if (mapped) setVType(mapped);
+      setTab('generate');
+    }
+  }, [quickStart]);
 
   useEffect(() => {
     if (tab === 'history') loadJobs();
