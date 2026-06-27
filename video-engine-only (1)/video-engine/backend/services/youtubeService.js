@@ -106,7 +106,7 @@ export async function uploadVideoToYouTube({ videoUrl, title, description, tags,
 }
 
 // ── Upload YouTube Short ──────────────────────────────────────────────────────
-export async function uploadYouTubeShort({ videoUrl, title, description, tags }) {
+export async function uploadYouTubeShort({ videoUrl, title, description, tags, privacy }) {
   // Shorts are just vertical videos — same upload with #Shorts in description
   const shortDescription = `${description || ''}\n\n#Shorts #ContentForge`.trim();
   const shortTitle = title?.slice(0, 100) || 'ContentForge Short';
@@ -116,8 +116,52 @@ export async function uploadYouTubeShort({ videoUrl, title, description, tags })
     description: shortDescription,
     tags:        [...(tags || []), 'Shorts'],
     category:    '22',
-    privacy:     'public',
+    privacy:     privacy || 'unlisted',
   });
+}
+
+// ── Delete a video from YouTube ───────────────────────────────────────────────
+// Note: this requires the broader 'https://www.googleapis.com/auth/youtube'
+// OAuth scope. If the refresh token was only granted 'youtube.upload', this
+// will fail with an insufficient-permissions error from Google — that's a
+// scope issue, not a bug, and would require re-authorizing with the wider scope.
+export async function deleteYouTubeVideo(videoId) {
+  const fetch = (await import('node-fetch')).default;
+  if (!videoId) throw new Error('videoId is required to delete a video');
+
+  const token = await getAccessToken();
+  console.log(`🗑 Deleting YouTube video: ${videoId}`);
+
+  const res = await fetch(`${YT_DATA}/videos?id=${encodeURIComponent(videoId)}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (res.status === 204) {
+    console.log(`✅ YouTube video deleted: ${videoId}`);
+    return { success: true, videoId };
+  }
+
+  let detail = '';
+  try {
+    const err = await res.json();
+    detail = err.error?.message || JSON.stringify(err.error || {});
+  } catch (e) {
+    detail = await res.text().catch(() => '');
+  }
+
+  if (res.status === 403) {
+    throw new Error(
+      `YouTube refused the delete (403 — insufficient permission). ` +
+      `This usually means the connected account's OAuth token doesn't have ` +
+      `the 'youtube' scope (delete requires more than 'youtube.upload'). ` +
+      `Detail: ${detail}`
+    );
+  }
+  if (res.status === 404) {
+    throw new Error(`Video not found on YouTube (already deleted, or wrong videoId). Detail: ${detail}`);
+  }
+  throw new Error(`YouTube delete failed: HTTP ${res.status} — ${detail}`);
 }
 
 // ── Verify YouTube credentials ────────────────────────────────────────────────
