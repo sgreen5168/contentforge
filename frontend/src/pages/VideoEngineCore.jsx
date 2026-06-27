@@ -74,6 +74,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
   const [publishResult, setPublishResult] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleted, setDeleted] = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -250,6 +253,31 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       setPublishError(e.message);
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function deleteFromYouTube() {
+    if (!publishResult || !publishResult.videoId) return;
+    const confirmed = window.confirm(
+      'Delete this video from YouTube? This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch(API + '/api/youtube/video/' + publishResult.videoId, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status + (data.error ? (' — ' + data.error) : ''));
+      }
+      setDeleted(true);
+    } catch (e) {
+      setDeleteError(e.message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -858,9 +886,29 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               </div>
                             )}
 
-                            {publishResult && publishResult.success && (
+                            {publishResult && publishResult.success && !deleted && (
                               <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.12)', border: '1px solid rgba(29,158,117,.3)', borderRadius: 8, fontSize: 12, color: ACCH, wordBreak: 'break-word' }}>
-                                ✅ Published{publishResult.isShort ? ' as a Short' : ''}! <a href={publishResult.youtubeUrl} target="_blank" rel="noreferrer" style={{ color: ACCH, textDecoration: 'underline' }}>{publishResult.youtubeUrl}</a>
+                                <div style={{ marginBottom: 8 }}>
+                                  ✅ Published{publishResult.isShort ? ' as a Short' : ''}! <a href={publishResult.youtubeUrl} target="_blank" rel="noreferrer" style={{ color: ACCH, textDecoration: 'underline' }}>{publishResult.youtubeUrl}</a>
+                                </div>
+                                {deleteError && (
+                                  <div style={{ marginBottom: 8, padding: '6px 8px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 6, color: '#F09595' }}>
+                                    <strong>Delete failed:</strong> {deleteError}
+                                  </div>
+                                )}
+                                <button onClick={deleteFromYouTube} disabled={deleting}
+                                  style={{
+                                    padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(226,75,74,.4)',
+                                    background: 'transparent', color: '#F09595', fontSize: 11, fontWeight: 500,
+                                    cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+                                  }}>
+                                  {deleting ? 'Deleting…' : '🗑 Delete from YouTube'}
+                                </button>
+                              </div>
+                            )}
+                            {deleted && (
+                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(255,255,255,.05)', border: '1px solid ' + BORD, borderRadius: 8, fontSize: 12, color: TXT2 }}>
+                                Video deleted from YouTube.
                               </div>
                             )}
 
