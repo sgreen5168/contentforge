@@ -44,6 +44,13 @@ const MUSIC_OPTIONS = [
   { id:'corporate',   label:'Corporate' },
 ];
 
+const SCENE_SITUATIONS = [
+  'Airport', 'Balcony', 'Office', 'Art Studio', 'Bathroom', 'Beauty', 'Bedroom',
+  'Bookshelf', 'Business', 'Car', 'Cityscape', 'Closet', 'Cooking', 'Daytime',
+  'Fashion', 'Fitness', 'Gaming', 'Gym', 'Home', 'Kitchen', 'Lifestyle',
+  'Living Room', 'Nature', 'Skincare', 'Streaming', 'Vlogging',
+];
+
 export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {}) {
   const [tab, setTab]           = useState('generate');
   const [topic, setTopic]       = useState('');
@@ -64,6 +71,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [voice, setVoice]           = useState('nova');
   const [durMode, setDurMode]       = useState('short');
   const [selectedPhrases, setSelectedPhrases] = useState([]);
+  const [phraseSituations, setPhraseSituations] = useState({});
   const [phraseClips, setPhraseClips]         = useState([]);
   const [generatingPhraseClips, setGenPhraseClips] = useState(false);
   const [phraseClipError, setPhraseClipError] = useState('');
@@ -296,6 +304,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     );
   }
 
+  function setPhraseSituation(phrase, situation) {
+    setPhraseSituations(prev => {
+      const next = { ...prev };
+      if (next[phrase] === situation) {
+        delete next[phrase]; // clicking the same one again clears it
+      } else {
+        next[phrase] = situation;
+      }
+      return next;
+    });
+  }
+
   async function generateClipsFromSelectedPhrases() {
     if (selectedPhrases.length === 0) {
       setPhraseClipError('Select at least one phrase from the script first.');
@@ -305,10 +325,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     setPhraseClipError('');
     setPhraseClips([]);
     try {
+      const enhancedPhrases = selectedPhrases.map(function(p) {
+        const situation = phraseSituations[p];
+        return situation ? (p + ' — ' + situation) : p;
+      });
       const res = await fetch(API + '/api/video/clips-from-phrases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrases: selectedPhrases, jobId: jobId }),
+        body: JSON.stringify({ phrases: enhancedPhrases, jobId: jobId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Clip generation failed');
@@ -741,24 +765,46 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
                       {splitIntoPhrases(job.result.script.fullScript).map(function(phrase, i) {
                         const isSelected = selectedPhrases.includes(phrase);
+                        const situation = phraseSituations[phrase];
                         return (
-                          <div key={i} onClick={function() { togglePhrase(phrase); }}
-                            style={{
-                              padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, lineHeight: 1.5,
-                              border: '1px solid ' + (isSelected ? ACC : BORD),
-                              background: isSelected ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)',
-                              color: isSelected ? TXT : TXT2,
-                              display: 'flex', alignItems: 'flex-start', gap: 8,
-                            }}>
-                            <span style={{
-                              flexShrink: 0, width: 16, height: 16, borderRadius: 4, marginTop: 1,
-                              border: '2px solid ' + (isSelected ? ACC : BORD),
-                              background: isSelected ? ACC : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {isSelected && <span style={{ fontSize: 9, color: 'white' }}>✓</span>}
-                            </span>
-                            <span>{phrase}</span>
+                          <div key={i}>
+                            <div onClick={function() { togglePhrase(phrase); }}
+                              style={{
+                                padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 12, lineHeight: 1.5,
+                                border: '1px solid ' + (isSelected ? ACC : BORD),
+                                background: isSelected ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)',
+                                color: isSelected ? TXT : TXT2,
+                                display: 'flex', alignItems: 'flex-start', gap: 8,
+                              }}>
+                              <span style={{
+                                flexShrink: 0, width: 16, height: 16, borderRadius: 4, marginTop: 1,
+                                border: '2px solid ' + (isSelected ? ACC : BORD),
+                                background: isSelected ? ACC : 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              }}>
+                                {isSelected && <span style={{ fontSize: 9, color: 'white' }}>✓</span>}
+                              </span>
+                              <span>{phrase}{situation && <span style={{ color: ACCH, fontSize: 11 }}> — {situation}</span>}</span>
+                            </div>
+                            {isSelected && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px 2px 34px' }}>
+                                {SCENE_SITUATIONS.map(function(sit) {
+                                  const active = situation === sit;
+                                  return (
+                                    <span key={sit}
+                                      onClick={function(e) { e.stopPropagation(); setPhraseSituation(phrase, sit); }}
+                                      style={{
+                                        fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+                                        border: '1px solid ' + (active ? ACC : BORD),
+                                        background: active ? 'rgba(29,158,117,.15)' : 'transparent',
+                                        color: active ? ACCH : TXT3,
+                                      }}>
+                                      {sit}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
