@@ -216,7 +216,7 @@ export default function VideoEngineShell({ children, recentJobs = [], onSelectQu
                         preview
                       </div>
                       <div style={{ fontSize:11, color:TXT, marginBottom:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {(j.data && j.data.topic) || 'Untitled'}
+                        {(j.data && j.data.topic) || (j.createdAt && ('Video — ' + new Date(j.createdAt).toLocaleDateString())) || 'Untitled video'}
                       </div>
                       <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:8 }}>
                         <StatusDot status={j.status==='completed'?'live':'next'} />
