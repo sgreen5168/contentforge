@@ -44,13 +44,6 @@ const MUSIC_OPTIONS = [
   { id:'corporate',   label:'Corporate' },
 ];
 
-const SCENE_SITUATIONS = [
-  'Airport', 'Balcony', 'Office', 'Art Studio', 'Bathroom', 'Beauty', 'Bedroom',
-  'Bookshelf', 'Business', 'Car', 'Cityscape', 'Closet', 'Cooking', 'Daytime',
-  'Fashion', 'Fitness', 'Gaming', 'Gym', 'Home', 'Kitchen', 'Lifestyle',
-  'Living Room', 'Nature', 'Skincare', 'Streaming', 'Vlogging',
-];
-
 export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {}) {
   const [tab, setTab]           = useState('generate');
   const [topic, setTopic]       = useState('');
@@ -71,10 +64,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [voice, setVoice]           = useState('nova');
   const [durMode, setDurMode]       = useState('short');
   const [selectedPhrases, setSelectedPhrases] = useState([]);
-  const [phraseSituations, setPhraseSituations] = useState({});
   const [phraseClips, setPhraseClips]         = useState([]);
   const [generatingPhraseClips, setGenPhraseClips] = useState(false);
   const [phraseClipError, setPhraseClipError] = useState('');
+  const [sceneKeywords, setSceneKeywords] = useState({});
+  const [sceneMatches, setSceneMatches] = useState({});
+  const [sceneMatching, setSceneMatching] = useState({});
+  const [sceneMatchError, setSceneMatchError] = useState({});
+  const [scenesConfirmed, setScenesConfirmed] = useState(false);
   const [combineError, setCombineError] = useState('');
   const [ytTitle, setYtTitle] = useState('');
   const [ytDescription, setYtDescription] = useState('');
@@ -291,7 +288,6 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   function splitIntoPhrases(text) {
     if (!text) return [];
-    // Split on sentence-ending punctuation, keep punctuation, trim, drop empties
     return text
       .split(/(?<=[.!?])\s+/)
       .map(s => s.trim())
@@ -299,52 +295,45 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   }
 
   function togglePhrase(phrase) {
+    const isCurrentlySelected = selectedPhrases.includes(phrase);
     setSelectedPhrases(prev =>
-      prev.includes(phrase) ? prev.filter(p => p !== phrase) : [...prev, phrase]
+      isCurrentlySelected ? prev.filter(p => p !== phrase) : [...prev, phrase]
     );
-  }
+    setScenesConfirmed(false);
 
-  function setPhraseSituation(phrase, situation) {
-    setPhraseSituations(prev => {
-      const next = { ...prev };
-      if (next[phrase] === situation) {
-        delete next[phrase]; // clicking the same one again clears it
-      } else {
-        next[phrase] = situation;
-      }
-      return next;
-    });
-  }
-
-  async function generateClipsFromSelectedPhrases() {
-    if (selectedPhrases.length === 0) {
-      setPhraseClipError('Select at least one phrase from the script first.');
-      return;
+    if (isCurrentlySelected) {
+      setSceneKeywords(prev => { const next = { ...prev }; delete next[phrase]; return next; });
+      setSceneMatches(prev => { const next = { ...prev }; delete next[phrase]; return next; });
+      setSceneMatchError(prev => { const next = { ...prev }; delete next[phrase]; return next; });
+    } else {
+      matchScene(phrase, null);
     }
-    setGenPhraseClips(true);
-    setPhraseClipError('');
-    setPhraseClips([]);
+  }
+
+  async function matchScene(phrase, overrideKeyword) {
+    setSceneMatching(prev => ({ ...prev, [phrase]: true }));
+    setSceneMatchError(prev => { const next = { ...prev }; delete next[phrase]; return next; });
     try {
-      const enhancedPhrases = selectedPhrases.map(function(p) {
-        const situation = phraseSituations[p];
-        return situation ? (p + ' — ' + situation) : p;
-      });
-      const res = await fetch(API + '/api/video/clips-from-phrases', {
+      const res = await fetch(API + '/api/video/scene-keyword-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phrases: enhancedPhrases, jobId: jobId }),
+        body: JSON.stringify({ sentence: phrase, keyword: overrideKeyword || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Clip generation failed');
-      setPhraseClips(data.clips || []);
-      if (data.matched < data.total) {
-        setPhraseClipError(`${data.matched} of ${data.total} phrases matched footage — the rest had no relevant clip found.`);
-      }
+      if (!res.ok) throw new Error(data.error || 'Scene match failed');
+      setSceneKeywords(prev => ({ ...prev, [phrase]: data.keyword }));
+      setSceneMatches(prev => ({ ...prev, [phrase]: { videoUrl: data.videoUrl, thumb: data.thumb, matched: data.matched } }));
     } catch (e) {
-      setPhraseClipError(e.message);
+      setSceneMatchError(prev => ({ ...prev, [phrase]: e.message }));
     } finally {
-      setGenPhraseClips(false);
+      setSceneMatching(prev => ({ ...prev, [phrase]: false }));
     }
+  }
+
+  function rematchScene(phrase) {
+    const edited = sceneKeywords[phrase];
+    if (!edited || !edited.trim()) return;
+    matchScene(phrase, edited.trim());
   }
 
   function togglePlatform(id) {
@@ -751,7 +740,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 </div>
               )}
 
-              {/* Phrase-based scene selector */}
+              {/* Phrase-based scene selector — per-sentence immediate keyword + clip matching */}
               {job.result && job.result.script && job.result.script.fullScript && (
                 <div style={card()}>
                   <div style={hdr()}>
@@ -760,12 +749,15 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   </div>
                   <div style={body()}>
                     <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
-                      Click any sentence below to turn it into a scene. Each selected phrase gets matched to its own clip — pick as many as you want, no limit.
+                      Click any sentence to select it. We'll immediately suggest a keyword for the scene's main subject and find a matching clip — edit the keyword and click Re-match if it's not quite right.
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                       {splitIntoPhrases(job.result.script.fullScript).map(function(phrase, i) {
                         const isSelected = selectedPhrases.includes(phrase);
-                        const situation = phraseSituations[phrase];
+                        const keyword = sceneKeywords[phrase] || '';
+                        const match = sceneMatches[phrase];
+                        const matching = !!sceneMatching[phrase];
+                        const matchError = sceneMatchError[phrase];
                         return (
                           <div key={i}>
                             <div onClick={function() { togglePhrase(phrase); }}
@@ -784,25 +776,53 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               }}>
                                 {isSelected && <span style={{ fontSize: 9, color: 'white' }}>✓</span>}
                               </span>
-                              <span>{phrase}{situation && <span style={{ color: ACCH, fontSize: 11 }}> — {situation}</span>}</span>
+                              <span>{phrase}</span>
                             </div>
+
                             {isSelected && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px 2px 34px' }}>
-                                {SCENE_SITUATIONS.map(function(sit) {
-                                  const active = situation === sit;
-                                  return (
-                                    <span key={sit}
-                                      onClick={function(e) { e.stopPropagation(); setPhraseSituation(phrase, sit); }}
+                              <div style={{ padding: '8px 10px 4px 34px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                <div style={{ flex: 1 }}>
+                                  <span style={lbl}>Scene keyword</span>
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <input
+                                      style={{ ...inp, marginBottom: 0, flex: 1 }}
+                                      value={keyword}
+                                      placeholder={matching ? 'Suggesting keyword…' : 'e.g. elderly woman baking pie'}
+                                      onClick={function(e) { e.stopPropagation(); }}
+                                      onChange={function(e) {
+                                        setSceneKeywords(prev => ({ ...prev, [phrase]: e.target.value }));
+                                      }}
+                                    />
+                                    <button
+                                      onClick={function(e) { e.stopPropagation(); rematchScene(phrase); }}
+                                      disabled={matching || !keyword.trim()}
                                       style={{
-                                        fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
-                                        border: '1px solid ' + (active ? ACC : BORD),
-                                        background: active ? 'rgba(29,158,117,.15)' : 'transparent',
-                                        color: active ? ACCH : TXT3,
+                                        padding: '0 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                                        border: '1px solid ' + BORD, background: 'transparent', color: ACCH,
+                                        cursor: (matching || !keyword.trim()) ? 'default' : 'pointer',
+                                        opacity: (matching || !keyword.trim()) ? 0.5 : 1,
                                       }}>
-                                      {sit}
-                                    </span>
-                                  );
-                                })}
+                                      Re-match
+                                    </button>
+                                  </div>
+                                  {matchError && (
+                                    <div style={{ marginTop: 6, fontSize: 11, color: '#F09595' }}>{matchError}</div>
+                                  )}
+                                </div>
+
+                                <div style={{ width: 90, flexShrink: 0 }}>
+                                  <span style={lbl}>Match</span>
+                                  <div style={{ width: 90, aspectRatio: '9/16', borderRadius: 8, overflow: 'hidden', border: '1px solid ' + BORD, background: 'rgba(22,61,106,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {matching ? (
+                                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: ACCH, borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                                    ) : match && match.matched && match.videoUrl ? (
+                                      <video src={match.videoUrl} muted loop autoPlay
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#000' }} />
+                                    ) : match && !match.matched ? (
+                                      <span style={{ fontSize: 9, color: '#F09595', textAlign: 'center', padding: 6 }}>No match</span>
+                                    ) : null}
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -816,169 +836,152 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                       </div>
                     )}
 
-                    <button onClick={generateClipsFromSelectedPhrases} disabled={generatingPhraseClips || selectedPhrases.length === 0}
-                      style={{
-                        width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
-                        background: (generatingPhraseClips || selectedPhrases.length === 0) ? 'rgba(29,158,117,.3)' : ACC,
-                        color: 'white', fontSize: 13, fontWeight: 600,
-                        cursor: (generatingPhraseClips || selectedPhrases.length === 0) ? 'default' : 'pointer',
-                        fontFamily: 'inherit',
-                      }}>
-                      {generatingPhraseClips
-                        ? 'Matching clips to selected phrases…'
-                        : `Generate ${selectedPhrases.length || ''} scene${selectedPhrases.length === 1 ? '' : 's'} from selected phrases`}
-                    </button>
+                    {selectedPhrases.length > 0 && (
+                      <button onClick={function() { setScenesConfirmed(true); }}
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                          background: scenesConfirmed ? 'rgba(29,158,117,.3)' : ACC,
+                          color: 'white', fontSize: 13, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: 'inherit',
+                        }}>
+                        {scenesConfirmed ? '✓ Scenes confirmed — edit selections above to change' : 'Done picking scenes'}
+                      </button>
+                    )}
 
-                    {phraseClips.length > 0 && (
-                      <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 11, color: TXT3, marginBottom: 8 }}>Matched clips:</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                          {phraseClips.map(function(clip, i) {
+                    {scenesConfirmed && (function() {
+                      const confirmedClips = selectedPhrases.map(function(phrase, i) {
+                        const match = sceneMatches[phrase];
+                        return {
+                          scene: i + 1,
+                          phrase,
+                          status: (match && match.matched && match.videoUrl) ? 'success' : 'failed',
+                          videoUrl: (match && match.matched) ? match.videoUrl : null,
+                        };
+                      });
+                      if (JSON.stringify(confirmedClips) !== JSON.stringify(phraseClips)) {
+                        setPhraseClips(confirmedClips);
+                      }
+                      return null;
+                    })()}
+
+                    {scenesConfirmed && phraseClips.some(function(c) { return c.status === 'success' && c.videoUrl; }) && (
+                      <div style={{ marginTop: 14, padding: 12, background: 'rgba(29,158,117,.06)', border: '1px solid ' + BORD, borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
+                        <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                          Merges your matched scenes with the voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
+                        </div>
+                        {combineError && (
+                          <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
+                            <strong>Combine failed:</strong> {combineError}
+                          </div>
+                        )}
+                        <button onClick={assembleAndDownload} disabled={assembling}
+                          style={{
+                            width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                            background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white',
+                            fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer',
+                            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          }}>
+                          {assembling ? (
+                            <>
+                              <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                              Combining clips, audio &amp; captions…
+                            </>
+                          ) : (
+                            <>⬇ Combine &amp; Download Final Video</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {scenesConfirmed && phraseClips.some(function(c) { return c.status === 'success' && c.videoUrl; }) && (
+                      <div style={{ marginTop: 14, padding: 12, background: 'rgba(255,0,0,.05)', border: '1px solid rgba(255,0,0,.2)', borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Publish to YouTube</div>
+                        <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                          {aspectRatio === '9:16'
+                            ? 'This will publish as a YouTube Short (vertical, auto-detected from your 9:16 aspect ratio).'
+                            : 'This will publish as a regular long-form YouTube video (auto-detected from your ' + aspectRatio + ' aspect ratio).'}
+                        </div>
+
+                        <span style={lbl}>Title (required)</span>
+                        <input style={inp} placeholder="Give your video a title"
+                          value={ytTitle} onChange={function(e) { setYtTitle(e.target.value); }} maxLength={100} />
+
+                        <span style={lbl}>Description (optional)</span>
+                        <textarea
+                          value={ytDescription} onChange={function(e) { setYtDescription(e.target.value); }}
+                          placeholder="Add a description..."
+                          style={{ ...inp, minHeight: 60, resize: 'vertical' }}
+                        />
+
+                        <span style={lbl}>Privacy</span>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                          {[['unlisted', 'Unlisted'], ['public', 'Public'], ['private', 'Private']].map(function(p) {
                             return (
-                              <div key={i} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid ' + (clip.status === 'success' ? BORD : 'rgba(226,75,74,.3)') }}>
-                                {clip.status === 'success' && clip.videoUrl ? (
-                                  <video src={clip.videoUrl} muted loop
-                                    style={{ width: '100%', aspectRatio: '9/16', maxHeight: 140, objectFit: 'cover', display: 'block', background: '#000' }}
-                                  />
-                                ) : (
-                                  <div style={{ width: '100%', aspectRatio: '9/16', maxHeight: 140, background: 'rgba(226,75,74,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#F09595', textAlign: 'center', padding: 8 }}>
-                                    No match found
-                                  </div>
-                                )}
-                                <div style={{ padding: '6px 8px', fontSize: 10, color: TXT3, background: 'rgba(22,61,106,.5)' }}>
-                                  Scene {clip.scene}
-                                </div>
-                                {clip.status === 'success' && clip.videoUrl && (
-                                  <button onClick={function() { download(clip.videoUrl); }}
-                                    style={{ width: '100%', padding: '6px', fontSize: 10, border: 'none', borderTop: '1px solid ' + BORD, background: 'rgba(29,158,117,.1)', color: ACCH, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                    ⬇ Download
-                                  </button>
-                                )}
-                              </div>
+                              <button key={p[0]} onClick={function() { setYtPrivacy(p[0]); }}
+                                style={{
+                                  flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, textAlign: 'center',
+                                  border: '1px solid ' + (ytPrivacy === p[0] ? '#FF0000' : BORD),
+                                  background: ytPrivacy === p[0] ? 'rgba(255,0,0,.12)' : 'transparent',
+                                  color: ytPrivacy === p[0] ? '#FF6B6B' : TXT2,
+                                }}>
+                                {p[1]}
+                              </button>
                             );
                           })}
                         </div>
 
-                        {phraseClips.some(function(c) { return c.status === 'success' && c.videoUrl; }) && (
-                          <div style={{ marginTop: 14, padding: 12, background: 'rgba(29,158,117,.06)', border: '1px solid ' + BORD, borderRadius: 10 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
-                            <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
-                              Merges your matched scenes with the voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
-                            </div>
-                            {combineError && (
-                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
-                                <strong>Combine failed:</strong> {combineError}
-                              </div>
-                            )}
-                            <button onClick={assembleAndDownload} disabled={assembling}
-                              style={{
-                                width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
-                                background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white',
-                                fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer',
-                                fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                              }}>
-                              {assembling ? (
-                                <>
-                                  <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
-                                  Combining clips, audio &amp; captions…
-                                </>
-                              ) : (
-                                <>⬇ Combine &amp; Download Final Video</>
-                              )}
-                            </button>
+                        {publishError && (
+                          <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
+                            <strong>Publish failed:</strong> {publishError}
                           </div>
                         )}
 
-                        {phraseClips.some(function(c) { return c.status === 'success' && c.videoUrl; }) && (
-                          <div style={{ marginTop: 14, padding: 12, background: 'rgba(255,0,0,.05)', border: '1px solid rgba(255,0,0,.2)', borderRadius: 10 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Publish to YouTube</div>
-                            <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
-                              {aspectRatio === '9:16'
-                                ? 'This will publish as a YouTube Short (vertical, auto-detected from your 9:16 aspect ratio).'
-                                : 'This will publish as a regular long-form YouTube video (auto-detected from your ' + aspectRatio + ' aspect ratio).'}
+                        {publishResult && publishResult.success && !deleted && (
+                          <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.12)', border: '1px solid rgba(29,158,117,.3)', borderRadius: 8, fontSize: 12, color: ACCH, wordBreak: 'break-word' }}>
+                            <div style={{ marginBottom: 8 }}>
+                              ✅ Published{publishResult.isShort ? ' as a Short' : ''}! <a href={publishResult.youtubeUrl} target="_blank" rel="noreferrer" style={{ color: ACCH, textDecoration: 'underline' }}>{publishResult.youtubeUrl}</a>
                             </div>
-
-                            <span style={lbl}>Title (required)</span>
-                            <input style={inp} placeholder="Give your video a title"
-                              value={ytTitle} onChange={function(e) { setYtTitle(e.target.value); }} maxLength={100} />
-
-                            <span style={lbl}>Description (optional)</span>
-                            <textarea
-                              value={ytDescription} onChange={function(e) { setYtDescription(e.target.value); }}
-                              placeholder="Add a description..."
-                              style={{ ...inp, minHeight: 60, resize: 'vertical' }}
-                            />
-
-                            <span style={lbl}>Privacy</span>
-                            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                              {[['unlisted', 'Unlisted'], ['public', 'Public'], ['private', 'Private']].map(function(p) {
-                                return (
-                                  <button key={p[0]} onClick={function() { setYtPrivacy(p[0]); }}
-                                    style={{
-                                      flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, textAlign: 'center',
-                                      border: '1px solid ' + (ytPrivacy === p[0] ? '#FF0000' : BORD),
-                                      background: ytPrivacy === p[0] ? 'rgba(255,0,0,.12)' : 'transparent',
-                                      color: ytPrivacy === p[0] ? '#FF6B6B' : TXT2,
-                                    }}>
-                                    {p[1]}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {publishError && (
-                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
-                                <strong>Publish failed:</strong> {publishError}
+                            {deleteError && (
+                              <div style={{ marginBottom: 8, padding: '6px 8px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 6, color: '#F09595' }}>
+                                <strong>Delete failed:</strong> {deleteError}
                               </div>
                             )}
-
-                            {publishResult && publishResult.success && !deleted && (
-                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.12)', border: '1px solid rgba(29,158,117,.3)', borderRadius: 8, fontSize: 12, color: ACCH, wordBreak: 'break-word' }}>
-                                <div style={{ marginBottom: 8 }}>
-                                  ✅ Published{publishResult.isShort ? ' as a Short' : ''}! <a href={publishResult.youtubeUrl} target="_blank" rel="noreferrer" style={{ color: ACCH, textDecoration: 'underline' }}>{publishResult.youtubeUrl}</a>
-                                </div>
-                                {deleteError && (
-                                  <div style={{ marginBottom: 8, padding: '6px 8px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 6, color: '#F09595' }}>
-                                    <strong>Delete failed:</strong> {deleteError}
-                                  </div>
-                                )}
-                                <button onClick={deleteFromYouTube} disabled={deleting}
-                                  style={{
-                                    padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(226,75,74,.4)',
-                                    background: 'transparent', color: '#F09595', fontSize: 11, fontWeight: 500,
-                                    cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
-                                  }}>
-                                  {deleting ? 'Deleting…' : '🗑 Delete from YouTube'}
-                                </button>
-                              </div>
-                            )}
-                            {deleted && (
-                              <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(255,255,255,.05)', border: '1px solid ' + BORD, borderRadius: 8, fontSize: 12, color: TXT2 }}>
-                                Video deleted from YouTube.
-                              </div>
-                            )}
-
-                            <button onClick={publishToYouTube} disabled={publishing || !ytTitle.trim()}
+                            <button onClick={deleteFromYouTube} disabled={deleting}
                               style={{
-                                width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
-                                background: (publishing || !ytTitle.trim()) ? 'rgba(255,0,0,.25)' : '#FF0000', color: 'white',
-                                fontSize: 13, fontWeight: 600, cursor: (publishing || !ytTitle.trim()) ? 'default' : 'pointer',
-                                fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(226,75,74,.4)',
+                                background: 'transparent', color: '#F09595', fontSize: 11, fontWeight: 500,
+                                cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
                               }}>
-                              {publishing ? (
-                                <>
-                                  <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
-                                  Uploading to YouTube…
-                                </>
-                              ) : (
-                                <>▶ Publish to YouTube</>
-                              )}
+                              {deleting ? 'Deleting…' : '🗑 Delete from YouTube'}
                             </button>
                           </div>
                         )}
-                        <style>{'@keyframes cf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
+                        {deleted && (
+                          <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(255,255,255,.05)', border: '1px solid ' + BORD, borderRadius: 8, fontSize: 12, color: TXT2 }}>
+                            Video deleted from YouTube.
+                          </div>
+                        )}
+
+                        <button onClick={publishToYouTube} disabled={publishing || !ytTitle.trim()}
+                          style={{
+                            width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none',
+                            background: (publishing || !ytTitle.trim()) ? 'rgba(255,0,0,.25)' : '#FF0000', color: 'white',
+                            fontSize: 13, fontWeight: 600, cursor: (publishing || !ytTitle.trim()) ? 'default' : 'pointer',
+                            fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          }}>
+                          {publishing ? (
+                            <>
+                              <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                              Uploading to YouTube…
+                            </>
+                          ) : (
+                            <>▶ Publish to YouTube</>
+                          )}
+                        </button>
                       </div>
                     )}
+                    <style>{'@keyframes cf-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
                   </div>
                 </div>
               )}
