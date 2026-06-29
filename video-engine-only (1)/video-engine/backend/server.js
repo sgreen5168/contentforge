@@ -1177,7 +1177,90 @@ app.post('/api/video/clips-from-phrases', async (req, res) => {
   }
 });
 
-app.post('/api/video/generate', async (req, res) => {
+// ── Ask Claude for a short, literal, stock-footage-searchable keyword
+// phrase that captures the MAIN VISUAL SUBJECT of a single sentence.
+async function suggestSceneKeyword(sentence) {
+  const Anthropic = (await import('@anthropic-ai/sdk')).default;
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const prompt = `Here is one sentence from a video script:
+"${sentence}"
+
+In 3-5 words, describe the MAIN VISUAL SUBJECT of this sentence — what a stock video library search should look for. Be literal and concrete: subject + setting/action. Examples of good output: "elderly woman baking pie", "man typing laptop office", "woman jogging park morning".
+
+Reply with ONLY the 3-5 word phrase. No punctuation, no quotes, no explanation.`;
+
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 30,
+    system: 'You extract short, literal, stock-footage-searchable keyword phrases. Reply with only the phrase, nothing else.',
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const raw = msg.content[0].text.trim();
+  return raw.replace(/^["']|["']$/g, '').replace(/[.!?]+$/, '').trim();
+}
+
+// ── Search Pexels videos for a given keyword query, returning the top match.
+async function searchPexelsForKeyword(keyword) {
+  const fetch = (await import('node-fetch')).default;
+  if (!process.env.PEXELS_API_KEY) throw new Error('PEXELS_API_KEY not configured');
+
+  const res = await fetch(
+    `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&orientation=portrait&size=medium&per_page=8&min_duration=3&max_duration=15`,
+    { headers: { Authorization: process.env.PEXELS_API_KEY } }
+  );
+  if (!res.ok) throw new Error(`Pexels ${res.status}`);
+  const data = await res.json();
+  const videos = data.videos || [];
+  if (videos.length === 0) return null;
+
+  const top = videos[0];
+  const files = top.video_files || [];
+  const hd = files.find(f => f.quality === 'hd' && f.width >= 720) ||
+             files.find(f => f.quality === 'sd') ||
+             files[0];
+  if (!hd?.link) return null;
+
+  return {
+    videoUrl: hd.link,
+    thumb: top.image,
+    duration: top.duration,
+    width: hd.width,
+    height: hd.height,
+  };
+}
+
+// ── Single endpoint: given one sentence, suggest a keyword AND immediately
+// search Pexels with it, returning both.
+app.post('/api/video/scene-keyword-match', async (req, res) => {
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  if (!process.env.PEXELS_API_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not configured' });
+
+  const { sentence, keyword: overrideKeyword } = req.body;
+  if (!sentence || !sentence.trim()) return res.status(400).json({ error: 'sentence is required' });
+
+  try {
+    const keyword = overrideKeyword && overrideKeyword.trim()
+      ? overrideKeyword.trim()
+      : await suggestSceneKeyword(sentence.trim());
+
+    console.log(`🔑 Scene keyword for "${sentence.slice(0, 50)}...": "${keyword}"`);
+
+    const match = await searchPexelsForKeyword(keyword);
+
+    res.json({
+      keyword,
+      matched: !!match,
+      videoUrl: match ? match.videoUrl : null,
+      thumb: match ? match.thumb : null,
+      duration: match ? match.duration : null,
+    });
+  } catch (e) {
+    console.error('scene-keyword-match error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});app.post('/api/video/generate', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
   const jobId = Math.random().toString(36).slice(2) + Date.now().toString(36);
   await updateJob(jobId, { status: 'queued', progress: 0, step: 'Queued...', data: req.body, createdAt: new Date().toISOString() });
