@@ -53,6 +53,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [platforms, setPlats]   = useState(['tiktok']);
   const [captions, setCaptions] = useState(true);
   const [captionStyle, setCapStyle] = useState('bottom');
+  const [customCaptionStyling, setCustomCaptionStyling] = useState(false);
+  const [captionFont, setCaptionFont] = useState('default');
+  const [captionFontSize, setCaptionFontSize] = useState(28);
+  const [captionTextColor, setCaptionTextColor] = useState('#FFFFFF');
+  const [captionBgEnabled, setCaptionBgEnabled] = useState(false);
+  const [captionBackgroundColor, setCaptionBackgroundColor] = useState('#000000');
   const [aspectRatio, setAspect] = useState('9:16');
   const [music, setMusic]       = useState('none');
   const [loading, setLoad]      = useState(false);
@@ -198,6 +204,11 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           captions: captions,
           captionStyle: captionStyle,
           captionText: (job.result.script && job.result.script.fullScript) || '',
+          customCaptionStyling: customCaptionStyling,
+          captionFont: captionFont,
+          captionFontSize: captionFontSize,
+          captionTextColor: captionTextColor,
+          captionBackgroundColor: captionBgEnabled ? captionBackgroundColor : null,
         }),
       });
       if (!res.ok) {
@@ -244,6 +255,11 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           captions: captions,
           captionStyle: captionStyle,
           captionText: (job.result.script && job.result.script.fullScript) || '',
+          customCaptionStyling: customCaptionStyling,
+          captionFont: captionFont,
+          captionFontSize: captionFontSize,
+          captionTextColor: captionTextColor,
+          captionBackgroundColor: captionBgEnabled ? captionBackgroundColor : null,
           title: ytTitle,
           description: ytDescription,
           privacy: ytPrivacy,
@@ -610,10 +626,60 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   <span style={{ fontSize: 12, color: TXT2 }}>{captions ? 'On — burned in via FFmpeg' : 'Off'}</span>
                 </div>
                 {captions && (
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {['bottom','middle','top'].map(function(pos) {
-                      return <button key={pos} onClick={function() { setCapStyle(pos); }} style={chip(captionStyle === pos)}>{pos}</button>;
-                    })}
+                  <div>
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                      {['bottom','middle','top'].map(function(pos) {
+                        return <button key={pos} onClick={function() { setCapStyle(pos); }} style={chip(captionStyle === pos)}>{pos}</button>;
+                      })}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: customCaptionStyling ? 10 : 0 }}>
+                      <div onClick={function() { setCustomCaptionStyling(!customCaptionStyling); }}
+                        style={{ width: 36, height: 20, borderRadius: 10, background: customCaptionStyling ? ACC : 'rgba(255,255,255,.1)', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: customCaptionStyling ? 18 : 2, transition: 'left .2s' }} />
+                      </div>
+                      <span style={{ fontSize: 12, color: TXT2 }}>{customCaptionStyling ? 'Custom font & color on' : 'Plain default style'}</span>
+                    </div>
+
+                    {customCaptionStyling && (
+                      <div style={{ padding: 10, background: 'rgba(22,61,106,.3)', borderRadius: 8 }}>
+                        <span style={lbl}>Font</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                          {[['default','Roboto'],['montserrat','Montserrat'],['montserrat-bold','Montserrat Bold'],['anton','Anton (Impact-style)']].map(function(f) {
+                            return <button key={f[0]} onClick={function() { setCaptionFont(f[0]); }} style={chip(captionFont === f[0])}>{f[1]}</button>;
+                          })}
+                        </div>
+
+                        <span style={lbl}>Font size: {captionFontSize}px</span>
+                        <input type="range" min="16" max="60" value={captionFontSize}
+                          onChange={function(e) { setCaptionFontSize(parseInt(e.target.value)); }}
+                          style={{ width: '100%', marginBottom: 10 }} />
+
+                        <span style={lbl}>Text color</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <input type="color" value={captionTextColor}
+                            onChange={function(e) { setCaptionTextColor(e.target.value); }}
+                            style={{ width: 36, height: 28, borderRadius: 6, border: '1px solid ' + BORD, cursor: 'pointer', padding: 0 }} />
+                          <span style={{ fontSize: 11, color: TXT3 }}>{captionTextColor}</span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: captionBgEnabled ? 8 : 0 }}>
+                          <div onClick={function() { setCaptionBgEnabled(!captionBgEnabled); }}
+                            style={{ width: 36, height: 20, borderRadius: 10, background: captionBgEnabled ? ACC : 'rgba(255,255,255,.1)', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+                            <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: captionBgEnabled ? 18 : 2, transition: 'left .2s' }} />
+                          </div>
+                          <span style={{ fontSize: 12, color: TXT2 }}>Background box</span>
+                        </div>
+                        {captionBgEnabled && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="color" value={captionBackgroundColor}
+                              onChange={function(e) { setCaptionBackgroundColor(e.target.value); }}
+                              style={{ width: 36, height: 28, borderRadius: 6, border: '1px solid ' + BORD, cursor: 'pointer', padding: 0 }} />
+                            <span style={{ fontSize: 11, color: TXT3 }}>{captionBackgroundColor}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
