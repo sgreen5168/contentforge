@@ -1071,7 +1071,74 @@ app.get('/api/video/audio/:jobId', async (req, res) => {
   }
 });
 
-function formatSRTTime(seconds) {
+// ── Convert a standard web hex color (#RRGGBB) to libass/ASS format (&HBBGGRR&) ──
+function hexToAssColor(hex) {
+  if (!hex || typeof hex !== 'string') return null;
+  const clean = hex.replace('#', '').trim();
+  if (clean.length !== 6) return null;
+  const r = clean.slice(0, 2);
+  const g = clean.slice(2, 4);
+  const b = clean.slice(4, 6);
+  return `&H${b}${g}${r}&`;
+}
+
+const CAPTION_FONTS = {
+  'default':    'Roboto-Regular.ttf',
+  'roboto':     'Roboto-Regular.ttf',
+  'montserrat': 'Montserrat-Regular.ttf',
+  'montserrat-bold': 'Montserrat-Bold.ttf',
+  'anton':      'Anton-Regular.ttf',
+};
+
+const CAPTION_FONT_FAMILY_NAMES = {
+  'default':    'Roboto',
+  'roboto':     'Roboto',
+  'montserrat': 'Montserrat',
+  'montserrat-bold': 'Montserrat',
+  'anton':      'Anton',
+};
+
+function buildCaptionStyle({ customStyling, captionFont, fontSize, textColor, backgroundColor, captionStyle }) {
+  const vAlign = captionStyle === 'top' ? 'Alignment=6,MarginV=40' :
+                 captionStyle === 'middle' ? 'Alignment=10' :
+                 'Alignment=2,MarginV=40';
+
+  if (!customStyling) {
+    return `FontName=Arial,FontSize=22,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=1,Outline=2,Bold=1,${vAlign}`;
+  }
+
+  const fontKey = CAPTION_FONTS[captionFont] ? captionFont : 'default';
+  const fontFamily = CAPTION_FONT_FAMILY_NAMES[fontKey] || 'Roboto';
+  const size = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : 28;
+  const primaryColour = hexToAssColor(textColor) || '&HFFFFFF&';
+
+  const parts = [
+    `FontName=${fontFamily}`,
+    `FontSize=${size}`,
+    `PrimaryColour=${primaryColour}`,
+    'Bold=1',
+    vAlign,
+  ];
+
+  if (backgroundColor) {
+    const backColour = hexToAssColor(backgroundColor) || '&H000000&';
+    parts.push(`BackColour=&H80${backColour.replace('&H', '').replace('&', '')}`);
+    parts.push('BorderStyle=4');
+    parts.push('Outline=4');
+    parts.push('Shadow=0');
+  } else {
+    parts.push('OutlineColour=&H000000');
+    parts.push('BorderStyle=1');
+    parts.push('Outline=2');
+  }
+
+  return parts.join(',');
+}
+
+async function getFontsDir() {
+  const path = (await import('path')).default;
+  return path.join(process.cwd(), 'fonts');
+}function formatSRTTime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
