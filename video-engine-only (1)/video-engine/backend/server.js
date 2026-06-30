@@ -750,12 +750,19 @@ app.post('/api/video/assemble', async (req, res) => {
         });
         fs.writeFileSync(srtPath, srt);
 
-        const vAlign = captionStyle === 'top' ? 'Alignment=6,MarginV=40' :
-                       captionStyle === 'middle' ? 'Alignment=10' :
-                       'Alignment=2,MarginV=40';
+        const fontsDir = await getFontsDir();
+        const styleString = buildCaptionStyle({
+          customStyling: !!req.body.customCaptionStyling,
+          captionFont: req.body.captionFont,
+          fontSize: req.body.captionFontSize,
+          textColor: req.body.captionTextColor,
+          backgroundColor: req.body.captionBackgroundColor,
+          captionStyle,
+        });
         const captionedPath = path.join(tmpDir, 'captioned.mp4');
         const srtEscaped = srtPath.replace(/\\/g, '/').replace(/:/g, '\\:');
-        await execAsync(`"${ffmpegPath}" -y -i "${outputPath}" -vf "subtitles='${srtEscaped}':force_style='FontName=Arial,FontSize=22,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,BorderStyle=1,Outline=2,Bold=1,${vAlign}'" -c:a copy "${captionedPath}"`);
+        const fontsDirEscaped = fontsDir.replace(/\\/g, '/').replace(/:/g, '\\:');
+        await execAsync(`"${ffmpegPath}" -y -i "${outputPath}" -vf "subtitles='${srtEscaped}':fontsdir='${fontsDirEscaped}':force_style='${styleString}'" -c:a copy "${captionedPath}"`);
         if (fs.existsSync(captionedPath) && fs.statSync(captionedPath).size > 0) {
           finalPath = captionedPath;
           console.log('✅ Captions burned in (' + captionStyle + ')');
