@@ -706,7 +706,7 @@ app.post('/api/video/assemble', async (req, res) => {
 
     if (audioPath && musicPath) {
       const mixedAudio = path.join(tmpDir, 'mixed.mp3');
-      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex "[0:a]volume=1.0[v];[1:a]volume=0.15[m];[v][m]amix=inputs=2:duration=first" "${mixedAudio}"`);
+      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex "[0:a]volume=1.0[v];[1:a]volume=0.30[m];[v][m]amix=inputs=2:duration=first" "${mixedAudio}"`);
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${mixedAudio}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
     } else if (audioPath) {
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
