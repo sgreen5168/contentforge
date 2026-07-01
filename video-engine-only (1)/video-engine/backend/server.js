@@ -211,9 +211,6 @@ async function generateClip(prompt, duration) {
         const data = await res.json();
         const videos = data.videos || [];
         if (videos.length > 0) {
-          // Use Pexels' top-ranked result (their relevance algorithm) instead of
-          // a random pick — reduces inconsistency across repeated generations
-          // of the same script.
           matchedVideo = videos[0];
           matchedQuery = query;
           break;
@@ -232,7 +229,6 @@ async function generateClip(prompt, duration) {
         }
       }
 
-      // Last resort: broaden by dropping to just 2 most distinctive words (still scene-derived, not random)
       if (specificWords.length > 0) {
         const broadQuery = specificWords.slice(0, 2).join(' ') || specificWords[0];
         console.log(`   final attempt with broadened scene query: "${broadQuery}"`);
@@ -356,10 +352,6 @@ async function tryUploadToR2(localPath, key) {
   }
 }
 
-// ── Upload + generate a temporary signed URL (works even with a private bucket) ──
-// Used for YouTube publishing: the video only needs to be fetchable by Google's
-// servers for the duration of the upload, so a presigned URL avoids needing to
-// expose the entire R2 bucket publicly.
 async function uploadToR2AndSign(localPath, key, expiresInSeconds = 3600) {
   try {
     const { S3Client, PutObjectCommand, GetObjectCommand } = await import('@aws-sdk/client-s3');
@@ -383,9 +375,7 @@ async function uploadToR2AndSign(localPath, key, expiresInSeconds = 3600) {
     return null;
   }
 }
-// ── FFmpeg video assembly ─────────────────────────────────────────────────────
 async function assembleVideo(clips, audioPath, jobId) {
-  // Try ffmpeg-static first (npm bundled binary - no system install needed)
   let ffmpegBin = null;
   try {
     const ffmpegStatic = await import('ffmpeg-static');
@@ -405,13 +395,11 @@ async function assembleVideo(clips, audioPath, jobId) {
     const tmpDir = `/tmp/job_${jobId}`;
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    // Set ffmpeg path
     let ffmpegCmd = ffmpegBin || 'ffmpeg';
     try { 
       const { stdout } = await execAsync(`${ffmpegCmd} -version`);
       console.log('✅ FFmpeg ready:', ffmpegCmd);
     } catch(e) {
-      // Try system paths
       for (const p of ['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg']) {
         try { await execAsync(`${p} -version`); ffmpegCmd = p; break; } catch {}
       }
@@ -422,7 +410,6 @@ async function assembleVideo(clips, audioPath, jobId) {
       }
     }
 
-    // Download each clip
     const clipPaths = [];
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i];
@@ -493,14 +480,13 @@ async function runPipeline(jobId, params) {
       step: '✅ Script + voiceover ready — pick scenes from your script below to generate clips',
     });
 
-    // Convert audio to base64 for frontend access
     let audioBase64 = null;
     if (audioPath) {
       try {
         const fs = (await import('fs')).default;
         if (fs.existsSync(audioPath)) {
           const audioBuf = fs.readFileSync(audioPath);
-          if (audioBuf.length < 5 * 1024 * 1024) { // Only if under 5MB
+          if (audioBuf.length < 5 * 1024 * 1024) {
             audioBase64 = `data:audio/mpeg;base64,${audioBuf.toString('base64')}`;
             console.log(`✅ Audio converted to base64: ${(audioBuf.length/1024).toFixed(0)}KB`);
           }
@@ -554,7 +540,6 @@ Return JSON: { "hook", "problemAgitation", "solutionReveal", "socialProof", "off
   return JSON.parse(raw);
 }
 
-// ── Video assembly endpoint ───────────────────────────────────────────────────
 app.post('/api/video/assemble', async (req, res) => {
   try {
     const { exec } = await import('child_process');
@@ -570,7 +555,6 @@ app.post('/api/video/assemble', async (req, res) => {
     const tmpDir = `/tmp/assemble_${jobId || Date.now()}`;
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    // ── Find FFmpeg ────────────────────────────────────────────────────────────
     let ffmpegPath = 'ffmpeg';
     try {
       const ffmpegStatic = await import('ffmpeg-static');
@@ -580,7 +564,6 @@ app.post('/api/video/assemble', async (req, res) => {
     try { await execAsync(`"${ffmpegPath}" -version`); }
     catch(e) { return res.status(500).json({ error: 'FFmpeg not available' }); }
 
-    // ── Aspect ratio dimensions ────────────────────────────────────────────────
     const ratioMap = {
       '9:16':  { w: 720,  h: 1280, label: 'Vertical (TikTok/Reels)' },
       '16:9':  { w: 1280, h: 720,  label: 'Landscape (YouTube)' },
@@ -592,7 +575,6 @@ app.post('/api/video/assemble', async (req, res) => {
     const { w, h } = dim;
     console.log(`🎬 Assembling ${clipUrls.length} clips at ${w}x${h} (${aspectRatio})`);
 
-    // ── Download and normalize all clips to same size ─────────────────────────
     const clipPaths = [];
     for (let i = 0; i < clipUrls.length; i++) {
       try {
@@ -602,7 +584,6 @@ app.post('/api/video/assemble', async (req, res) => {
         const rawPath = path.join(tmpDir, `raw_${i}.mp4`);
         fs.writeFileSync(rawPath, buf);
 
-        // Re-encode to exact target size with padding to preserve aspect ratio
         const normPath = path.join(tmpDir, `clip_${i}.mp4`);
         const scaleFilter = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`;
         await execAsync(`"${ffmpegPath}" -y -i "${rawPath}" -vf "${scaleFilter}" -c:v libx264 -preset ultrafast -crf 26 -r 24 -an -t 7 "${normPath}"`);
@@ -616,12 +597,10 @@ app.post('/api/video/assemble', async (req, res) => {
 
     if (clipPaths.length === 0) return res.status(500).json({ error: 'No clips could be processed' });
 
-    // ── Download audio ─────────────────────────────────────────────────────────
     let audioPath = null;
     if (audioUrl) {
       try {
         if (audioUrl.startsWith('data:')) {
-          // Base64 audio
           const base64Data = audioUrl.split(',')[1];
           if (base64Data) {
             audioPath = path.join(tmpDir, 'voice.mp3');
@@ -640,7 +619,6 @@ app.post('/api/video/assemble', async (req, res) => {
       } catch(e) { console.warn('Audio download failed:', e.message); }
     }
 
-    // ── Download background music if provided ────────────────────────────────
     let musicPath = null;
     if (music && music !== 'none') {
       const musicUrls = {
@@ -666,7 +644,6 @@ app.post('/api/video/assemble', async (req, res) => {
     const concatPath = path.join(tmpDir, 'concat.mp4');
     const outputPath = path.join(tmpDir, 'final.mp4');
 
-    // ── Concatenate clips ─────────────────────────────────────────────────────
     if (clipPaths.length === 1) {
       fs.copyFileSync(clipPaths[0], concatPath);
     } else {
@@ -676,8 +653,6 @@ app.post('/api/video/assemble', async (req, res) => {
     }
     console.log('✅ Clips concatenated');
 
-    // ── Mix audio: voiceover + optional background music ─────────────────────
-    // Get audio duration to loop video to match
     let audioDuration = 0;
     if (audioPath && fs.existsSync(audioPath)) {
       try {
@@ -690,12 +665,10 @@ app.post('/api/video/assemble', async (req, res) => {
       } catch(e) { console.warn('Could not get audio duration:', e.message); }
     }
 
-    // Loop video to match audio duration if audio is longer
     let videoForMix = concatPath;
     if (audioDuration > 0) {
       const loopedPath = path.join(tmpDir, 'looped.mp4');
       try {
-        // Stream_loop -1 loops indefinitely, -t cuts at audio duration
         await execAsync(`"${ffmpegPath}" -y -stream_loop -1 -i "${concatPath}" -c:v libx264 -preset ultrafast -crf 26 -t ${audioDuration + 1} "${loopedPath}"`);
         if (fs.existsSync(loopedPath)) {
           videoForMix = loopedPath;
@@ -706,7 +679,7 @@ app.post('/api/video/assemble', async (req, res) => {
 
     if (audioPath && musicPath) {
       const mixedAudio = path.join(tmpDir, 'mixed.mp3');
-      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex "[0:a]volume=1.0[v];[1:a]volume=0.30[m];[v][m]amix=inputs=2:duration=first" "${mixedAudio}"`);
+      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex `[0:a]volume=${req.body.voiceVolume !== undefined ? Number(req.body.voiceVolume) : 1.0}[v];[1:a]volume=${req.body.musicVolume !== undefined ? Number(req.body.musicVolume) : 0.30}[m];[v][m]amix=inputs=2:duration=first` "${mixedAudio}"`);
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${mixedAudio}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
     } else if (audioPath) {
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
@@ -719,7 +692,6 @@ app.post('/api/video/assemble', async (req, res) => {
 
     if (!fs.existsSync(outputPath)) return res.status(500).json({ error: 'Assembly failed' });
 
-    // ── Burn in captions if requested ────────────────────────────────────────
     let finalPath = outputPath;
     if (captions && captionText) {
       try {
@@ -777,7 +749,6 @@ app.post('/api/video/assemble', async (req, res) => {
     const stat = fs.statSync(finalPath);
     console.log(`✅ Assembly complete: ${(stat.size/1024/1024).toFixed(1)}MB at ${w}x${h}${captions ? ' with captions' : ''}`);
 
-    // Stream back
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('Content-Disposition', 'attachment; filename="contentforge-video.mp4"');
     res.setHeader('Content-Length', stat.size);
@@ -810,7 +781,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     const tmpDir = `/tmp/assemble_${jobId || Date.now()}`;
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
 
-    // ── Find FFmpeg ────────────────────────────────────────────────────────────
     let ffmpegPath = 'ffmpeg';
     try {
       const ffmpegStatic = await import('ffmpeg-static');
@@ -820,7 +790,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     try { await execAsync(`"${ffmpegPath}" -version`); }
     catch(e) { return res.status(500).json({ error: 'FFmpeg not available' }); }
 
-    // ── Aspect ratio dimensions ────────────────────────────────────────────────
     const ratioMap = {
       '9:16':  { w: 720,  h: 1280, label: 'Vertical (TikTok/Reels)' },
       '16:9':  { w: 1280, h: 720,  label: 'Landscape (YouTube)' },
@@ -832,7 +801,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     const { w, h } = dim;
     console.log(`🎬 Assembling ${clipUrls.length} clips at ${w}x${h} (${aspectRatio})`);
 
-    // ── Download and normalize all clips to same size ─────────────────────────
     const clipPaths = [];
     for (let i = 0; i < clipUrls.length; i++) {
       try {
@@ -842,7 +810,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
         const rawPath = path.join(tmpDir, `raw_${i}.mp4`);
         fs.writeFileSync(rawPath, buf);
 
-        // Re-encode to exact target size with padding to preserve aspect ratio
         const normPath = path.join(tmpDir, `clip_${i}.mp4`);
         const scaleFilter = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1`;
         await execAsync(`"${ffmpegPath}" -y -i "${rawPath}" -vf "${scaleFilter}" -c:v libx264 -preset ultrafast -crf 26 -r 24 -an -t 7 "${normPath}"`);
@@ -856,12 +823,10 @@ app.post('/api/video/publish-youtube', async (req, res) => {
 
     if (clipPaths.length === 0) return res.status(500).json({ error: 'No clips could be processed' });
 
-    // ── Download audio ─────────────────────────────────────────────────────────
     let audioPath = null;
     if (audioUrl) {
       try {
         if (audioUrl.startsWith('data:')) {
-          // Base64 audio
           const base64Data = audioUrl.split(',')[1];
           if (base64Data) {
             audioPath = path.join(tmpDir, 'voice.mp3');
@@ -880,7 +845,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
       } catch(e) { console.warn('Audio download failed:', e.message); }
     }
 
-    // ── Download background music if provided ────────────────────────────────
     let musicPath = null;
     if (music && music !== 'none') {
       const musicUrls = {
@@ -906,7 +870,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     const concatPath = path.join(tmpDir, 'concat.mp4');
     const outputPath = path.join(tmpDir, 'final.mp4');
 
-    // ── Concatenate clips ─────────────────────────────────────────────────────
     if (clipPaths.length === 1) {
       fs.copyFileSync(clipPaths[0], concatPath);
     } else {
@@ -916,8 +879,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     }
     console.log('✅ Clips concatenated');
 
-    // ── Mix audio: voiceover + optional background music ─────────────────────
-    // Get audio duration to loop video to match
     let audioDuration = 0;
     if (audioPath && fs.existsSync(audioPath)) {
       try {
@@ -930,12 +891,10 @@ app.post('/api/video/publish-youtube', async (req, res) => {
       } catch(e) { console.warn('Could not get audio duration:', e.message); }
     }
 
-    // Loop video to match audio duration if audio is longer
     let videoForMix = concatPath;
     if (audioDuration > 0) {
       const loopedPath = path.join(tmpDir, 'looped.mp4');
       try {
-        // Stream_loop -1 loops indefinitely, -t cuts at audio duration
         await execAsync(`"${ffmpegPath}" -y -stream_loop -1 -i "${concatPath}" -c:v libx264 -preset ultrafast -crf 26 -t ${audioDuration + 1} "${loopedPath}"`);
         if (fs.existsSync(loopedPath)) {
           videoForMix = loopedPath;
@@ -946,7 +905,7 @@ app.post('/api/video/publish-youtube', async (req, res) => {
 
     if (audioPath && musicPath) {
       const mixedAudio = path.join(tmpDir, 'mixed.mp3');
-      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex "[0:a]volume=1.0[v];[1:a]volume=0.15[m];[v][m]amix=inputs=2:duration=first" "${mixedAudio}"`);
+      await execAsync(`"${ffmpegPath}" -y -i "${audioPath}" -i "${musicPath}" -filter_complex `[0:a]volume=${req.body.voiceVolume !== undefined ? Number(req.body.voiceVolume) : 1.0}[v];[1:a]volume=${req.body.musicVolume !== undefined ? Number(req.body.musicVolume) : 0.30}[m];[v][m]amix=inputs=2:duration=first` "${mixedAudio}"`);
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${mixedAudio}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
     } else if (audioPath) {
       await execAsync(`"${ffmpegPath}" -y -i "${videoForMix}" -i "${audioPath}" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "${outputPath}"`);
@@ -959,7 +918,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
 
     if (!fs.existsSync(outputPath)) return res.status(500).json({ error: 'Assembly failed' });
 
-    // ── Burn in captions if requested ────────────────────────────────────────
     let finalPath = outputPath;
     if (captions && captionText) {
       try {
@@ -1017,9 +975,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     const stat = fs.statSync(finalPath);
     console.log(`✅ Assembly complete: ${(stat.size/1024/1024).toFixed(1)}MB at ${w}x${h}${captions ? ' with captions' : ''}`);
 
-    // ── Upload finished video to R2 and get a temporary signed URL YouTube can fetch ──
-    // (Uses a presigned URL rather than the bucket's public dev URL, since the
-    // bucket's public access is disabled and we don't want to expose it just for this.)
     if (!process.env.R2_BUCKET_NAME) {
       try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
       return res.status(500).json({ error: 'R2_BUCKET_NAME not configured — cannot publish to YouTube without persistent storage' });
@@ -1032,13 +987,9 @@ app.post('/api/video/publish-youtube', async (req, res) => {
     }
     console.log(`✅ Uploaded to R2 with signed URL for YouTube publish (expires in 1 hour)`);
 
-    // ── Determine Short vs long-form ───────────────────────────────────────────
-    // isShort may be explicitly passed by the caller; otherwise infer from
-    // aspect ratio + duration, since YouTube Shorts are vertical and under 60s.
     const inferredShort = (aspectRatio === '9:16') && (audioDuration > 0 ? audioDuration <= 60 : true);
     const publishAsShort = (typeof isShort === 'boolean') ? isShort : inferredShort;
 
-    // ── Publish to YouTube using the real, already-working service functions ──
     let ytResult;
     try {
       const { uploadVideoToYouTube, uploadYouTubeShort } = await import('./services/youtubeService.js');
@@ -1067,7 +1018,6 @@ app.post('/api/video/publish-youtube', async (req, res) => {
   }
 });
 
-// ── Serve audio file by jobId ─────────────────────────────────────────────────
 app.get('/api/video/audio/:jobId', async (req, res) => {
   try {
     const fs = (await import('fs')).default;
@@ -1152,7 +1102,9 @@ function buildCaptionStyle({ customStyling, captionFont, fontSize, textColor, ba
 async function getFontsDir() {
   const path = (await import('path')).default;
   return path.join(process.cwd(), 'fonts');
-}function formatSRTTime(seconds) {
+}
+
+function formatSRTTime(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
@@ -1160,7 +1112,6 @@ async function getFontsDir() {
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
 }
 
-// ── Pexels search proxy (browser can't call Pexels directly) ─────────────────
 app.get('/api/pexels/search', async (req, res) => {
   if (!process.env.PEXELS_API_KEY) return res.status(400).json({ error: 'PEXELS_API_KEY not configured' });
   try {
@@ -1191,15 +1142,12 @@ app.get('/api/pexels/search', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Voice options endpoint ───────────────────────────────────────────────────
 app.get('/api/voice/options', (_req, res) => {
   res.json({
     voices: [
-      // Female voices
       { id:'nova',    label:'Nova',    gender:'Female', style:'Warm & friendly',    sample:'Great for UGC and lifestyle content' },
       { id:'shimmer', label:'Shimmer', gender:'Female', style:'Clear & professional',sample:'Great for educational and VSL content' },
       { id:'alloy',   label:'Alloy',   gender:'Female', style:'Versatile & neutral', sample:'Great for any content type' },
-      // Male voices
       { id:'onyx',    label:'Onyx',    gender:'Male',   style:'Deep & authoritative',sample:'Great for product demos and commercials' },
       { id:'echo',    label:'Echo',    gender:'Male',   style:'Confident & clear',   sample:'Great for tutorials and reviews' },
       { id:'fable',   label:'Fable',   gender:'Male',   style:'Expressive & warm',   sample:'Great for storytelling content' },
@@ -1219,7 +1167,6 @@ app.post('/api/video/script', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Generate clips from user-selected phrases (no scene cap, no Claude-invented visuals) ──
 app.post('/api/video/clips-from-phrases', async (req, res) => {
   if (!process.env.PEXELS_API_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not configured' });
   const { phrases, jobId } = req.body;
@@ -1258,8 +1205,6 @@ app.post('/api/video/clips-from-phrases', async (req, res) => {
   }
 });
 
-// ── Ask Claude for a short, literal, stock-footage-searchable keyword
-// phrase that captures the MAIN VISUAL SUBJECT of a single sentence.
 async function suggestSceneKeyword(sentence) {
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -1282,7 +1227,6 @@ Reply with ONLY the 3-5 word phrase. No punctuation, no quotes, no explanation.`
   return raw.replace(/^["']|["']$/g, '').replace(/[.!?]+$/, '').trim();
 }
 
-// ── Search Pexels videos for a given keyword query, returning the top match.
 async function searchPexelsForKeyword(keyword) {
   const fetch = (await import('node-fetch')).default;
   if (!process.env.PEXELS_API_KEY) throw new Error('PEXELS_API_KEY not configured');
@@ -1312,8 +1256,6 @@ async function searchPexelsForKeyword(keyword) {
   };
 }
 
-// ── Single endpoint: given one sentence, suggest a keyword AND immediately
-// search Pexels with it, returning both.
 app.post('/api/video/scene-keyword-match', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
   if (!process.env.PEXELS_API_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not configured' });
@@ -1387,25 +1329,22 @@ Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": 
       .replace(/\s*```$/i, '')
       .trim();
 
-    // Fix common JSON issues before parsing
     raw = raw
-      .replace(/,\s*}/g, '}')          // trailing commas before }
-      .replace(/,\s*]/g, ']')          // trailing commas before ]
-      .replace(/([\w"])\s*\n\s*"/g, '$1, "')  // missing commas between properties
-      .replace(/}\s*{/g, '},{');        // missing commas between objects
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/([\w"])\s*\n\s*"/g, '$1, "')
+      .replace(/}\s*{/g, '},{');
 
     let posts;
     try {
       posts = JSON.parse(raw);
     } catch (parseErr) {
-      // Try to extract valid JSON with regex as fallback
       console.warn('JSON parse failed, attempting repair:', parseErr.message);
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           posts = JSON.parse(jsonMatch[0]);
         } catch (e2) {
-          // Build manual response from text
           const fallback = {};
           active.forEach(p => {
             fallback[p] = {
@@ -1564,7 +1503,6 @@ app.post('/api/email/test', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Reddit integration removed
 app.get('/api/facebook/verify', async (_req, res) => {
   try {
     const { verifyFacebookCredentials } = await import('./services/facebookService.js');
@@ -1586,14 +1524,12 @@ app.post('/api/facebook/post-text', async (req, res) => {
     const userToken = process.env.FACEBOOK_ACCESS_TOKEN;
     const pageId = process.env.FACEBOOK_PAGE_ID || '1310272512449356';
 
-    // Step 1: Get page access token from user token
     const pageTokenRes = await fetch(
       `https://graph.facebook.com/v25.0/${pageId}?fields=access_token&access_token=${userToken}`
     );
     const pageTokenData = await pageTokenRes.json();
     
     if (!pageTokenData.access_token) {
-      // Fall back to posting with user token directly
       console.warn('No page token, trying user token directly');
       const postRes = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
         method: 'POST',
@@ -1612,7 +1548,6 @@ app.post('/api/facebook/post-text', async (req, res) => {
     const pageToken = pageTokenData.access_token;
     console.log('✅ Got page access token');
 
-    // Step 2: Post using page token
     const postRes = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1697,7 +1632,7 @@ if (process.env.YOUTUBE_REFRESH_TOKEN) {
     .then(r => console.log('YouTube:', r.connected ? `✅ ${r.channelName} (${r.subscribers} subscribers)` : `❌ ${r.error}`))
     .catch(e => console.warn('YouTube check failed:', e.message));
 }
-const landingPages = new Map(); // in-memory store
+const landingPages = new Map();
 
 app.post('/api/landing/create', async (req, res) => {
   try {
@@ -1713,7 +1648,6 @@ app.post('/api/landing/create', async (req, res) => {
       views: 0, clicks: 0,
     };
     landingPages.set(id, page);
-    // Persist to Supabase
     if (process.env.SUPABASE_URL) {
       try {
         const { createClient } = await import('@supabase/supabase-js');
@@ -1729,7 +1663,6 @@ app.post('/api/landing/create', async (req, res) => {
 
 app.get('/api/landing/:id', async (req, res) => {
   let page = landingPages.get(req.params.id);
-  // Try Supabase if not in memory
   if (!page && process.env.SUPABASE_URL) {
     try {
       const { createClient } = await import('@supabase/supabase-js');
@@ -1868,7 +1801,6 @@ app.listen(PORT, () => {
   console.log(`✅ ContentForge Video Engine running on port ${PORT}`);
 });
 
-// Scheduler — check every minute
 setInterval(async () => {
   const now = new Date();
   for (const [id, s] of schedules.entries()) {
