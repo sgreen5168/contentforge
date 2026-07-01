@@ -61,6 +61,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [captionBackgroundColor, setCaptionBackgroundColor] = useState('#000000');
   const [aspectRatio, setAspect] = useState('9:16');
   const [music, setMusic]       = useState('none');
+  const [voiceVolume, setVoiceVolume] = useState(100);
+  const [musicVolume, setMusicVolume] = useState(30);
   const [loading, setLoad]      = useState(false);
   const [jobId, setJobId]       = useState(null);
   const [job, setJob]           = useState(null);
@@ -215,6 +217,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           jobId: jobId,
           aspectRatio: aspectRatio,
           music: music,
+          voiceVolume: voiceVolume / 100,
+          musicVolume: musicVolume / 100,
           captions: captions,
           captionStyle: captionStyle,
           captionText: (job.result.script && job.result.script.fullScript) || '',
@@ -266,6 +270,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           jobId: jobId,
           aspectRatio: aspectRatio,
           music: music,
+          voiceVolume: voiceVolume / 100,
+          musicVolume: musicVolume / 100,
           captions: captions,
           captionStyle: captionStyle,
           captionText: (job.result.script && job.result.script.fullScript) || '',
@@ -630,6 +636,29 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     return <button key={m.id} onClick={function() { setMusic(m.id); }} style={chip(music === m.id)}>{m.label}</button>;
                   })}
                 </div>
+                {music !== 'none' && (
+                    <div style={{ marginTop: 10 }}>
+                      <span style={lbl}>Volume levels</span>
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: TXT2 }}>🎙 Voiceover</span>
+                          <span style={{ fontSize: 11, color: ACCH, fontWeight: 600 }}>{voiceVolume}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" step="1" value={voiceVolume}
+                          onChange={function(e) { setVoiceVolume(parseInt(e.target.value)); }}
+                          style={{ width: '100%' }} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: TXT2 }}>🎵 Background music</span>
+                          <span style={{ fontSize: 11, color: ACCH, fontWeight: 600 }}>{musicVolume}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" step="1" value={musicVolume}
+                          onChange={function(e) { setMusicVolume(parseInt(e.target.value)); }}
+                          style={{ width: '100%' }} />
+                      </div>
+                    </div>
+                )}
 
                 <span style={lbl}>Captions</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -950,6 +979,29 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
                           Merges your matched scenes with the voiceover, chosen music, captions ({captionStyle}) and aspect ratio ({aspectRatio}) into one downloadable MP4.
                         </div>
+                        {music !== 'none' && (
+                          <div style={{ marginTop: 0, marginBottom: 10 }}>
+                            <span style={lbl}>Volume levels</span>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: 11, color: TXT2 }}>🎙 Voiceover</span>
+                                <span style={{ fontSize: 11, color: ACCH, fontWeight: 600 }}>{voiceVolume}%</span>
+                              </div>
+                              <input type="range" min="0" max="100" step="1" value={voiceVolume}
+                                onChange={function(e) { setVoiceVolume(parseInt(e.target.value)); }}
+                                style={{ width: '100%' }} />
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: 11, color: TXT2 }}>🎵 Background music</span>
+                                <span style={{ fontSize: 11, color: ACCH, fontWeight: 600 }}>{musicVolume}%</span>
+                              </div>
+                              <input type="range" min="0" max="100" step="1" value={musicVolume}
+                                onChange={function(e) { setMusicVolume(parseInt(e.target.value)); }}
+                                style={{ width: '100%' }} />
+                            </div>
+                          </div>
+                        )}
                         {combineError && (
                           <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
                             <strong>Combine failed:</strong> {combineError}
