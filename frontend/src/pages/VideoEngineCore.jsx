@@ -124,6 +124,20 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   }, [tab]);
 
   useEffect(() => {
+    if (job && job.result && job.result.script) {
+      const script = job.result.script;
+      if (script.hook && !ytTitle) {
+        setYtTitle(script.hook.slice(0, 100));
+      }
+      if (!ytDescription) {
+        const hashtags = (script.hashtags || []).join(' ');
+        const desc = (script.fullScript || '').slice(0, 200);
+        setYtDescription(desc + (hashtags ? '\n\n' + hashtags : ''));
+      }
+    }
+  }, [job]);
+
+  useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
