@@ -1,14 +1,539 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ContentForge — Social AI Engine</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KQVK6PG8F6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KQVK6PG8F6');
+</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NichRoute — Transform Any Link Into a High-Converting Page</title>
+  <meta name="description" content="NichRoute publishes research-based affiliate product reviews in health, fitness, kitchen, and home niches. All content draws on verified customer feedback from thousands of purchasers. Based in Charlotte, NC." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#060e1e;--navy-2:#0a1628;--navy-3:#0d1f3c;--navy-4:#122444;
+      --border:#1e3a5f;--accent:#4d9fff;--accent-2:#70b3ff;
+      --green:#3ecf8e;--amber:#f5a623;--purple:#a080ff;--coral:#f07a5a;
+      --text:#e8f0fe;--muted:#7aa0c4;
+      --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--navy);color:var(--text);font-family:var(--font-body);overflow-x:hidden}
+
+    /* ── NAV ── */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px 48px;background:rgba(6,14,30,0.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(30,58,95,0.5)}
+    .nav-logo{font-family:var(--font-head);font-size:20px;font-weight:800;color:var(--text);letter-spacing:-0.5px;text-decoration:none}
+    .nav-logo span{color:var(--accent)}
+    .nav-links{display:flex;gap:32px;align-items:center}
+    .nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+    .nav-links a:hover{color:var(--text)}
+    .nav-cta{background:var(--accent)!important;color:var(--navy)!important;padding:9px 22px;border-radius:8px;font-weight:600!important;transition:background .2s!important}
+    .nav-cta:hover{background:var(--accent-2)!important}
+
+    /* ── HERO ── */
+    .hero{min-height:100vh;display:flex;align-items:center;padding:100px 48px 80px;position:relative;overflow:hidden}
+    .hero-bg{position:absolute;inset:0;z-index:0}
+    .hero-bg-glow{position:absolute;top:-20%;left:-10%;width:70%;height:80%;background:radial-gradient(ellipse,rgba(77,159,255,0.12) 0%,transparent 65%);pointer-events:none}
+    .hero-bg-glow2{position:absolute;bottom:-20%;right:-5%;width:50%;height:60%;background:radial-gradient(ellipse,rgba(160,128,255,0.08) 0%,transparent 65%);pointer-events:none}
+    .hero-grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(30,58,95,0.2) 1px,transparent 1px),linear-gradient(90deg,rgba(30,58,95,0.2) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 100% 100% at 50% 50%,black 0%,transparent 100%)}
+    .hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;max-width:1200px;margin:0 auto;width:100%}
+
+    /* LEFT SIDE */
+    .hero-left{display:flex;flex-direction:column;gap:28px}
+    .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(160,128,255,0.1);border:1px solid rgba(160,128,255,0.3);padding:6px 16px;border-radius:100px;font-size:12px;font-weight:500;color:var(--purple);width:fit-content;animation:fadeUp .6s ease both}
+    .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    h1{font-family:var(--font-head);font-size:clamp(36px,4.5vw,58px);font-weight:800;line-height:1.05;letter-spacing:-2px;color:var(--text);animation:fadeUp .6s .1s ease both}
+    h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{font-size:clamp(15px,1.8vw,18px);color:var(--muted);line-height:1.7;font-weight:300;max-width:480px;animation:fadeUp .6s .2s ease both}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;animation:fadeUp .6s .3s ease both}
+    .btn-hero-primary{background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;padding:15px 32px;border-radius:12px;font-family:var(--font-body);font-size:15px;font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 32px rgba(77,159,255,0.25)}
+    .btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(77,159,255,0.35)}
+    .btn-hero-secondary{background:transparent;color:var(--text);padding:15px 28px;border-radius:12px;font-family:var(--font-body);font-size:15px;font-weight:500;text-decoration:none;border:1px solid var(--border);transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+    .btn-hero-secondary:hover{border-color:var(--accent);color:var(--accent)}
+    .hero-social-proof{display:flex;align-items:center;gap:12px;animation:fadeUp .6s .4s ease both}
+    .proof-avatars{display:flex}
+    .proof-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--navy);margin-left:-8px;display:flex;align-items:center;justify-content:center;font-size:12px}
+    .proof-avatar:first-child{margin-left:0}
+    .proof-text{font-size:13px;color:var(--muted)}
+    .proof-text span{color:var(--text);font-weight:500}
+    .hero-features{display:flex;gap:20px;flex-wrap:wrap;animation:fadeUp .6s .5s ease both}
+    .hero-feature{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+    .hero-feature-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+    /* RIGHT SIDE — UI MOCKUP */
+    .hero-right{animation:fadeUp .8s .3s ease both;position:relative}
+    .mockup-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120%;height:120%;background:radial-gradient(ellipse,rgba(77,159,255,0.1) 0%,transparent 65%);pointer-events:none;z-index:0}
+    .mockup-wrap{position:relative;z-index:1;background:var(--navy-3);border:1px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(77,159,255,0.1)}
+    .mockup-topbar{background:var(--navy-2);padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+    .mock-dot{width:10px;height:10px;border-radius:50%}
+    .mockup-url{flex:1;background:#0a1628;border-radius:6px;padding:5px 12px;font-size:11px;color:var(--muted);text-align:center;border:1px solid var(--border)}
+    .mockup-body{padding:20px}
+    .mock-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .mock-input-row{display:flex;gap:8px;margin-bottom:14px}
+    .mock-input{flex:1;background:var(--navy-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);font-family:var(--font-body)}
+    .mock-btn{background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font-body)}
+    .mock-tags{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+    .mock-tag{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer}
+    .mock-tag.active{background:rgba(160,128,255,0.15);color:var(--purple);border-color:rgba(160,128,255,0.4)}
+    .mock-output{background:var(--navy-2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;min-height:110px;position:relative;overflow:hidden}
+    .mock-output-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px}
+    .mock-output-lines{display:flex;flex-direction:column;gap:5px}
+    .mock-line{height:8px;border-radius:4px;background:var(--navy-3)}
+    .mock-line.w100{width:100%}
+    .mock-line.w90{width:90%}
+    .mock-line.w75{width:75%}
+    .mock-line.w60{width:60%}
+    .mock-line.w40{width:40%}
+    .mock-cursor{width:2px;height:14px;background:var(--accent);border-radius:1px;display:inline-block;animation:blink 1s infinite;margin-left:2px;vertical-align:middle}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .mock-generating{font-size:11px;color:var(--purple);display:flex;align-items:center;gap:6px;margin-bottom:8px}
+    .mock-spin{width:10px;height:10px;border:1.5px solid rgba(160,128,255,0.3);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .mock-compliance{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+    .mock-check{font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(62,207,142,0.1);color:var(--green);border:1px solid rgba(62,207,142,0.3)}
+    .mock-actions{display:flex;gap:8px}
+    .mock-action-btn{flex:1;padding:9px;border-radius:8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;font-family:var(--font-body)}
+    .mock-action-primary{background:var(--accent);color:var(--navy);border:none}
+    .mock-action-secondary{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .mock-badge{position:absolute;top:10px;right:10px;background:rgba(160,128,255,0.15);border:1px solid rgba(160,128,255,0.3);color:var(--purple);font-size:9px;padding:2px 8px;border-radius:10px;font-weight:600}
+
+    /* ── VIDEO SECTION ── */
+    .video-section{padding:80px 48px;background:var(--navy-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .video-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+    .video-left .section-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+    h2{font-family:var(--font-head);font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-1px;color:var(--text);margin-bottom:16px;line-height:1.1}
+    h2 em{font-style:normal;color:var(--accent)}
+    .video-desc{font-size:15px;color:var(--muted);line-height:1.7;font-weight:300;margin-bottom:28px}
+    .video-features{display:flex;flex-direction:column;gap:14px}
+    .video-feature{display:flex;gap:12px;align-items:flex-start}
+    .vf-icon{width:36px;height:36px;border-radius:8px;background:rgba(77,159,255,0.1);border:1px solid rgba(77,159,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .vf-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+    .vf-desc{font-size:12px;color:var(--muted);line-height:1.5}
+    .video-right{position:relative}
+    .video-frame{background:var(--navy-3);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.4)}
+    .video-frame-top{background:var(--navy-2);padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+    .video-frame-body{padding:0;position:relative}
+    .video-placeholder{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#0d1f3c 0%,#1a0a2e 50%,#0d1f3c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;cursor:pointer;position:relative;overflow:hidden}
+    .video-play-btn{width:56px;height:56px;border-radius:50%;background:rgba(77,159,255,0.2);border:2px solid rgba(77,159,255,0.5);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s;z-index:2}
+    .video-placeholder:hover .video-play-btn{background:rgba(77,159,255,0.35);transform:scale(1.1)}
+    .video-placeholder-text{font-size:13px;color:var(--muted);z-index:2}
+    .video-bg-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(30,58,95,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(30,58,95,0.3) 1px,transparent 1px);background-size:30px 30px}
+    .video-duration{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,0.7);color:var(--text);font-size:11px;padding:3px 8px;border-radius:4px;z-index:2}
+
+    /* ── FEATURES ── */
+    .features-section{padding:100px 48px}
+    .features-inner{max-width:1200px;margin:0 auto}
+    .features-header{text-align:center;margin-bottom:60px}
+    .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .feature-card{background:var(--navy-3);border:1px solid var(--border);border-radius:16px;padding:28px;transition:all .2s;position:relative;overflow:hidden}
+    .feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--purple));opacity:0;transition:opacity .2s}
+    .feature-card:hover{border-color:rgba(77,159,255,0.3);transform:translateY(-3px)}
+    .feature-card:hover::before{opacity:1}
+    .feature-icon-wrap{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+    .fi-blue{background:rgba(77,159,255,0.1);border:1px solid rgba(77,159,255,0.2)}
+    .fi-purple{background:rgba(160,128,255,0.1);border:1px solid rgba(160,128,255,0.2)}
+    .fi-green{background:rgba(62,207,142,0.1);border:1px solid rgba(62,207,142,0.2)}
+    .fi-amber{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.2)}
+    .fi-coral{background:rgba(240,122,90,0.1);border:1px solid rgba(240,122,90,0.2)}
+    .fi-teal{background:rgba(61,202,168,0.1);border:1px solid rgba(61,202,168,0.2)}
+    .feature-title{font-family:var(--font-head);font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px}
+    .feature-desc{font-size:13px;color:var(--muted);line-height:1.7}
+
+    /* ── HOW IT WORKS ── */
+    .how-section{padding:100px 48px;background:var(--navy-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .how-inner{max-width:1200px;margin:0 auto}
+    .how-header{text-align:center;margin-bottom:60px}
+    .how-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+    .how-steps::before{content:'';position:absolute;top:28px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,var(--border),var(--border),transparent)}
+    .how-step{text-align:center;padding:0 20px;position:relative;z-index:1}
+    .how-step-num{width:56px;height:56px;border-radius:50%;background:var(--navy-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:18px;font-weight:800;color:var(--accent);margin:0 auto 16px}
+    .how-step-title{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+    .how-step-desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+    /* ── NICHES ── */
+    .niches-section{padding:100px 48px}
+    .niches-inner{max-width:1200px;margin:0 auto}
+    .niches-header{text-align:center;margin-bottom:48px}
+    .niches-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .niche-card{background:var(--navy-3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer}
+    .niche-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+    .niche-emoji{font-size:24px}
+    .niche-name{font-size:13px;font-weight:500;color:var(--text)}
+    .niche-engines{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* ── CTA ── */
+    .cta-section{padding:100px 48px}
+    .cta-inner{max-width:900px;margin:0 auto;text-align:center;background:linear-gradient(135deg,var(--navy-3),var(--navy-4));border:1px solid var(--border);border-radius:28px;padding:80px 60px;position:relative;overflow:hidden}
+    .cta-glow-top{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:500px;height:200px;background:radial-gradient(ellipse,rgba(77,159,255,0.15) 0%,transparent 65%);pointer-events:none}
+    .cta-glow-bottom{position:absolute;bottom:-80px;right:-80px;width:300px;height:200px;background:radial-gradient(ellipse,rgba(160,128,255,0.1) 0%,transparent 65%);pointer-events:none}
+    .cta-inner .section-label{display:block;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+    .cta-inner h2{font-size:clamp(28px,4vw,46px);margin-bottom:16px}
+    .cta-inner p{font-size:16px;color:var(--muted);margin-bottom:36px;font-weight:300}
+    .cta-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+    /* ── FOOTER ── */
+    footer{border-top:1px solid var(--border);padding:32px 48px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .footer-logo{font-family:var(--font-head);font-size:16px;font-weight:800;color:var(--muted)}
+    .footer-logo span{color:var(--accent)}
+    .footer-copy{font-size:12px;color:#3a5a7a}
+
+    /* ── SECTION LABEL ── */
+    .section-label{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:block}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      nav{padding:14px 24px}
+      .hero{padding:90px 24px 60px}
+      .hero-inner{grid-template-columns:1fr;gap:40px}
+      .hero-right{display:none}
+      .video-section,.features-section,.how-section,.niches-section,.cta-section{padding:60px 24px}
+      .video-inner{grid-template-columns:1fr;gap:40px}
+      .features-grid{grid-template-columns:1fr 1fr}
+      .how-steps{grid-template-columns:1fr 1fr;gap:24px}
+      .how-steps::before{display:none}
+      .niches-grid{grid-template-columns:1fr 1fr}
+      .cta-inner{padding:48px 32px}
+      footer{padding:24px}
+    }
+  
+    #ck{position:fixed;bottom:20px;left:20px;width:300px;background:#fff;border:1px solid #D4CFC8;border-radius:14px;padding:18px 20px;box-shadow:0 8px 32px rgba(26,23,20,0.12);z-index:9999;display:none;flex-direction:column;gap:12px;font-family:"DM Sans",sans-serif}
+    #ck.on{display:flex}
+    #ck-title{font-size:13px;font-weight:600;color:#1A1714}
+    #ck-text{font-size:12px;color:#8A8480;line-height:1.5}
+    #ck-btns{display:flex;gap:8px}
+    #ck-yes{flex:1;background:#C84B2F;color:#fff;border:none;padding:8px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:"DM Sans",sans-serif}
+    #ck-yes:hover{background:#E8654A}
+    #ck-no{flex:1;background:transparent;color:#8A8480;border:1px solid #D4CFC8;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;font-family:"DM Sans",sans-serif}
+    #ck-no:hover{border-color:#1A1714;color:#1A1714}
+  
+    /* ── Accessibility (WCAG 2.1 AA) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100px;left:12px;background:var(--accent,#C84B2F);color:#fff;padding:8px 16px;border-radius:0 0 8px 8px;font-size:14px;font-weight:600;text-decoration:none;z-index:9999;transition:top .15s}
+    .skip-link:focus{top:0}
+    :focus-visible{outline:3px solid #C84B2F;outline-offset:3px;border-radius:3px}
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #C84B2F;outline-offset:3px}
+  
+    /* Translate widget */
+    body{top:0!important}
+  
+  </style>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+  <meta property="og:title" content="NichRoute — Research-Based Affiliate Product Reviews">
+<meta property="og:description" content="Research-based product reviews across health, fitness, kitchen, and home niches. Drawing on verified customer data to help readers make informed buying decisions.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nichroute.com">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NichRoute — Research-Based Product Reviews">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "NichRoute",
+  "url": "https://nichroute.com",
+  "description": "Research-based affiliate product reviews in health, fitness, kitchen, and home niches.",
+  "author": {
+    "@type": "Person",
+    "name": "Steven Green",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Charlotte",
+      "addressRegion": "NC"
+    }
+  }
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">Nich<span>Route</span></a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#niches">Niches</a>
+    <a href="/dashboard.html" class="nav-cta">Log in →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="main-content" role="main" class="hero">
+  <div class="hero-bg">
+    <div class="hero-bg-glow"></div>
+    <div class="hero-bg-glow2"></div>
+    <div class="hero-grid-bg"></div>
+  </div>
+  <div class="hero-inner">
+
+    <!-- LEFT -->
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        AI-powered · June 2026 · Free to start
+      </div>
+      <h1>Transform Any Link, Topic, or URL Into a <em>High-Converting Page</em> — Instantly.</h1>
+      <p class="hero-sub">Your all-in-one AI builder that creates landing pages, product descriptions, and affiliate reviews in seconds. Route your content to the right search engines automatically.</p>
+      <div class="hero-actions">
+        <a href="/dashboard.html" class="btn-hero-primary">✦ Start Creating Instantly</a>
+        <a href="#how" class="btn-hero-secondary">See how it works →</a>
+      </div>
+      <div class="hero-social-proof">
+        <div class="proof-avatars">
+          <div class="proof-avatar" style="background:#0c2d52">SG</div>
+          <div class="proof-avatar" style="background:#062a22">JM</div>
+          <div class="proof-avatar" style="background:#2e1e06">KR</div>
+          <div class="proof-avatar" style="background:#1a1040">AL</div>
+        </div>
+        <div class="proof-text">Trusted by <span>affiliate marketers</span> generating consistent commissions</div>
+      </div>
+      <div class="hero-features">
+        <div class="hero-feature"><span class="hero-feature-dot"></span>No writing experience needed</div>
+        <div class="hero-feature"><span class="hero-feature-dot"></span>FTC compliant by default</div>
+        <div class="hero-feature"><span class="hero-feature-dot"></span>Routes to 12+ search engines</div>
+      </div>
+    </div>
+
+    <!-- RIGHT — UI MOCKUP -->
+    <div class="hero-right">
+      <div class="mockup-glow"></div>
+      <div class="mockup-wrap">
+        <div class="mockup-topbar">
+          <div class="mock-dot" style="background:#f07a5a"></div>
+          <div class="mock-dot" style="background:#f5a623"></div>
+          <div class="mock-dot" style="background:#3ecf8e"></div>
+          <div class="mockup-url">nichroute.com/dashboard — AI Content Creator</div>
+        </div>
+        <div class="mockup-body">
+          <div class="mock-label">Input — topic, URL, or affiliate link</div>
+          <div class="mock-input-row">
+            <input class="mock-input" value="best magnesium supplements for sleep" readonly />
+            <button class="mock-btn">✦ Generate</button>
+          </div>
+          <div class="mock-label">Content type</div>
+          <div class="mock-tags">
+            <div class="mock-tag active">Product review</div>
+            <div class="mock-tag">Comparison</div>
+            <div class="mock-tag">Top 5 list</div>
+            <div class="mock-tag">How-to guide</div>
+          </div>
+          <div class="mock-output">
+            <div class="mock-badge">AI writing…</div>
+            <div class="mock-generating"><div class="mock-spin"></div>Generating your content</div>
+            <div class="mock-output-title">Best Magnesium Supplements for Sleep and Anxiety in 2026<span class="mock-cursor"></span></div>
+            <div class="mock-output-lines">
+              <div class="mock-line w100" style="background:linear-gradient(90deg,#1e3a5f,#0d1f3c)"></div>
+              <div class="mock-line w90" style="background:#1e3a5f"></div>
+              <div class="mock-line w100" style="background:#1e3a5f"></div>
+              <div class="mock-line w75" style="background:#1e3a5f"></div>
+              <div class="mock-line w100" style="background:#1e3a5f"></div>
+              <div class="mock-line w60" style="background:#1e3a5f"></div>
+            </div>
+          </div>
+          <div class="mock-compliance">
+            <div class="mock-check">✓ FTC disclosure</div>
+            <div class="mock-check">✓ Google E-E-A-T</div>
+            <div class="mock-check">✓ No false claims</div>
+            <div class="mock-check">✓ 400+ words</div>
+          </div>
+          <div class="mock-actions">
+            <button class="mock-action-btn mock-action-primary">Use this content ↗</button>
+            <button class="mock-action-btn mock-action-secondary">Preview page</button>
+            <button class="mock-action-btn mock-action-secondary">Regenerate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- VIDEO SECTION -->
+<section class="video-section" id="video">
+  <div class="video-inner">
+    <div class="video-left">
+      <span class="section-label">See it in action</span>
+      <h2>Watch the AI creator build a <em>complete affiliate page</em> in seconds</h2>
+      <p class="video-desc">Paste any affiliate link, product URL, or topic — and watch NichRoute generate a fully-optimised, compliant affiliate review page ready to route to the right search engines.</p>
+      <div class="video-features">
+        <div class="video-feature">
+          <div class="vf-icon">⚡</div>
+          <div><div class="vf-title">Generates in under 15 seconds</div><div class="vf-desc">Claude AI writes 400+ word reviews, comparisons, and how-to guides instantly.</div></div>
+        </div>
+        <div class="video-feature">
+          <div class="vf-icon">🛡️</div>
+          <div><div class="vf-title">Compliance checked automatically</div><div class="vf-desc">Every piece is checked against FTC, Google, Pinterest, and Instagram rules before you submit.</div></div>
+        </div>
+        <div class="video-feature">
+          <div class="vf-icon">🗺️</div>
+          <div><div class="vf-title">Routed to the right engines</div><div class="vf-desc">Each niche routes to where its audience searches — Google, Pinterest, YouTube, Reddit, and AI search.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="video-right">
+      <div class="video-frame">
+        <div class="video-frame-top">
+          <div class="mock-dot" style="background:#f07a5a"></div>
+          <div class="mock-dot" style="background:#f5a623"></div>
+          <div class="mock-dot" style="background:#3ecf8e"></div>
+          <div style="flex:1;text-align:center;font-size:11px;color:var(--muted)">NichRoute — Platform Demo</div>
+        </div>
+        <div class="video-frame-body">
+          <div class="video-placeholder" onclick="this.innerHTML='<div style=\'padding:20px;background:var(--navy-3);font-size:13px;color:var(--muted);text-align:center\'>▶ Demo video coming soon — log in to try the live platform</div>'">
+            <div class="video-bg-lines"></div>
+            <div class="video-play-btn">▶</div>
+            <div class="video-placeholder-text">Click to play platform demo</div>
+            <div class="video-duration">2:34</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="features-inner">
+    <div class="features-header">
+      <span class="section-label">Everything included</span>
+      <h2>Built for affiliate marketers<br />who want results fast</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-purple">✦</div>
+        <div class="feature-title">AI content creator</div>
+        <div class="feature-desc">Generate full affiliate reviews, comparisons, and how-to guides from any topic, URL, or affiliate link in under 15 seconds. Powered by Claude AI.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-blue">🗺️</div>
+        <div class="feature-title">Smart niche routing</div>
+        <div class="feature-desc">8 niche categories each routed to their best search engines automatically. Google, Pinterest, YouTube, Reddit, LinkedIn, and AI search — all covered.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-green">🛡️</div>
+        <div class="feature-title">Compliance checker</div>
+        <div class="feature-desc">Auto-checks every piece of content against FTC disclosure rules, Google E-E-A-T standards, Pinterest guidelines, and Instagram policies before you publish.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-amber">👁️</div>
+        <div class="feature-title">Landing page preview</div>
+        <div class="feature-desc">See exactly how your content looks as a landing page before submitting. Complete with featured image, CTA button, and related video panel.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-coral">🖼️</div>
+        <div class="feature-title">Image & video suggestions</div>
+        <div class="feature-desc">AI suggests the best image style for your niche. Click to find royalty-free photos on Unsplash. Related YouTube videos load automatically for your content topic.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrap fi-teal">🔒</div>
+        <div class="feature-title">Private dashboard</div>
+        <div class="feature-desc">Single-user login secured by Supabase authentication. All submissions saved permanently to your database. Public landing page, completely private operations.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <div class="how-header">
+      <span class="section-label">How it works</span>
+      <h2>From link to live content<br />in four steps</h2>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-num">01</div>
+        <div class="how-step-title">Paste your link or topic</div>
+        <div class="how-step-desc">Enter any affiliate URL, product link, or content topic into the AI creator.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">02</div>
+        <div class="how-step-title">AI generates content</div>
+        <div class="how-step-desc">Claude writes a full, compliant affiliate piece in under 15 seconds. Compliance is checked automatically.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">03</div>
+        <div class="how-step-title">Preview and submit</div>
+        <div class="how-step-desc">Preview your landing page, select images and videos, then submit with one click.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-num">04</div>
+        <div class="how-step-title">Traffic earns commissions</div>
+        <div class="how-step-desc">Content routes to the right engines for your niche. Visitors click your affiliate link and you earn.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NICHES -->
+<section class="niches-section" id="niches">
+  <div class="niches-inner">
+    <div class="niches-header">
+      <span class="section-label">Supported niches</span>
+      <h2>Eight niches, each routed<br />to its best engines</h2>
+    </div>
+    <div class="niches-grid">
+      <div class="niche-card"><div class="niche-emoji">💊</div><div><div class="niche-name">Health &amp; Wellness</div><div class="niche-engines">Google · Pinterest · YouTube · Reddit</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">💻</div><div><div class="niche-name">Tech &amp; Gadgets</div><div class="niche-engines">Google · Bing · Reddit · YouTube</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">💰</div><div><div class="niche-name">Finance &amp; Money</div><div class="niche-engines">Google · Bing · LinkedIn · Quora</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">✈️</div><div><div class="niche-name">Travel</div><div class="niche-engines">Google · YouTube · Pinterest · TripAdvisor</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">👗</div><div><div class="niche-name">Fashion &amp; Lifestyle</div><div class="niche-engines">Pinterest · Instagram · TikTok · Google</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">🏠</div><div><div class="niche-name">Home &amp; DIY</div><div class="niche-engines">Pinterest · Google · YouTube · Houzz</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">🍳</div><div><div class="niche-name">Food &amp; Recipes</div><div class="niche-engines">Google · Pinterest · YouTube · TikTok</div></div></div>
+      <div class="niche-card"><div class="niche-emoji">🏋️</div><div><div class="niche-name">Fitness &amp; Sport</div><div class="niche-engines">Google · YouTube · Instagram · Reddit</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-glow-top"></div>
+    <div class="cta-glow-bottom"></div>
+    <span class="section-label">Get started now</span>
+    <h2>Start creating high-converting<br />affiliate content today</h2>
+    <p>Log in to access your AI content creator, landing page preview,<br />compliance checker, and full search engine routing dashboard.</p>
+    <div class="cta-actions">
+      <a href="/dashboard.html" class="btn-hero-primary" style="font-size:16px;padding:16px 40px">✦ Start Creating Instantly</a>
+      <a href="#features" class="btn-hero-secondary" style="font-size:15px;padding:16px 28px">See all features</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">Nich<span>Route</span>.com</div>
+  <div class="footer-copy">© 2026 NichRoute · AI-powered affiliate traffic platform · Charlotte, NC</div>
+</footer>
+
+<div id="ck">
+  <div id="ck-title">🍪 We use cookies</div>
+  <div id="ck-text">This site uses cookies to enhance your experience. By continuing you agree to our use of cookies in line with GDPR &amp; CCPA guidelines.</div>
+  <div id="ck-btns">
+    <button id="ck-yes">Accept</button>
+    <button id="ck-no">Decline</button>
+  </div>
+</div>
+<script>
+  (function(){
+    var b=document.getElementById("ck");
+    if(!sessionStorage.getItem("ck_shown")){setTimeout(function(){b.classList.add("on");},800);}
+    document.getElementById("ck-yes").onclick=function(){sessionStorage.setItem("ck_shown","1");b.classList.remove("on");};
+    document.getElementById("ck-no").onclick=function(){sessionStorage.setItem("ck_shown","1");b.classList.remove("on");};
+  })();
+</script>
+
+<!-- Google Translate -->
+
+</body>
 </html>
