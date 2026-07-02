@@ -36,6 +36,13 @@ const ASPECT_RATIOS = [
   { id:'4:5',   label:'4:5',  desc:'Instagram' },
 ];
 
+const CROP_STYLES = [
+  { id:'center',  label:'Center',  desc:'Crop to center of clip' },
+  { id:'top',     label:'Top',     desc:'Crop from top of clip' },
+  { id:'bottom',  label:'Bottom',  desc:'Crop from bottom of clip' },
+  { id:'pad',     label:'Letterbox', desc:'Add black bars (no crop)' },
+];
+
 const MUSIC_OPTIONS = [
   { id:'none',        label:'No music' },
   { id:'upbeat',      label:'Upbeat' },
@@ -60,6 +67,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [captionBgEnabled, setCaptionBgEnabled] = useState(false);
   const [captionBackgroundColor, setCaptionBackgroundColor] = useState('#000000');
   const [aspectRatio, setAspect] = useState('9:16');
+  const [cropStyle, setCropStyle] = useState('center');
   const [music, setMusic]       = useState('none');
   const [voiceVolume, setVoiceVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(30);
@@ -216,6 +224,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           audioUrl: audioUrl,
           jobId: jobId,
           aspectRatio: aspectRatio,
+          cropStyle: cropStyle,
           music: music,
           voiceVolume: voiceVolume / 100,
           musicVolume: musicVolume / 100,
@@ -234,6 +243,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         try { const err = await res.json(); detail = err.error || ''; } catch (e2) { detail = await res.text().catch(function() { return ''; }); }
         throw new Error('HTTP ' + res.status + ' from ' + assembleUrl + (detail ? (' — ' + detail) : ' (no error detail returned)'));
       }
+      // Check for SRT subtitle file in response header
+      const srtB64 = res.headers.get('X-Subtitle-SRT');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -241,6 +252,20 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       a.download = 'contentforge-' + aspectRatio.replace(':', '-') + '-' + Date.now() + '.mp4';
       a.click();
       URL.revokeObjectURL(url);
+
+      // Also download SRT subtitle file if captions were enabled
+      if (srtB64 && captions) {
+        try {
+          const srtText = atob(srtB64);
+          const srtBlob = new Blob([srtText], { type: 'text/plain' });
+          const srtUrl = URL.createObjectURL(srtBlob);
+          const srtA = document.createElement('a');
+          srtA.href = srtUrl;
+          srtA.download = 'contentforge-captions-' + Date.now() + '.srt';
+          srtA.click();
+          URL.revokeObjectURL(srtUrl);
+        } catch(srtErr) { console.warn('SRT download failed:', srtErr); }
+      }
     } catch(e) {
       setCombineError(e.message);
     } finally {
@@ -269,6 +294,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           audioUrl: audioUrl,
           jobId: jobId,
           aspectRatio: aspectRatio,
+          cropStyle: cropStyle,
           music: music,
           voiceVolume: voiceVolume / 100,
           musicVolume: musicVolume / 100,
@@ -614,7 +640,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
             <div style={card()}>
               <div style={hdr()}>Video size</div>
               <div style={body()}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
                   {ASPECT_RATIOS.map(function(r) {
                     return (
                       <button key={r.id} onClick={function() { setAspect(r.id); }}
@@ -625,6 +651,27 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: aspectRatio === r.id ? ACCH : TXT }}>{r.label}</div>
                         <div style={{ fontSize: 9, color: TXT3, marginTop: 2 }}>{r.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {aspectRatio !== '9:16' && (
+                  <div style={{ marginBottom: 8, padding: '6px 8px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 6, fontSize: 10, color: '#F5A623' }}>
+                    Note: Pexels clips are vertical. Non-9:16 sizes add letterboxing. Use crop style below to fill the frame.
+                  </div>
+                )}
+                <span style={lbl}>Crop style</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 4 }}>
+                  {CROP_STYLES.map(function(c) {
+                    return (
+                      <button key={c.id} onClick={function() { setCropStyle(c.id); }}
+                        style={{
+                          padding: '8px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                          border: '1px solid ' + (cropStyle === c.id ? ACC : BORD),
+                          background: cropStyle === c.id ? 'rgba(29,158,117,.15)' : 'transparent',
+                        }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: cropStyle === c.id ? ACCH : TXT }}>{c.label}</div>
+                        <div style={{ fontSize: 9, color: TXT3, marginTop: 2 }}>{c.desc}</div>
                       </button>
                     );
                   })}
