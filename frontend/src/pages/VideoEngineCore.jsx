@@ -69,6 +69,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [cropStyle, setCropStyle] = useState('center');
   const [voiceVolume, setVoiceVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(30);
+  const [vignette, setVignette] = useState(true);
   const [selectedPhrases, setSelectedPhrases] = useState([]);
   const [sceneKeywords, setSceneKeywords] = useState({});
   const [sceneMatches, setSceneMatches]   = useState({});
@@ -220,6 +221,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           aspectRatio: '9:16', cropStyle,
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
+          vignette,
         }),
       });
       if (!res.ok) {
@@ -252,6 +254,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
           title: ytTitle, description: ytDescription, privacy: ytPrivacy,
+          vignette,
         }),
       });
       const data = await res.json();
@@ -656,6 +659,17 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
                   <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
                     Merges your {phraseClips.filter(function(c){return c.status==='success';}).length} matched scenes with the voiceover and music into one downloadable MP4.
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '8px 10px', background: 'rgba(29,158,117,.05)', borderRadius: 8, border: '1px solid rgba(29,158,117,.15)' }}>
+                    <div onClick={function() { setVignette(function(v){return !v;}); }}
+                      style={{ width: 36, height: 20, borderRadius: 10, background: vignette ? ACC : 'rgba(255,255,255,.1)', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background .2s' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: vignette ? 18 : 2, transition: 'left .2s' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: TXT, fontWeight: 500 }}>Dark vignette edges</div>
+                      <div style={{ fontSize: 10, color: TXT3 }}>Cinematic dark fade around the edges — free FFmpeg filter</div>
+                    </div>
                   </div>
 
                   {music !== 'none' && (
