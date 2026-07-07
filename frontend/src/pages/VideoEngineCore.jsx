@@ -218,7 +218,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const res = await fetch(API + '/api/video/assemble', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clipUrls: clips.map(c => c.videoUrl), audioUrl, jobId,
+          clipUrls: clips.map(c => c.videoUrl),
+          clips: clips.map(c => ({ pexelsId: c.pexelsId, pexelsQuery: c.pexelsQuery })),
+          audioUrl, jobId,
           aspectRatio, cropStyle,
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
@@ -250,7 +252,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const res = await fetch(API + '/api/video/publish-youtube', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clipUrls: clips.map(c => c.videoUrl), audioUrl, jobId,
+          clipUrls: clips.map(c => c.videoUrl),
+          clips: clips.map(c => ({ pexelsId: c.pexelsId, pexelsQuery: c.pexelsQuery })),
+          audioUrl, jobId,
           aspectRatio, cropStyle,
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
