@@ -67,6 +67,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [voice, setVoice]       = useState('nova');
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle] = useState('center');
+  const [aspectRatio, setAspect]   = useState('9:16');
   const [voiceVolume, setVoiceVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(30);
   const [vignette, setVignette] = useState(true);
@@ -218,7 +219,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clipUrls: clips.map(c => c.videoUrl), audioUrl, jobId,
-          aspectRatio: '9:16', cropStyle,
+          aspectRatio, cropStyle,
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
           vignette,
@@ -250,7 +251,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clipUrls: clips.map(c => c.videoUrl), audioUrl, jobId,
-          aspectRatio: '9:16', cropStyle,
+          aspectRatio, cropStyle,
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
           title: ytTitle, description: ytDescription, privacy: ytPrivacy,
@@ -426,7 +427,26 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
             <div style={card()}>
               <div style={hdr()}>Video settings</div>
               <div style={body()}>
-                <span style={lbl}>Crop style (9:16 vertical)</span>
+                <span style={lbl}>Aspect ratio</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 14 }}>
+                  {[
+                    { id:'9:16',  label:'9:16',  desc:'TikTok' },
+                    { id:'16:9',  label:'16:9',  desc:'YouTube' },
+                    { id:'1:1',   label:'1:1',   desc:'Feed' },
+                    { id:'4:5',   label:'4:5',   desc:'Portrait' },
+                    { id:'4:3',   label:'4:3',   desc:'Standard' },
+                  ].map(function(r) {
+                    return (
+                      <button key={r.id} onClick={function() { setAspect(r.id); }}
+                        style={{ padding: '7px 2px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', border: '1px solid ' + (aspectRatio === r.id ? ACC : BORD), background: aspectRatio === r.id ? 'rgba(29,158,117,.15)' : 'transparent' }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: aspectRatio === r.id ? ACCH : TXT }}>{r.label}</div>
+                        <div style={{ fontSize: 9, color: TXT3, marginTop: 2 }}>{r.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <span style={lbl}>Crop style</span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, marginBottom: 14 }}>
                   {CROP_STYLES.map(function(c) {
                     return (
