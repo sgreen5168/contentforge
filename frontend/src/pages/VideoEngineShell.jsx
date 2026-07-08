@@ -40,9 +40,7 @@ const STYLE_PRESETS       = ['Cinematic','UGC Raw','Corporate Clean','Aesthetic 
 
 const SMART_SHORTCUTS = [
   { id:'script',  label:'AI Script Generator',   status:'live',    note:'Writes hook + scenes + CTA' },
-  { id:'hook',    label:'AI Hook Generator',     status:'live',    note:'3 hook variants per topic' },
   { id:'scenes',  label:'AI Scene Builder',      status:'live',    note:'Keyword-matched scene editor' },
-  { id:'broll',   label:'AI B-Roll Suggestions', status:'next',    note:'Coming in step 3' },
   { id:'voice',   label:'Voice & Tone Selector', status:'live',    note:'6 voices, HD quality' },
   { id:'caption', label:'Caption Style Picker',  status:'live',    note:'Top / middle / bottom burn-in' },
 ];
