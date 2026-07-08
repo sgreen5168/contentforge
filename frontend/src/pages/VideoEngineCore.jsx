@@ -50,6 +50,96 @@ const SCENE_SITUATIONS = [
   'Living Room','Nature','Skincare','Streaming','Vlogging',
 ];
 
+
+const NICHES = [
+  {
+    id: 'make-money-home',
+    label: 'Make Money from Home',
+    icon: '🏠',
+    desc: 'Side hustles, home income, entrepreneurship',
+    subNiches: [
+      { id: 'baking-business',    label: 'Baking from Home',        desc: 'Selling baked goods, recipes, food business' },
+      { id: 'home-services',      label: 'Home Services',           desc: 'Lawn care, repairs, cleaning, handyman' },
+      { id: 'online-work',        label: 'Online Work',             desc: 'Freelancing, remote jobs, digital services' },
+      { id: 'affiliate-content',  label: 'Affiliate Content',       desc: 'Content creation, product reviews, commissions' },
+      { id: 'crafts-handmade',    label: 'Crafts & Handmade',       desc: 'Etsy, handmade goods, creative selling' },
+      { id: 'general-hustle',     label: 'General Side Hustle',     desc: 'Mixed home income ideas and opportunities' },
+    ],
+    situations: ['Home','Kitchen','Office','Living Room','Bedroom','Cooking','Baking','Business','Lifestyle','Daytime','Nature','Fitness'],
+    hooks: [
+      'Here are real ways people are earning from home right now',
+      'Did you know this home business idea is growing fast?',
+      'If you've been thinking about starting something from home, this is worth knowing',
+      'More people than ever are building income without leaving the house',
+      'This is what starting a home-based business actually looks like',
+      'You don't need a big investment to start earning from home',
+      'Here's an honest look at what's working for home entrepreneurs',
+      'These are the home income ideas most people overlook',
+    ],
+    compliance: 'Do NOT make personal income claims. Do NOT say "I made $X." Present opportunities in an educational, informational way. Use third-person examples or general statements about what is possible. Keep tone relaxed, uplifting, honest, and professional-casual. Content must comply with Facebook, TikTok, and FTC guidelines on income representation.',
+  },
+  {
+    id: 'healthy-eating',
+    label: 'Healthy Eating',
+    icon: '🥗',
+    desc: 'Nutrition, wellness, clean eating',
+    subNiches: [
+      { id: 'meal-prep',          label: 'Meal Prep',               desc: 'Weekly prep, batch cooking, planning' },
+      { id: 'smoothies-juices',   label: 'Smoothies & Juices',      desc: 'Green juices, protein shakes, blends' },
+      { id: 'weight-wellness',    label: 'Weight & Wellness',       desc: 'Healthy habits, balanced lifestyle' },
+      { id: 'clean-eating',       label: 'Clean Eating',            desc: 'Whole foods, ingredient swaps, recipes' },
+    ],
+    situations: ['Kitchen','Cooking','Fitness','Nature','Lifestyle','Gym','Home','Skincare','Beauty'],
+    hooks: [
+      'This simple food swap is something more people are trying',
+      'Here's what a week of healthy eating actually looks like',
+      'These are the meals nutrition-focused people are making right now',
+      'Small changes in what you eat can make a real difference',
+      'Here are some healthy eating ideas that are easy to start with',
+    ],
+    compliance: 'Do NOT make unverified health claims. Do NOT promise weight loss results. Present food ideas as options and inspiration, not medical advice. Encourage viewers to consult professionals for health decisions.',
+  },
+  {
+    id: 'fitness-wellness',
+    label: 'Fitness & Wellness',
+    icon: '💪',
+    desc: 'Exercise, mindset, healthy living',
+    subNiches: [
+      { id: 'home-workouts',      label: 'Home Workouts',           desc: 'No-gym exercise, bodyweight, routines' },
+      { id: 'mindset-motivation', label: 'Mindset & Motivation',    desc: 'Habits, mindset, daily routines' },
+      { id: 'outdoor-fitness',    label: 'Outdoor Fitness',         desc: 'Walking, running, outdoor movement' },
+    ],
+    situations: ['Gym','Fitness','Nature','Home','Daytime','Lifestyle','Living Room'],
+    hooks: [
+      'These are simple fitness habits more people are building at home',
+      'Here's what a realistic home workout routine can look like',
+      'Movement doesn't have to be complicated — here's proof',
+      'Small daily habits add up — here are some worth trying',
+    ],
+    compliance: 'Do NOT promise specific fitness results. Do NOT make before/after claims without clear disclaimers. Present exercise ideas as general wellness content, not medical or personal training advice.',
+  },
+  {
+    id: 'cooking',
+    label: 'Cooking',
+    icon: '👨‍🍳',
+    desc: 'Recipes, techniques, food content',
+    subNiches: [
+      { id: 'quick-meals',        label: 'Quick & Easy Meals',      desc: 'Fast recipes, simple cooking, busy families' },
+      { id: 'budget-cooking',     label: 'Budget Cooking',          desc: 'Affordable meals, stretching groceries' },
+      { id: 'baking-recipes',     label: 'Baking & Desserts',       desc: 'Bread, cakes, pastries, sweet treats' },
+      { id: 'special-diets',      label: 'Special Diets',           desc: 'Vegan, gluten-free, keto, dairy-free' },
+    ],
+    situations: ['Kitchen','Cooking','Baking','Home','Lifestyle','Food'],
+    hooks: [
+      'This recipe takes less than 20 minutes and tastes amazing',
+      'Here's a budget-friendly meal that actually fills you up',
+      'If you're short on time, this is worth trying',
+      'This is one of those recipes people keep coming back to',
+    ],
+    compliance: 'Present recipes as creative ideas, not guaranteed outcomes. Be accurate about ingredients and allergens where mentioned.',
+  },
+];
+
 export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {}) {
   const [tab, setTab]           = useState('generate');
   const [topic, setTopic]       = useState('');
@@ -67,6 +157,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [voice, setVoice]       = useState('nova');
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle] = useState('center');
+  const [niche, setNiche]         = useState('');
+  const [subNiche, setSubNiche]   = useState('');
+  const [showNichePanel, setShowNichePanel] = useState(false);
   const [aspectRatio, setAspect]   = useState('9:16');
   const [voiceVolume, setVoiceVolume] = useState(100);
   const [musicVolume, setMusicVolume] = useState(30);
@@ -146,7 +239,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     try {
       const res = await fetch(API + '/api/video/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputMode:'topic', topic, videoType, persona, duration, platforms, voice }),
+        body: JSON.stringify({ inputMode:'topic', topic, videoType, persona, duration, platforms, voice, niche, subNiche }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
@@ -168,6 +261,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         }
       }
     } catch(e) { console.warn('pollJob:', e.message); }
+  }
+
+  function getNicheSituations() {
+    const activeNiche = NICHES.find(function(n) { return n.id === niche; });
+    if (!activeNiche) return SCENE_SITUATIONS;
+    const nicheSits = activeNiche.situations;
+    const rest = SCENE_SITUATIONS.filter(function(s) { return !nicheSits.includes(s); });
+    return [...nicheSits, ...rest];
   }
 
   function togglePhrase(phrase) {
@@ -353,6 +454,63 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       {tab === 'generate' && (
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 14 }}>
           <div>
+
+            {/* Niche selector */}
+            <div style={card()}>
+              <div style={hdr()}>
+                <span>Content niche <span style={{ fontSize: 10, color: TXT3, fontWeight: 400 }}>(optional — shapes your script and scene suggestions)</span></span>
+                {niche && <button onClick={function() { setNiche(''); setSubNiche(''); }} style={{ fontSize: 10, color: TXT3, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>}
+              </div>
+              <div style={body()}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6, marginBottom: niche ? 12 : 0 }}>
+                  {NICHES.map(function(n) {
+                    const active = niche === n.id;
+                    return (
+                      <button key={n.id} onClick={function() { setNiche(active ? '' : n.id); setSubNiche(''); }}
+                        style={{ padding: '8px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.12)' : 'transparent' }}>
+                        <div style={{ fontSize: 11, fontWeight: 500, color: active ? ACCH : TXT }}>{n.icon} {n.label}</div>
+                        <div style={{ fontSize: 10, color: TXT3, marginTop: 2 }}>{n.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {niche && (function() {
+                  const activeNiche = NICHES.find(function(n) { return n.id === niche; });
+                  if (!activeNiche) return null;
+                  return (
+                    <div>
+                      <div style={{ fontSize: 10, color: TXT3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Sub-category</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+                        {activeNiche.subNiches.map(function(s) {
+                          const active = subNiche === s.id;
+                          return (
+                            <button key={s.id} onClick={function() { setSubNiche(active ? '' : s.id); }}
+                              style={{ fontSize: 10, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.12)' : 'transparent', color: active ? ACCH : TXT2 }}>
+                              {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ fontSize: 10, color: TXT3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Starter hooks — click to use</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {activeNiche.hooks.map(function(hook, i) {
+                          return (
+                            <button key={i} onClick={function() { setTopic(hook); }}
+                              style={{ fontSize: 11, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + BORD, background: 'rgba(22,61,106,.3)', color: TXT2, lineHeight: 1.4 }}>
+                              {hook}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ marginTop: 10, padding: '6px 8px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 6, fontSize: 10, color: '#FAC775', lineHeight: 1.5 }}>
+                        ⚠ Compliance note: {activeNiche.compliance.slice(0, 120)}...
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
             <div style={card()}>
               <div style={hdr()}>Topic</div>
               <div style={body()}>
@@ -637,6 +795,19 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                       style={{ padding: '0 12px', borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: 'inherit', border: '1px solid ' + BORD, background: 'transparent', color: ACCH, cursor: (matching || !keyword.trim()) ? 'default' : 'pointer', opacity: (matching || !keyword.trim()) ? 0.5 : 1 }}>
                                       Re-match
                                     </button>
+                                  </div>
+                                  <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                    {getNicheSituations().slice(0, niche ? 12 : 8).map(function(sit) {
+                                      const nicheActive = NICHES.find(function(n) { return n.id === niche; });
+                                      const isNicheRelevant = nicheActive && nicheActive.situations.includes(sit);
+                                      return (
+                                        <span key={sit}
+                                          onClick={function(e) { e.stopPropagation(); setSceneKeywords(function(prev) { return { ...prev, [phrase]: ((prev[phrase] || '').trim() + ' ' + sit.toLowerCase()).trim() }; }); }}
+                                          style={{ fontSize: 9, padding: '2px 7px', borderRadius: 10, cursor: 'pointer', border: '1px solid ' + (isNicheRelevant ? ACC : BORD), background: isNicheRelevant ? 'rgba(29,158,117,.1)' : 'transparent', color: isNicheRelevant ? ACCH : TXT3, fontWeight: isNicheRelevant ? 500 : 400 }}>
+                                          {sit}
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                   {matchError && <div style={{ marginTop: 6, fontSize: 11, color: '#F09595' }}>{matchError}</div>}
                                 </div>
