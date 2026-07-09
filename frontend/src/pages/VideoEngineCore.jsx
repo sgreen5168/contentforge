@@ -154,6 +154,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [error, setError]       = useState('');
   const [jobs, setJobs]         = useState([]);
   const [assembling, setAssembling] = useState(false);
+  const [ctaUrl, setCtaUrl]         = useState('');
+  const [ctaText, setCtaText]       = useState('');
   const [voice, setVoice]       = useState('nova');
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle] = useState('center');
@@ -326,6 +328,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           music, voiceVolume: voiceVolume / 100, musicVolume: musicVolume / 100,
           captions: false, captionText: '',
           vignette,
+          ctaUrl: ctaUrl.trim(),
+          ctaText: ctaText.trim(),
         }),
       });
       if (!res.ok) {
@@ -361,6 +365,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           captions: false, captionText: '',
           title: ytTitle, description: ytDescription, privacy: ytPrivacy,
           vignette,
+          ctaUrl: ctaUrl.trim(),
+          ctaText: ctaText.trim(),
         }),
       });
       const data = await res.json();
@@ -864,6 +870,22 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div>
                       <div style={{ fontSize: 12, color: TXT, fontWeight: 500 }}>Dark vignette edges</div>
                       <div style={{ fontSize: 10, color: TXT3 }}>Cinematic dark fade around the edges — free FFmpeg filter</div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(22,61,106,.4)', borderRadius: 8, border: '1px solid ' + BORD }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: TXT, marginBottom: 6 }}>CTA overlay — appears on final 5 seconds of video</div>
+                    <div style={{ fontSize: 11, color: TXT2, marginBottom: 8, lineHeight: 1.4 }}>
+                      Your link or short URL displays as visible text burned into the video. Leave blank to skip.
+                    </div>
+                    <span style={lbl}>Your URL (the actual link)</span>
+                    <input style={inp} placeholder="https://your-affiliate-link.com/product"
+                      value={ctaUrl} onChange={function(e) { setCtaUrl(e.target.value); }} />
+                    <span style={lbl}>Display text (optional — shown instead of the full URL)</span>
+                    <input style={inp} placeholder="e.g.  Link in bio  or  contentstudiohub.com"
+                      value={ctaText} onChange={function(e) { setCtaText(e.target.value); }} />
+                    <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.4 }}>
+                      Tip: use a short display text so viewers can remember it. The actual clickable link goes in your Facebook/YouTube description.
                     </div>
                   </div>
 
