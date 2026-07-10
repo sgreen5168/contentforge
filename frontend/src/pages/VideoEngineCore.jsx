@@ -157,6 +157,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [ctaUrl, setCtaUrl]         = useState('');
   const [ctaText, setCtaText]       = useState('');
   const [voice, setVoice]       = useState('nova');
+  const [playingVoice, setPlayingVoice] = useState('');
+  const audioPreviewRef = React.useRef(null);
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle] = useState('center');
   const [niche, setNiche]         = useState('');
@@ -230,6 +232,25 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const d = await r.json();
       setJobs(Array.isArray(d) ? d : []);
     } catch(e) { console.warn('loadJobs:', e.message); }
+  }
+
+  async function previewVoice(voiceId) {
+    if (playingVoice === voiceId) {
+      if (audioPreviewRef.current) { audioPreviewRef.current.pause(); audioPreviewRef.current = null; }
+      setPlayingVoice('');
+      return;
+    }
+    setPlayingVoice(voiceId);
+    try {
+      const audio = new Audio(API + '/api/voice/preview/' + voiceId);
+      audioPreviewRef.current = audio;
+      audio.onended = function() { setPlayingVoice(''); audioPreviewRef.current = null; };
+      audio.onerror = function() { setPlayingVoice(''); audioPreviewRef.current = null; };
+      await audio.play();
+    } catch(e) {
+      setPlayingVoice('');
+      console.warn('Voice preview failed:', e.message);
+    }
   }
 
   async function generate() {
@@ -659,27 +680,51 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
             <div style={card()}>
               <div style={hdr()}>Voiceover</div>
               <div style={body()}>
-                <span style={lbl}>Female voices</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                <span style={lbl}>Female voices — click name to select, ▶ to preview</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
                   {[['nova','Nova','Warm & friendly'],['shimmer','Shimmer','Professional'],['alloy','Alloy','Versatile']].map(function(v) {
+                    const isSelected = voice === v[0];
+                    const isPlaying = playingVoice === v[0];
                     return (
-                      <button key={v[0]} onClick={function() { setVoice(v[0]); }}
-                        style={{ padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + (voice === v[0] ? '#E1306C' : BORD), background: voice === v[0] ? 'rgba(225,48,108,.1)' : 'transparent' }}>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: voice === v[0] ? '#E1306C' : TXT }}>{v[1]}</div>
-                        <div style={{ fontSize: 9, color: TXT3 }}>{v[2]}</div>
-                      </button>
+                      <div key={v[0]} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button onClick={function() { setVoice(v[0]); }}
+                          style={{ flex: 1, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + (isSelected ? ACC : BORD), background: isSelected ? 'rgba(29,158,117,.12)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: isSelected ? ACCH : TXT }}>{v[1]}</span>
+                            <span style={{ fontSize: 10, color: TXT3, marginLeft: 8 }}>{v[2]}</span>
+                          </div>
+                          {isSelected && <span style={{ fontSize: 9, color: ACCH }}>✓ Selected</span>}
+                        </button>
+                        <button onClick={function(e) { e.stopPropagation(); previewVoice(v[0]); }}
+                          title={'Preview ' + v[1] + ' voice'}
+                          style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid ' + (isPlaying ? ACC : BORD), background: isPlaying ? 'rgba(29,158,117,.2)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, color: isPlaying ? ACCH : TXT2 }}>
+                          {isPlaying ? '■' : '▶'}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
-                <span style={lbl}>Male voices</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                <span style={lbl}>Male voices — click name to select, ▶ to preview</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {[['onyx','Onyx','Deep & authoritative'],['echo','Echo','Confident & clear'],['fable','Fable','Warm & expressive']].map(function(v) {
+                    const isSelected = voice === v[0];
+                    const isPlaying = playingVoice === v[0];
                     return (
-                      <button key={v[0]} onClick={function() { setVoice(v[0]); }}
-                        style={{ padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + (voice === v[0] ? '#1877F2' : BORD), background: voice === v[0] ? 'rgba(24,119,242,.1)' : 'transparent' }}>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: voice === v[0] ? '#5B9BD5' : TXT }}>{v[1]}</div>
-                        <div style={{ fontSize: 9, color: TXT3 }}>{v[2]}</div>
-                      </button>
+                      <div key={v[0]} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button onClick={function() { setVoice(v[0]); }}
+                          style={{ flex: 1, padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: '1px solid ' + (isSelected ? ACC : BORD), background: isSelected ? 'rgba(29,158,117,.12)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: isSelected ? ACCH : TXT }}>{v[1]}</span>
+                            <span style={{ fontSize: 10, color: TXT3, marginLeft: 8 }}>{v[2]}</span>
+                          </div>
+                          {isSelected && <span style={{ fontSize: 9, color: ACCH }}>✓ Selected</span>}
+                        </button>
+                        <button onClick={function(e) { e.stopPropagation(); previewVoice(v[0]); }}
+                          title={'Preview ' + v[1] + ' voice'}
+                          style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid ' + (isPlaying ? ACC : BORD), background: isPlaying ? 'rgba(29,158,117,.2)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, color: isPlaying ? ACCH : TXT2 }}>
+                          {isPlaying ? '■' : '▶'}
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
