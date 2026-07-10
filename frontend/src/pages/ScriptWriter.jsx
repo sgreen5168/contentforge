@@ -32,24 +32,39 @@ export default function ScriptWriter() {
     try {
       const results = [];
       for (let i = 0; i < (count || 1); i++) {
-        const res = await fetch(`${API}/api/video/script`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            inputMode: mode,
-            topic: mode === 'topic' ? input : undefined,
-            url: mode === 'url' ? input : undefined,
-            affiliateUrl: mode === 'affiliate' ? input : undefined,
-            style,
-            persona: persona.toLowerCase().replace(' ','-'),
-            duration: length === 'short' ? '30s' : length === 'medium' ? '60s' : '5m',
-            platforms: [platform.toLowerCase()],
-            videoType: style === 'VSL' ? 'ai-vsl' : style === 'Reel Ad' ? 'reel-ads' : 'ugc-persona',
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Script generation failed');
-        results.push({ ...data.script, id: Date.now() + i, timestamp: new Date().toLocaleTimeString() });
+        let lastErr = null;
+        let script = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const res = await fetch(`${API}/api/video/script`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              inputMode: mode,
+              topic: mode === 'topic' ? input : undefined,
+              url: mode === 'url' ? input : undefined,
+              affiliateUrl: mode === 'affiliate' ? input : undefined,
+              style,
+              persona: persona.toLowerCase().replace(' ','-'),
+              duration: length === 'short' ? '30s' : length === 'medium' ? '60s' : '5m',
+              platforms: [platform.toLowerCase()],
+              videoType: style === 'VSL' ? 'ai-vsl' : style === 'Reel Ad' ? 'reel-ads' : 'ugc-persona',
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            lastErr = data.error || 'Script generation failed';
+            const isOverload = res.status === 503 || (lastErr && lastErr.includes('busy'));
+            if (isOverload && attempt < 2) {
+              await new Promise(r => setTimeout(r, 5000));
+              continue;
+            }
+            throw new Error(lastErr);
+          }
+          script = data.script;
+          break;
+        }
+        if (!script) throw new Error(lastErr || 'Script generation failed');
+        results.push({ ...script, id: Date.now() + i, timestamp: new Date().toLocaleTimeString() });
       }
       setScripts(prev => variations ? [...prev, ...results] : results);
     } catch(e) { setError(e.message); }
@@ -189,7 +204,13 @@ export default function ScriptWriter() {
 
           {error && (
             <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(226,75,74,.1)', borderRadius: 8, fontSize: 12, color: '#F09595' }}>
-              {error}
+              <div style={{ marginBottom: error.includes('busy') ? 8 : 0 }}>{error}</div>
+              {error.includes('busy') && (
+                <button onClick={() => generate(countRef.current)}
+                  style={{ fontSize: 11, padding: '4px 12px', borderRadius: 6, border: 'none', background: '#E24B4A', color: 'white', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Try again
+                </button>
+              )}
             </div>
           )}
 
