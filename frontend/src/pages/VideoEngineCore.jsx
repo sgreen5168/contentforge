@@ -410,7 +410,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     setHeygenUrl('');
     setHeygenVideoId('');
     try {
-      const res = await fetch(API + '/api/heygen/generate-and-wait', {
+      // Phase 1: Start generation — returns immediately with a videoId
+      const res = await fetch(API + '/api/heygen/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -423,12 +424,36 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'HeyGen generation failed');
-      setHeygenVideoId(data.videoId);
-      setHeygenUrl(data.videoUrl);
+      if (!res.ok) throw new Error(data.error || 'HeyGen generation failed to start');
+      const videoId = data.videoId;
+      setHeygenVideoId(videoId);
+
+      // Phase 2: Poll for completion — short requests every 8s, no timeout risk
+      let attempts = 0;
+      const maxAttempts = 45; // 45 × 8s = 6 minutes max
+      while (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 8000));
+        attempts++;
+        try {
+          const pollRes = await fetch(API + '/api/heygen/video/' + videoId);
+          const pollData = await pollRes.json();
+          if (pollData.status === 'completed' && pollData.videoUrl) {
+            setHeygenUrl(pollData.videoUrl);
+            setHeygenGen(false);
+            return;
+          }
+          if (pollData.status === 'failed') {
+            throw new Error('HeyGen video generation failed: ' + (pollData.error || 'Unknown error'));
+          }
+          // still processing — continue polling
+        } catch(pollErr) {
+          if (pollErr.message.includes('failed')) throw pollErr;
+          // network hiccup — keep trying
+        }
+      }
+      throw new Error('HeyGen video timed out after 6 minutes. Check your HeyGen dashboard for the video status.');
     } catch(e) {
       setHeygenError(e.message);
-    } finally {
       setHeygenGen(false);
     }
   }
