@@ -182,6 +182,16 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [publishing, setPublishing]       = useState(false);
   const [publishError, setPublishError]   = useState('');
   const [publishResult, setPublishResult] = useState(null);
+  const [heygenAvatars, setHeygenAvatars] = useState([]);
+  const [heygenVoices, setHeygenVoices]   = useState([]);
+  const [heygenAvatar, setHeygenAvatar]   = useState('');
+  const [heygenVoice, setHeygenVoice]     = useState('');
+  const [heygenGenerating, setHeygenGen]  = useState(false);
+  const [heygenVideoId, setHeygenVideoId] = useState('');
+  const [heygenVideoUrl, setHeygenUrl]    = useState('');
+  const [heygenError, setHeygenError]     = useState('');
+  const [heygenConfigured, setHeygenConf] = useState(false);
+  const [heygenLoaded, setHeygenLoaded]   = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -365,6 +375,62 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       URL.revokeObjectURL(url);
     } catch(e) { setCombineError(e.message); }
     finally { setAssembling(false); }
+  }
+
+  async function loadHeyGenConfig() {
+    if (heygenLoaded) return;
+    setHeygenLoaded(true);
+    try {
+      const statusRes = await fetch(API + '/api/heygen/status');
+      const statusData = await statusRes.json();
+      if (!statusData.configured) { setHeygenConf(false); return; }
+      setHeygenConf(true);
+      const [avatarRes, voiceRes] = await Promise.all([
+        fetch(API + '/api/heygen/avatars'),
+        fetch(API + '/api/heygen/voices'),
+      ]);
+      const avatarData = await avatarRes.json();
+      const voiceData  = await voiceRes.json();
+      setHeygenAvatars(avatarData.avatars || []);
+      setHeygenVoices(voiceData.voices || []);
+      if (avatarData.avatars?.[0]) setHeygenAvatar(avatarData.avatars[0].avatar_id);
+      if (voiceData.voices?.[0]) setHeygenVoice(voiceData.voices[0].voice_id);
+    } catch(e) {
+      console.warn('HeyGen config load failed:', e.message);
+      setHeygenConf(false);
+    }
+  }
+
+  async function generateHeyGenVideo() {
+    if (!job?.result?.script?.fullScript) { setHeygenError('Generate a script first before creating an avatar video.'); return; }
+    if (!heygenAvatar) { setHeygenError('Select an avatar first.'); return; }
+    if (!heygenVoice)  { setHeygenError('Select a voice first.'); return; }
+    setHeygenGen(true);
+    setHeygenError('');
+    setHeygenUrl('');
+    setHeygenVideoId('');
+    try {
+      const res = await fetch(API + '/api/heygen/generate-and-wait', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatarId:        heygenAvatar,
+          voiceId:         heygenVoice,
+          script:          job.result.script.fullScript,
+          aspectRatio:     aspectRatio,
+          backgroundType:  'color',
+          backgroundValue: '#18202e',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'HeyGen generation failed');
+      setHeygenVideoId(data.videoId);
+      setHeygenUrl(data.videoUrl);
+    } catch(e) {
+      setHeygenError(e.message);
+    } finally {
+      setHeygenGen(false);
+    }
   }
 
   async function publishToYouTube() {
@@ -1006,6 +1072,98 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />Uploading to YouTube…</>
                       ) : <>▶ Publish to YouTube</>}
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* HeyGen Avatar Video Panel */}
+              {job && job.result && job.result.script && (
+                <div style={card()}>
+                  <div style={hdr()}>
+                    <span>🎭 HeyGen Avatar Video</span>
+                    <span style={{ fontSize: 10, color: TXT3 }}>Avatar IV — photorealistic AI presenter</span>
+                  </div>
+                  <div style={body()}>
+                    {!heygenLoaded && (
+                      <button onClick={loadHeyGenConfig}
+                        style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: ACCH, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Load Avatar Options
+                      </button>
+                    )}
+                    {heygenLoaded && !heygenConfigured && (
+                      <div style={{ padding: '10px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 8, fontSize: 12, color: '#FAC775', lineHeight: 1.5 }}>
+                        HEYGEN_API_KEY not found in Railway. Add it to Railway variables and redeploy to enable avatar videos.
+                      </div>
+                    )}
+                    {heygenLoaded && heygenConfigured && (
+                      <div>
+                        <span style={lbl}>Choose avatar</span>
+                        {heygenAvatars.length === 0 ? (
+                          <div style={{ fontSize: 11, color: TXT3, marginBottom: 10 }}>Loading avatars...</div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
+                            {heygenAvatars.slice(0, 12).map(function(a) {
+                              const active = heygenAvatar === a.avatar_id;
+                              return (
+                                <button key={a.avatar_id} onClick={function() { setHeygenAvatar(a.avatar_id); }}
+                                  style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.12)' : 'transparent' }}>
+                                  {a.preview_image_url && (
+                                    <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: 6, overflow: 'hidden', marginBottom: 4, background: 'rgba(22,61,106,.4)' }}>
+                                      <img src={a.preview_image_url} alt={a.avatar_name}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        onError={function(e) { e.target.style.display='none'; }} />
+                                    </div>
+                                  )}
+                                  <div style={{ fontSize: 9, color: active ? ACCH : TXT2, lineHeight: 1.3 }}>{a.avatar_name?.slice(0,20)}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <span style={lbl}>Choose voice</span>
+                        <select value={heygenVoice} onChange={function(e) { setHeygenVoice(e.target.value); }}
+                          style={{ ...inp, marginBottom: 12 }}>
+                          {heygenVoices.map(function(v) {
+                            return <option key={v.voice_id} value={v.voice_id}>{v.name} ({v.gender})</option>;
+                          })}
+                        </select>
+
+                        <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
+                          This will generate your full script as an Avatar IV video. Generation takes 1–3 minutes and uses your HeyGen API balance (~$0.50–$2 depending on length).
+                        </div>
+
+                        {heygenError && (
+                          <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
+                            {heygenError}
+                          </div>
+                        )}
+
+                        {heygenVideoUrl && (
+                          <div style={{ marginBottom: 12 }}>
+                            <video src={heygenVideoUrl} controls
+                              style={{ width: '100%', borderRadius: 8, background: '#000', display: 'block', marginBottom: 8 }} />
+                            <a href={heygenVideoUrl} download="heygen-avatar-video.mp4"
+                              style={{ display: 'block', textAlign: 'center', padding: '8px', borderRadius: 8, background: ACC, color: 'white', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                              ⬇ Download Avatar Video
+                            </a>
+                          </div>
+                        )}
+
+                        <button onClick={generateHeyGenVideo} disabled={heygenGenerating || !heygenAvatar || !heygenVoice}
+                          style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none',
+                            background: (heygenGenerating || !heygenAvatar || !heygenVoice) ? 'rgba(29,158,117,.3)' : ACC,
+                            color: 'white', fontSize: 13, fontWeight: 600, cursor: (heygenGenerating || !heygenAvatar || !heygenVoice) ? 'default' : 'pointer', fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          {heygenGenerating ? (
+                            <>
+                              <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                              Generating avatar video… (~1–3 min)
+                            </>
+                          ) : <>🎭 Generate Avatar IV Video</>}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
