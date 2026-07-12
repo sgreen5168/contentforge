@@ -469,11 +469,13 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const videoId = data.videoId;
       setHeygenVideoId(videoId);
 
-      // Phase 2: Poll for completion — short requests every 8s, no timeout risk
+      // HeyGen's architecture is async — videos take 5-30+ minutes
+      // Rather than hold an open connection that will timeout, we show the user
+      // a direct link to their HeyGen projects page where the video will appear
+      // We still poll briefly (5 times × 30s = 2.5 min) in case it's fast
       let attempts = 0;
-      const maxAttempts = 100; // 100 × 15s = 25 minutes
-      while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 15000));
+      while (attempts < 5) {
+        await new Promise(r => setTimeout(r, 30000));
         attempts++;
         try {
           const pollRes = await fetch(API + '/api/heygen/video/' + videoId);
@@ -486,13 +488,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           if (pollData.status === 'failed') {
             throw new Error('HeyGen video generation failed: ' + (pollData.error || 'Unknown error'));
           }
-          // still processing — continue polling
         } catch(pollErr) {
-          if (pollErr.message.includes('failed')) throw pollErr;
-          // network hiccup — keep trying
+          if (pollErr.message && pollErr.message.includes('failed')) throw pollErr;
         }
       }
-      throw new Error(`HeyGen is still processing (25 min elapsed). Your video ID is: ${videoId} — check app.heygen.com/projects for the completed video.`);
+      // After 2.5 min, stop polling and send user to HeyGen directly
+      // The video will be ready there when HeyGen finishes (usually 5-30 min)
+      setHeygenGen(false);
+      setHeygenError('READY_CHECK:' + videoId);
     } catch(e) {
       setHeygenError(e.message);
       setHeygenGen(false);
@@ -1305,14 +1308,24 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         )}
 
                         <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
-                          This will generate your full script as an Avatar IV video. HeyGen takes approximately 10 minutes per 1 minute of video — keep this tab open. Uses your HeyGen API balance (~$0.50–$2 depending on length).
+                          This will submit your script to HeyGen for Avatar IV generation. It takes 10–30 minutes. ContentForge will check for 2.5 minutes, then give you a direct link to your HeyGen projects page where it will appear when ready. Uses your HeyGen API balance (~$0.50–$2 depending on length).
                         </div>
 
-                        {heygenError && (
+                        {heygenError && heygenError.startsWith('READY_CHECK:') ? (
+                          <div style={{ marginBottom: 10, padding: '10px 12px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.25)', borderRadius: 8, fontSize: 11, color: '#FAC775', lineHeight: 1.6 }}>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>⏳ Video is generating on HeyGen's servers</div>
+                            <div style={{ marginBottom: 8 }}>HeyGen typically takes 10–30 minutes for Avatar IV videos. Your video is in the queue and will appear in your HeyGen projects when ready.</div>
+                            <a href={'https://app.heygen.com/projects'} target="_blank" rel="noreferrer"
+                              style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 6, background: 'rgba(245,166,35,.2)', color: '#FAC775', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
+                              Open HeyGen Projects →
+                            </a>
+                            <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(250,199,117,.6)' }}>Video ID: {heygenError.replace('READY_CHECK:', '')}</div>
+                          </div>
+                        ) : heygenError ? (
                           <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
                             {heygenError}
                           </div>
-                        )}
+                        ) : null}
 
                         {heygenVideoUrl && (
                           <div style={{ marginBottom: 12 }}>
@@ -1336,7 +1349,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           {heygenGenerating ? (
                             <>
                               <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
-                              Generating avatar video… (~1–3 min)
+                              Submitting to HeyGen… checking for 2.5 min then showing dashboard link
                             </>
                           ) : <>🎭 Generate Avatar IV Video</>}
                         </button>
