@@ -192,6 +192,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenError, setHeygenError]     = useState('');
   const [heygenConfigured, setHeygenConf] = useState(false);
   const [heygenLoaded, setHeygenLoaded]   = useState(false);
+  const [avatarFilter, setAvatarFilter]   = useState('all');
+  const [avatarSearch, setAvatarSearch]   = useState('');
+  const [avatarPage, setAvatarPage]       = useState(0);
   const [heygenBgType, setHeygenBgType]   = useState('color');
   const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
   const [heygenGreenScreen, setHeygenGS]  = useState(false);
@@ -387,8 +390,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   }
 
   async function loadHeyGenConfig() {
-    if (heygenLoaded) return;
     setHeygenLoaded(true);
+    setHeygenAvatars([]);
+    setHeygenVoices([]);
     try {
       const statusRes = await fetch(API + '/api/heygen/status');
       const statusData = await statusRes.json();
@@ -467,9 +471,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
       // Phase 2: Poll for completion — short requests every 8s, no timeout risk
       let attempts = 0;
-      const maxAttempts = 45; // 45 × 8s = 6 minutes max
+      const maxAttempts = 100; // 100 × 15s = 25 minutes
       while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 8000));
+        await new Promise(r => setTimeout(r, 15000));
         attempts++;
         try {
           const pollRes = await fetch(API + '/api/heygen/video/' + videoId);
@@ -488,7 +492,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           // network hiccup — keep trying
         }
       }
-      throw new Error('HeyGen video timed out after 6 minutes. Check your HeyGen dashboard for the video status.');
+      throw new Error(`HeyGen is still processing (25 min elapsed). Your video ID is: ${videoId} — check app.heygen.com/projects for the completed video.`);
     } catch(e) {
       setHeygenError(e.message);
       setHeygenGen(false);
@@ -1184,12 +1188,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <span style={{ fontSize: 10, color: TXT3 }}>Avatar IV — photorealistic AI presenter</span>
                   </div>
                   <div style={body()}>
-                    {!heygenLoaded && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <button onClick={loadHeyGenConfig}
-                        style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: ACCH, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Load Avatar Options
+                        style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: ACCH, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {heygenLoaded ? '↻ Refresh Avatars' : 'Load Avatar Options'}
                       </button>
-                    )}
+                    </div>
                     {heygenLoaded && !heygenConfigured && (
                       <div style={{ padding: '10px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 8, fontSize: 12, color: '#FAC775', lineHeight: 1.5 }}>
                         HEYGEN_API_KEY not found in Railway. Add it to Railway variables and redeploy to enable avatar videos.
@@ -1201,24 +1205,62 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         {heygenAvatars.length === 0 ? (
                           <div style={{ fontSize: 11, color: TXT3, marginBottom: 10 }}>Loading avatars...</div>
                         ) : (
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
-                            {heygenAvatars.slice(0, 12).map(function(a) {
-                              const active = heygenAvatar === a.avatar_id;
-                              return (
-                                <button key={a.avatar_id} onClick={function() { setHeygenAvatar(a.avatar_id); }}
-                                  style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.12)' : 'transparent' }}>
-                                  {a.preview_image_url && (
-                                    <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: 6, overflow: 'hidden', marginBottom: 4, background: 'rgba(22,61,106,.4)' }}>
-                                      <img src={a.preview_image_url} alt={a.avatar_name}
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        onError={function(e) { e.target.style.display='none'; }} />
-                                    </div>
-                                  )}
-                                  <div style={{ fontSize: 9, color: active ? ACCH : TXT2, lineHeight: 1.3 }}>{a.avatar_name?.slice(0,20)}</div>
-                                </button>
-                              );
-                            })}
-                          </div>
+                          (function() {
+                            const PER_PAGE = 12;
+                            const filtered = heygenAvatars.filter(function(a) {
+                              const matchGender = avatarFilter === 'all' || (a.gender && a.gender.toLowerCase() === avatarFilter);
+                              const matchSearch = !avatarSearch.trim() || (a.avatar_name && a.avatar_name.toLowerCase().includes(avatarSearch.toLowerCase()));
+                              return matchGender && matchSearch;
+                            });
+                            const totalPages = Math.ceil(filtered.length / PER_PAGE);
+                            const safePage = Math.min(avatarPage, Math.max(0, totalPages - 1));
+                            const visible = filtered.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
+                            return (
+                              <div>
+                                <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
+                                  <input placeholder="Search..." value={avatarSearch}
+                                    onChange={function(e) { setAvatarSearch(e.target.value); setAvatarPage(0); }}
+                                    style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '4px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                                  {['all','male','female'].map(function(g) {
+                                    return (
+                                      <button key={g} onClick={function() { setAvatarFilter(g); setAvatarPage(0); }}
+                                        style={{ padding: '3px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: '1px solid ' + (avatarFilter === g ? ACC : BORD), background: avatarFilter === g ? 'rgba(29,158,117,.15)' : 'transparent', color: avatarFilter === g ? ACCH : TXT2 }}>
+                                        {g === 'all' ? 'All' : g === 'male' ? '♂ Male' : '♀ Female'}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 6 }}>
+                                  {visible.map(function(a) {
+                                    const active = heygenAvatar === a.avatar_id;
+                                    return (
+                                      <button key={a.avatar_id} onClick={function() { setHeygenAvatar(a.avatar_id); }}
+                                        style={{ padding: '5px 3px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', border: '2px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.1)' : 'rgba(22,61,106,.2)', position: 'relative' }}>
+                                        {active && <div style={{ position: 'absolute', top: 3, right: 3, width: 13, height: 13, borderRadius: '50%', background: ACC, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'white', zIndex: 1 }}>✓</div>}
+                                        <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 5, overflow: 'hidden', marginBottom: 4, background: 'rgba(22,61,106,.4)' }}>
+                                          {a.preview_image_url
+                                            ? <img src={a.preview_image_url} alt={a.avatar_name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={function(e) { e.target.style.display='none'; }} />
+                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>
+                                          }
+                                        </div>
+                                        <div style={{ fontSize: 8, color: active ? ACCH : TXT2, fontWeight: active ? 600 : 400, lineHeight: 1.2 }}>{a.avatar_name?.slice(0,16) || 'Avatar'}</div>
+                                        {a.gender && <div style={{ fontSize: 7, color: TXT3 }}>{a.gender}</div>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {totalPages > 1 && (
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <button onClick={function() { setAvatarPage(function(p) { return Math.max(0,p-1); }); }} disabled={safePage===0}
+                                      style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===0?TXT3:TXT2, cursor: safePage===0?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>← Prev</button>
+                                    <span style={{ fontSize: 9, color: TXT3 }}>{safePage+1}/{totalPages} · {filtered.length} avatars</span>
+                                    <button onClick={function() { setAvatarPage(function(p) { return Math.min(totalPages-1,p+1); }); }} disabled={safePage===totalPages-1}
+                                      style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===totalPages-1?TXT3:TXT2, cursor: safePage===totalPages-1?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>Next →</button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()
                         )}
 
                         <span style={lbl}>Choose voice</span>
