@@ -361,6 +361,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           vignette,
           ctaUrl: ctaUrl.trim(),
           ctaText: ctaText.trim(),
+          heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
         }),
       });
       if (!res.ok) {
@@ -479,6 +480,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           vignette,
           ctaUrl: ctaUrl.trim(),
           ctaText: ctaText.trim(),
+          heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
         }),
       });
       const data = await res.json();
@@ -1169,9 +1171,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                             <video src={heygenVideoUrl} controls
                               style={{ width: '100%', borderRadius: 8, background: '#000', display: 'block', marginBottom: 8 }} />
                             <a href={heygenVideoUrl} download="heygen-avatar-video.mp4"
-                              style={{ display: 'block', textAlign: 'center', padding: '8px', borderRadius: 8, background: ACC, color: 'white', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                              ⬇ Download Avatar Video
+                              style={{ display: 'block', textAlign: 'center', padding: '8px', borderRadius: 8, background: ACC, color: 'white', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 8 }}>
+                              ⬇ Download Avatar Video (standalone)
                             </a>
+                            <div style={{ padding: '8px 10px', background: 'rgba(29,158,117,.08)', border: '1px solid rgba(29,158,117,.2)', borderRadius: 8, fontSize: 11, color: ACCH, lineHeight: 1.5 }}>
+                              ✅ Avatar ready — scroll up and click <strong style={{ color: TXT }}>⬇ Combine &amp; Download Final Video</strong> to merge your Pexels scenes with this avatar as a corner overlay. The avatar will appear in the bottom-right of the frame.
+                            </div>
                           </div>
                         )}
 
