@@ -192,6 +192,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenError, setHeygenError]     = useState('');
   const [heygenConfigured, setHeygenConf] = useState(false);
   const [heygenLoaded, setHeygenLoaded]   = useState(false);
+  const [heygenBgType, setHeygenBgType]   = useState('color');
+  const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
+  const [heygenGreenScreen, setHeygenGS]  = useState(false);
+  const [imgToClipUrl, setImgToClipUrl]   = useState('');
+  const [imgToClipLoading, setImgClipLoad]= useState(false);
+  const [imgToClipError, setImgClipErr]   = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -362,6 +368,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           ctaUrl: ctaUrl.trim(),
           ctaText: ctaText.trim(),
           heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
+          heygenBackgroundType: heygenGreenScreen ? 'greenscreen' : heygenBgType,
+          heygenGreenScreen: heygenGreenScreen,
         }),
       });
       if (!res.ok) {
@@ -402,6 +410,34 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     }
   }
 
+  async function convertImageToClip() {
+    if (!imgToClipUrl.trim()) { setImgClipErr('Paste an image URL first.'); return; }
+    setImgClipLoad(true);
+    setImgClipErr('');
+    try {
+      const res = await fetch(API + '/api/video/image-to-clip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: imgToClipUrl.trim(), aspectRatio, duration: 6 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(function() { return {}; });
+        throw new Error(err.error || 'Image conversion failed');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'image-clip-' + aspectRatio.replace(':','-') + '.mp4';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch(e) {
+      setImgClipErr(e.message);
+    } finally {
+      setImgClipLoad(false);
+    }
+  }
+
   async function generateHeyGenVideo() {
     if (!job?.result?.script?.fullScript) { setHeygenError('Generate a script first before creating an avatar video.'); return; }
     if (!heygenAvatar) { setHeygenError('Select an avatar first.'); return; }
@@ -420,8 +456,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           voiceId:         heygenVoice,
           script:          job.result.script.fullScript,
           aspectRatio:     aspectRatio,
-          backgroundType:  'color',
-          backgroundValue: '#18202e',
+          backgroundType:  heygenGreenScreen ? 'color' : heygenBgType,
+          backgroundValue: heygenGreenScreen ? '#00b140' : heygenBgValue,
         }),
       });
       const data = await res.json();
@@ -899,6 +935,43 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 </div>
               )}
 
+              {/* Image / Photo → video clip converter */}
+              {job.result && job.result.script && (
+                <div style={card()}>
+                  <div style={hdr()}>
+                    <span>Photo → video clip</span>
+                    <span style={{ fontSize: 10, color: TXT3 }}>Ken Burns pan/zoom · fits your chosen ratio</span>
+                  </div>
+                  <div style={body()}>
+                    <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                      Paste any image URL below to convert it into a {aspectRatio} video clip with a smooth pan/zoom effect. Downloads as an MP4 you can mix into your project.
+                    </div>
+                    <span style={lbl}>Image URL</span>
+                    <input style={inp}
+                      placeholder="https://example.com/your-photo.jpg"
+                      value={imgToClipUrl}
+                      onChange={function(e) { setImgToClipUrl(e.target.value); setImgClipErr(''); }} />
+                    {imgToClipError && (
+                      <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(226,75,74,.12)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>
+                        {imgToClipError}
+                      </div>
+                    )}
+                    <button onClick={convertImageToClip} disabled={imgToClipLoading || !imgToClipUrl.trim()}
+                      style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none',
+                        background: (imgToClipLoading || !imgToClipUrl.trim()) ? 'rgba(29,158,117,.3)' : ACC,
+                        color: 'white', fontSize: 12, fontWeight: 600, cursor: (imgToClipLoading || !imgToClipUrl.trim()) ? 'default' : 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      {imgToClipLoading ? (
+                        <>
+                          <span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
+                          Converting to {aspectRatio} video…
+                        </>
+                      ) : <>⬇ Convert to {aspectRatio} video clip</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {job.result && job.result.script && job.result.script.fullScript && (
                 <div style={card()}>
                   <div style={hdr()}>
@@ -1156,8 +1229,41 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           })}
                         </select>
 
+                        <span style={lbl}>Avatar background</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 8 }}>
+                          {[
+                            { id:'dark',    label:'Dark studio',  color:'#18202e', type:'color' },
+                            { id:'light',   label:'Light studio', color:'#f5f5f0', type:'color' },
+                            { id:'warm',    label:'Warm beige',   color:'#f0e6d3', type:'color' },
+                            { id:'white',   label:'Bright white', color:'#ffffff', type:'color' },
+                            { id:'forest',  label:'Forest green', color:'#1a3a2a', type:'color' },
+                            { id:'navy',    label:'Navy blue',    color:'#0d1e3a', type:'color' },
+                          ].map(function(bg) {
+                            const active = !heygenGreenScreen && heygenBgValue === bg.color;
+                            return (
+                              <button key={bg.id} onClick={function() { setHeygenGS(false); setHeygenBgType(bg.type); setHeygenBgValue(bg.color); }}
+                                style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid ' + (active ? ACC : BORD), background: 'transparent', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <div style={{ width: 16, height: 16, borderRadius: 3, background: bg.color, border: '1px solid rgba(255,255,255,.2)', flexShrink: 0 }} />
+                                <span style={{ fontSize: 9, color: active ? ACCH : TXT2 }}>{bg.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button onClick={function() { setHeygenGS(!heygenGreenScreen); }}
+                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, border: '1px solid ' + (heygenGreenScreen ? '#00c851' : BORD), background: heygenGreenScreen ? 'rgba(0,200,81,.1)' : 'transparent', color: heygenGreenScreen ? '#00c851' : TXT2, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                          <div style={{ width: 14, height: 14, borderRadius: 2, background: heygenGreenScreen ? '#00c851' : 'transparent', border: '1px solid ' + (heygenGreenScreen ? '#00c851' : BORD), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {heygenGreenScreen && <span style={{ fontSize: 9, color: '#fff' }}>✓</span>}
+                          </div>
+                          <span>Background removal (green screen → transparent overlay)</span>
+                        </button>
+                        {heygenGreenScreen && (
+                          <div style={{ marginBottom: 12, padding: '6px 8px', background: 'rgba(0,200,81,.06)', border: '1px solid rgba(0,200,81,.2)', borderRadius: 6, fontSize: 10, color: '#00c851', lineHeight: 1.5 }}>
+                            The avatar will be generated with a green screen and composited as a floating presence over your scene video — no background box.
+                          </div>
+                        )}
+
                         <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
-                          This will generate your full script as an Avatar IV video. Generation takes 1–3 minutes and uses your HeyGen API balance (~$0.50–$2 depending on length).
+                          This will generate your full script as an Avatar IV video. HeyGen takes approximately 10 minutes per 1 minute of video — keep this tab open. Uses your HeyGen API balance (~$0.50–$2 depending on length).
                         </div>
 
                         {heygenError && (
