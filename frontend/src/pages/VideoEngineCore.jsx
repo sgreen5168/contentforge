@@ -200,7 +200,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [showCreateAvatar, setShowCreate] = useState(false);
   const [createAppearance, setCreateApp]  = useState('');
   const [createGender, setCreateGender]   = useState('Woman');
-  const [createAge, setCreateAge]         = useState('Adult');
+  const [createAge, setCreateAge]         = useState('Unspecified');
   const [createEthnicity, setCreateEth]   = useState('Unspecified');
   const [createStyle, setCreateStyle]     = useState('Realistic');
   const [creating, setCreating]           = useState(false);
@@ -211,6 +211,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenBgType, setHeygenBgType]   = useState('color');
   const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
   const [heygenGreenScreen, setHeygenGS]  = useState(false);
+  const [createBgType, setCreateBgType]   = useState('color');
+  const [createBgUrl, setCreateBgUrl]     = useState('');
   const [imgToClipUrl, setImgToClipUrl]   = useState('');
   const [imgToClipLoading, setImgClipLoad]= useState(false);
   const [imgToClipError, setImgClipErr]   = useState('');
@@ -464,8 +466,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'ContentForge ' + createGender + ' Avatar',
-          age: createAge, gender: createGender, ethnicity: createEthnicity,
-          style: createStyle, orientation: 'vertical', pose: 'half_body',
+          age: createAge || 'Unspecified',
+          gender: createGender,
+          ethnicity: createEthnicity || 'Unspecified',
+          style: createStyle,
+          orientation: 'vertical',
+          pose: 'half_body',
           appearance: createAppearance.trim(),
         }),
       });
@@ -524,8 +530,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           voiceId:         heygenVoice,
           script:          job.result.script.fullScript,
           aspectRatio:     aspectRatio,
-          backgroundType:  heygenGreenScreen ? 'color' : heygenBgType,
-          backgroundValue: heygenGreenScreen ? '#00b140' : heygenBgValue,
+          backgroundType:  heygenGreenScreen ? 'color' : (createBgType && createBgUrl ? 'image' : heygenBgType),
+          backgroundValue: heygenGreenScreen ? '#00b140' : (createBgType === 'image' && createBgUrl ? createBgUrl : heygenBgValue),
         }),
       });
       const data = await res.json();
@@ -1331,8 +1337,11 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                       onClick={function() {
                                       setCreateApp(s.appearance);
                                       setCreateGender(s.gender);
-                                      setCreateAge(s.age);
+                                      setCreateAge(s.age || 'Unspecified');
                                       setCreateStyle(s.style);
+                                      setCreateEth(s.ethnicity || 'Unspecified');
+                                      setCreateBgType(s.backgroundType || 'color');
+                                      setCreateBgUrl(s.backgroundUrl || '');
                                       setShowCreate(true);
                                       setTimeout(function() {
                                         if (creatorPanelRef.current) {
@@ -1341,7 +1350,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                       }, 100);
                                     }}
                                       style={{ padding: '5px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, textAlign: 'left', border: '1px solid ' + BORD, background: 'rgba(22,61,106,.3)', color: TXT2, lineHeight: 1.4 }}>
-                                      {s.gender} · {s.age} — {s.appearance.slice(0, 70)}...
+                                      {s.label || (s.gender + ' · ' + (s.age || '') + ' — ' + s.appearance.slice(0, 60) + '...')}
                                     </button>
                                   );
                                 })}
@@ -1444,7 +1453,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
                                 {[
                                   { label:'Gender',    val: createGender,    set: setCreateGender,   opts:['Woman','Man','Non-binary'] },
-                                  { label:'Age',       val: createAge,       set: setCreateAge,      opts:['Young Adult','Adult','Middle Aged'] },
+                                  { label:'Age',       val: createAge,       set: setCreateAge,      opts:['Unspecified','Young Adult','Early Middle Age','Late Middle Age','Senior'] },
                                   { label:'Ethnicity', val: createEthnicity, set: setCreateEth,      opts:['Unspecified','White','Black','Asian American','East Asian','South East Asian','South Asian','Middle Eastern','Pacific','Hispanic'] },
                                   { label:'Style',     val: createStyle,     set: setCreateStyle,    opts:['Realistic','Cinematic','Natural'] },
                                 ].map(function(f) {
