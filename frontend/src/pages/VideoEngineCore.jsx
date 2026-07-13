@@ -159,6 +159,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [voice, setVoice]       = useState('nova');
   const [playingVoice, setPlayingVoice] = useState('');
   const audioPreviewRef = React.useRef(null);
+  const creatorPanelRef = React.useRef(null);
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle] = useState('center');
   const [niche, setNiche]         = useState('');
@@ -1254,6 +1255,33 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <span style={{ fontSize: 10, color: TXT3 }}>Avatar IV — photorealistic AI presenter</span>
                   </div>
                   <div style={body()}>
+
+                    {/* Feature guide */}
+                    <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(22,61,106,.35)', border: '1px solid rgba(93,202,165,.15)', borderRadius: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: TXT, marginBottom: 8 }}>How to create an Avatar IV video</div>
+                      {[
+                        { step:'1', title:'Load avatars', desc:'Click Load Avatar Options to see all available HeyGen avatars. Use niche tabs (🏠 Home Biz, 💪 Fitness, 🥗 Healthy, 👨‍🍳 Cooking) to filter by your content type. Search by keyword like "office", "chef", or "casual".' },
+                        { step:'2', title:'Choose or create an avatar', desc:'Click any avatar card to select it (green ✓ appears). Or expand "Create custom avatar for your niche" below the grid — click a niche tab first to see pre-written suggestions, then click a suggestion to auto-fill the creator. Adjust gender, age, ethnicity and click Generate.' },
+                        { step:'3', title:'Choose a voice', desc:'Pick from the voice dropdown. These are HeyGen\'s own AI voices. The avatar will lip-sync to the selected voice reading your script.' },
+                        { step:'4', title:'Optional: transparent background', desc:'Enable the green screen toggle if you plan to combine this avatar video with your Pexels scene clips. The avatar will float over the scene with no background box.' },
+                        { step:'5', title:'Generate', desc:'Click Generate Avatar IV Video. HeyGen queues the job — it typically takes 10–30 minutes. ContentForge checks for 2.5 minutes, then shows a direct link to your HeyGen Projects page where the video appears when ready.' },
+                        { step:'6', title:'Combine with scene clips', desc:'Once the avatar video is ready and shown below, scroll up and click ⬇ Combine & Download Final Video. Your Pexels scene clips fill the frame and the avatar appears in the bottom-right corner.' },
+                      ].map(function(item) {
+                        return (
+                          <div key={item.step} style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: ACC, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', flexShrink: 0, marginTop: 1 }}>{item.step}</div>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 2 }}>{item.title}</div>
+                              <div style={{ fontSize: 10, color: TXT2, lineHeight: 1.5 }}>{item.desc}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div style={{ marginTop: 8, padding: '6px 8px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 6, fontSize: 10, color: '#FAC775', lineHeight: 1.4 }}>
+                        💡 Best results tip: Use a niche suggestion for a well-described avatar that matches your script topic. For home income content pick a casual professional. For cooking pick someone in an apron. The more specific your appearance description, the better the result.
+                      </div>
+                    </div>
+
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <button onClick={loadHeyGenConfig}
                         style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: ACCH, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1282,7 +1310,11 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               const active = avatarNiche === tab.id;
                               return (
                                 <button key={tab.id}
-                                  onClick={function() { setAvatarNiche(tab.id); setAvatarPage(0); loadNicheSuggestions(tab.id); }}
+                                  onClick={function() {
+                                    setAvatarNiche(tab.id);
+                                    setAvatarPage(0);
+                                    loadNicheSuggestions(tab.id);
+                                  }}
                                   style={{ padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.15)' : 'transparent', color: active ? ACCH : TXT2 }}>
                                   {tab.icon} {tab.label}
                                 </button>
@@ -1296,7 +1328,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                 {nicheSuggestions.map(function(s, i) {
                                   return (
                                     <button key={i}
-                                      onClick={function() { setCreateApp(s.appearance); setCreateGender(s.gender); setCreateAge(s.age); setCreateStyle(s.style); setShowCreate(true); }}
+                                      onClick={function() {
+                                      setCreateApp(s.appearance);
+                                      setCreateGender(s.gender);
+                                      setCreateAge(s.age);
+                                      setCreateStyle(s.style);
+                                      setShowCreate(true);
+                                      setTimeout(function() {
+                                        if (creatorPanelRef.current) {
+                                          creatorPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }
+                                      }, 100);
+                                    }}
                                       style={{ padding: '5px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, textAlign: 'left', border: '1px solid ' + BORD, background: 'rgba(22,61,106,.3)', color: TXT2, lineHeight: 1.4 }}>
                                       {s.gender} · {s.age} — {s.appearance.slice(0, 70)}...
                                     </button>
@@ -1382,7 +1425,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         })()}
 
                         {/* Photo Avatar Creator */}
-                        <div style={{ marginBottom: 12, border: '1px solid ' + BORD, borderRadius: 10, overflow: 'hidden' }}>
+                        <div ref={creatorPanelRef} style={{ marginBottom: 12, border: '1px solid ' + BORD, borderRadius: 10, overflow: 'hidden' }}>
                           <button onClick={function() { setShowCreate(function(v) { return !v; }); }}
                             style={{ width: '100%', padding: '8px 12px', background: 'rgba(22,61,106,.4)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>✨ Create custom avatar for your niche</span>
@@ -1434,38 +1477,16 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           })}
                         </select>
 
-                        <span style={lbl}>Avatar background</span>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 8 }}>
-                          {[
-                            { id:'dark',    label:'Dark studio',  color:'#18202e', type:'color' },
-                            { id:'light',   label:'Light studio', color:'#f5f5f0', type:'color' },
-                            { id:'warm',    label:'Warm beige',   color:'#f0e6d3', type:'color' },
-                            { id:'white',   label:'Bright white', color:'#ffffff', type:'color' },
-                            { id:'forest',  label:'Forest green', color:'#1a3a2a', type:'color' },
-                            { id:'navy',    label:'Navy blue',    color:'#0d1e3a', type:'color' },
-                          ].map(function(bg) {
-                            const active = !heygenGreenScreen && heygenBgValue === bg.color;
-                            return (
-                              <button key={bg.id} onClick={function() { setHeygenGS(false); setHeygenBgType(bg.type); setHeygenBgValue(bg.color); }}
-                                style={{ padding: '6px 4px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid ' + (active ? ACC : BORD), background: 'transparent', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <div style={{ width: 16, height: 16, borderRadius: 3, background: bg.color, border: '1px solid rgba(255,255,255,.2)', flexShrink: 0 }} />
-                                <span style={{ fontSize: 9, color: active ? ACCH : TXT2 }}>{bg.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
                         <button onClick={function() { setHeygenGS(!heygenGreenScreen); }}
-                          style={{ width: '100%', padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, border: '1px solid ' + (heygenGreenScreen ? '#00c851' : BORD), background: heygenGreenScreen ? 'rgba(0,200,81,.1)' : 'transparent', color: heygenGreenScreen ? '#00c851' : TXT2, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                          <div style={{ width: 14, height: 14, borderRadius: 2, background: heygenGreenScreen ? '#00c851' : 'transparent', border: '1px solid ' + (heygenGreenScreen ? '#00c851' : BORD), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {heygenGreenScreen && <span style={{ fontSize: 9, color: '#fff' }}>✓</span>}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, border: '1px solid ' + (heygenGreenScreen ? '#00c851' : BORD), background: heygenGreenScreen ? 'rgba(0,200,81,.1)' : 'rgba(22,61,106,.2)', color: heygenGreenScreen ? '#00c851' : TXT2, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <div style={{ width: 15, height: 15, borderRadius: 3, background: heygenGreenScreen ? '#00c851' : 'transparent', border: '2px solid ' + (heygenGreenScreen ? '#00c851' : BORD), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {heygenGreenScreen && <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>✓</span>}
                           </div>
-                          <span>Background removal (green screen → transparent overlay)</span>
+                          <div style={{ textAlign: 'left' }}>
+                            <div style={{ fontWeight: 600 }}>Transparent background (green screen)</div>
+                            <div style={{ fontSize: 9, color: TXT3, marginTop: 1 }}>Avatar floats over your scene video with no background box — best for PIP combine</div>
+                          </div>
                         </button>
-                        {heygenGreenScreen && (
-                          <div style={{ marginBottom: 12, padding: '6px 8px', background: 'rgba(0,200,81,.06)', border: '1px solid rgba(0,200,81,.2)', borderRadius: 6, fontSize: 10, color: '#00c851', lineHeight: 1.5 }}>
-                            The avatar will be generated with a green screen and composited as a floating presence over your scene video — no background box.
-                          </div>
-                        )}
 
                         <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
                           This will submit your script to HeyGen for Avatar IV generation. It takes 10–30 minutes. ContentForge will check for 2.5 minutes, then give you a direct link to your HeyGen projects page where it will appear when ready. Uses your HeyGen API balance (~$0.50–$2 depending on length).
