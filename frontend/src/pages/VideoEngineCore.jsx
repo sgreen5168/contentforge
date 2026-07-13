@@ -200,7 +200,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [createAppearance, setCreateApp]  = useState('');
   const [createGender, setCreateGender]   = useState('Woman');
   const [createAge, setCreateAge]         = useState('Adult');
-  const [createEthnicity, setCreateEth]   = useState('American');
+  const [createEthnicity, setCreateEth]   = useState('Unspecified');
   const [createStyle, setCreateStyle]     = useState('Realistic');
   const [creating, setCreating]           = useState(false);
   const [createGenId, setCreateGenId]     = useState('');
@@ -1402,7 +1402,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                 {[
                                   { label:'Gender',    val: createGender,    set: setCreateGender,   opts:['Woman','Man','Non-binary'] },
                                   { label:'Age',       val: createAge,       set: setCreateAge,      opts:['Young Adult','Adult','Middle Aged'] },
-                                  { label:'Ethnicity', val: createEthnicity, set: setCreateEth,      opts:['American','African American','Asian American','Hispanic','East Asian','South Asian','European','Mixed'] },
+                                  { label:'Ethnicity', val: createEthnicity, set: setCreateEth,      opts:['Unspecified','White','Black','Asian American','East Asian','South East Asian','South Asian','Middle Eastern','Pacific','Hispanic'] },
                                   { label:'Style',     val: createStyle,     set: setCreateStyle,    opts:['Realistic','Cinematic','Natural'] },
                                 ].map(function(f) {
                                   return (
