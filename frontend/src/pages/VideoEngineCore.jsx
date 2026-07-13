@@ -195,6 +195,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [avatarFilter, setAvatarFilter]   = useState('all');
   const [avatarSearch, setAvatarSearch]   = useState('');
   const [avatarPage, setAvatarPage]       = useState(0);
+  const [avatarNiche, setAvatarNiche]     = useState('all');
+  const [showCreateAvatar, setShowCreate] = useState(false);
+  const [createAppearance, setCreateApp]  = useState('');
+  const [createGender, setCreateGender]   = useState('Woman');
+  const [createAge, setCreateAge]         = useState('Adult');
+  const [createEthnicity, setCreateEth]   = useState('American');
+  const [createStyle, setCreateStyle]     = useState('Realistic');
+  const [creating, setCreating]           = useState(false);
+  const [createGenId, setCreateGenId]     = useState('');
+  const [createError, setCreateError]     = useState('');
+  const [createDone, setCreateDone]       = useState(false);
+  const [nicheSuggestions, setNicheSugg]  = useState([]);
   const [heygenBgType, setHeygenBgType]   = useState('color');
   const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
   const [heygenGreenScreen, setHeygenGS]  = useState(false);
@@ -440,6 +452,57 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     } finally {
       setImgClipLoad(false);
     }
+  }
+
+  async function createPhotoAvatar() {
+    if (!createAppearance.trim()) { setCreateError('Describe the avatar appearance first.'); return; }
+    setCreating(true); setCreateError(''); setCreateDone(false); setCreateGenId('');
+    try {
+      const res = await fetch(API + '/api/heygen/create-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'ContentForge ' + createGender + ' Avatar',
+          age: createAge, gender: createGender, ethnicity: createEthnicity,
+          style: createStyle, orientation: 'vertical', pose: 'half_body',
+          appearance: createAppearance.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Avatar creation failed');
+      setCreateGenId(data.generationId);
+      // Poll for completion — photo avatars take 1-3 minutes
+      let attempts = 0;
+      while (attempts < 20) {
+        await new Promise(r => setTimeout(r, 10000));
+        attempts++;
+        const pollRes = await fetch(API + '/api/heygen/avatar-status/' + data.generationId);
+        const pollData = await pollRes.json();
+        if (pollData.status === 'completed' || pollData.avatarId) {
+          setCreateDone(true);
+          setCreating(false);
+          // Reload avatar list to include the new one
+          await loadHeyGenConfig();
+          return;
+        }
+        if (pollData.status === 'failed') throw new Error('Avatar creation failed on HeyGen');
+      }
+      // Timed out — tell user to refresh
+      setCreateDone(true);
+      setCreating(false);
+    } catch(e) {
+      setCreateError(e.message);
+      setCreating(false);
+    }
+  }
+
+  async function loadNicheSuggestions(niche) {
+    if (niche === 'all') { setNicheSugg([]); return; }
+    try {
+      const res = await fetch(API + '/api/heygen/niche-suggestions/' + niche);
+      const data = await res.json();
+      setNicheSugg(data.suggestions || []);
+    } catch(e) { setNicheSugg([]); }
   }
 
   async function generateHeyGenVideo() {
@@ -1204,35 +1267,88 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     )}
                     {heygenLoaded && heygenConfigured && (
                       <div>
-                        <span style={lbl}>Choose avatar</span>
+                        {/* Niche filter tabs */}
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={lbl}>Filter by content niche</span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                            {[
+                              { id:'all',           label:'All',          icon:'👥' },
+                              { id:'home-business', label:'Home Biz',     icon:'🏠' },
+                              { id:'fitness',       label:'Fitness',      icon:'💪' },
+                              { id:'healthy-eating',label:'Healthy',      icon:'🥗' },
+                              { id:'cooking',       label:'Cooking',      icon:'👨‍🍳' },
+                              { id:'lifestyle',     label:'Lifestyle',    icon:'✨' },
+                            ].map(function(tab) {
+                              const active = avatarNiche === tab.id;
+                              return (
+                                <button key={tab.id}
+                                  onClick={function() { setAvatarNiche(tab.id); setAvatarPage(0); loadNicheSuggestions(tab.id); }}
+                                  style={{ padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: '1px solid ' + (active ? ACC : BORD), background: active ? 'rgba(29,158,117,.15)' : 'transparent', color: active ? ACCH : TXT2 }}>
+                                  {tab.icon} {tab.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {nicheSuggestions.length > 0 && (
+                            <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(29,158,117,.06)', border: '1px solid rgba(29,158,117,.15)', borderRadius: 8 }}>
+                              <div style={{ fontSize: 10, color: ACCH, fontWeight: 600, marginBottom: 5 }}>✨ Niche suggestions — click to auto-fill creator</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {nicheSuggestions.map(function(s, i) {
+                                  return (
+                                    <button key={i}
+                                      onClick={function() { setCreateApp(s.appearance); setCreateGender(s.gender); setCreateAge(s.age); setCreateStyle(s.style); setShowCreate(true); }}
+                                      style={{ padding: '5px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, textAlign: 'left', border: '1px solid ' + BORD, background: 'rgba(22,61,106,.3)', color: TXT2, lineHeight: 1.4 }}>
+                                      {s.gender} · {s.age} — {s.appearance.slice(0, 70)}...
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <span style={lbl}>Choose avatar ({heygenAvatars.length} available)</span>
                         {heygenAvatars.length === 0 ? (
                           <div style={{ fontSize: 11, color: TXT3, marginBottom: 10 }}>Loading avatars...</div>
-                        ) : (
-                          (function() {
-                            const PER_PAGE = 12;
-                            const filtered = heygenAvatars.filter(function(a) {
-                              const matchGender = avatarFilter === 'all' || (a.gender && a.gender.toLowerCase() === avatarFilter);
-                              const matchSearch = !avatarSearch.trim() || (a.avatar_name && a.avatar_name.toLowerCase().includes(avatarSearch.toLowerCase()));
-                              return matchGender && matchSearch;
-                            });
-                            const totalPages = Math.ceil(filtered.length / PER_PAGE);
-                            const safePage = Math.min(avatarPage, Math.max(0, totalPages - 1));
-                            const visible = filtered.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
-                            return (
-                              <div>
-                                <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
-                                  <input placeholder="Search..." value={avatarSearch}
-                                    onChange={function(e) { setAvatarSearch(e.target.value); setAvatarPage(0); }}
-                                    style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '4px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
-                                  {['all','male','female'].map(function(g) {
-                                    return (
-                                      <button key={g} onClick={function() { setAvatarFilter(g); setAvatarPage(0); }}
-                                        style={{ padding: '3px 8px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: '1px solid ' + (avatarFilter === g ? ACC : BORD), background: avatarFilter === g ? 'rgba(29,158,117,.15)' : 'transparent', color: avatarFilter === g ? ACCH : TXT2 }}>
-                                        {g === 'all' ? 'All' : g === 'male' ? '♂ Male' : '♀ Female'}
-                                      </button>
-                                    );
-                                  })}
+                        ) : (function() {
+                          const PER_PAGE = 12;
+                          const filtered = heygenAvatars.filter(function(a) {
+                            const matchGender = avatarFilter === 'all' || (a.gender && a.gender.toLowerCase() === avatarFilter);
+                            const matchNiche  = avatarNiche === 'all' || (a.niches && a.niches.includes(avatarNiche));
+                            const searchTerm  = avatarSearch.trim().toLowerCase();
+                            const nicheKwMap  = { 'home':['office','business','blazer','casual','desk'], 'kitchen':['chef','cook','apron','food'], 'fitness':['gym','sport','workout','active'], 'cooking':['chef','apron','cook','food'], 'professional':['blazer','suit','formal','business'], 'casual':['tshirt','t-shirt','sofa','casual','hoodie'] };
+                            let matchSearch = true;
+                            if (searchTerm) {
+                              const nameMatch = a.avatar_name && a.avatar_name.toLowerCase().includes(searchTerm);
+                              const kwMatch   = Object.entries(nicheKwMap).some(function(e) { return e[0].includes(searchTerm) && e[1].some(function(kw) { return a.avatar_name && a.avatar_name.toLowerCase().includes(kw); }); });
+                              matchSearch = nameMatch || kwMatch;
+                            }
+                            return matchGender && matchNiche && matchSearch;
+                          });
+                          const totalPages = Math.ceil(filtered.length / PER_PAGE);
+                          const safePage   = Math.min(avatarPage, Math.max(0, totalPages - 1));
+                          const visible    = filtered.slice(safePage * PER_PAGE, (safePage + 1) * PER_PAGE);
+                          return (
+                            <div style={{ marginBottom: 10 }}>
+                              <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+                                <input placeholder="Search by name or topic (office, chef, casual…)"
+                                  value={avatarSearch}
+                                  onChange={function(e) { setAvatarSearch(e.target.value); setAvatarPage(0); }}
+                                  style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '4px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                                {['all','male','female'].map(function(g) {
+                                  return (
+                                    <button key={g} onClick={function() { setAvatarFilter(g); setAvatarPage(0); }}
+                                      style={{ padding: '3px 7px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: '1px solid ' + (avatarFilter === g ? ACC : BORD), background: avatarFilter === g ? 'rgba(29,158,117,.15)' : 'transparent', color: avatarFilter === g ? ACCH : TXT2 }}>
+                                      {g === 'all' ? 'All' : g === 'male' ? '♂' : '♀'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {filtered.length === 0 ? (
+                                <div style={{ padding: '10px', textAlign: 'center', color: TXT3, fontSize: 10, background: 'rgba(22,61,106,.2)', borderRadius: 8, marginBottom: 8 }}>
+                                  No avatars match — <span style={{ color: ACCH, cursor: 'pointer' }} onClick={function() { setAvatarSearch(''); setAvatarFilter('all'); setAvatarNiche('all'); }}>clear filters</span> or create one below.
                                 </div>
+                              ) : (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 6 }}>
                                   {visible.map(function(a) {
                                     const active = heygenAvatar === a.avatar_id;
@@ -1243,28 +1359,72 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                         <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 5, overflow: 'hidden', marginBottom: 4, background: 'rgba(22,61,106,.4)' }}>
                                           {a.preview_image_url
                                             ? <img src={a.preview_image_url} alt={a.avatar_name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={function(e) { e.target.style.display='none'; }} />
-                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>
-                                          }
+                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👤</div>}
                                         </div>
-                                        <div style={{ fontSize: 8, color: active ? ACCH : TXT2, fontWeight: active ? 600 : 400, lineHeight: 1.2 }}>{a.avatar_name?.slice(0,16) || 'Avatar'}</div>
-                                        {a.gender && <div style={{ fontSize: 7, color: TXT3 }}>{a.gender}</div>}
+                                        <div style={{ fontSize: 8, color: active ? ACCH : TXT2, fontWeight: active ? 600 : 400, lineHeight: 1.2 }}>{a.avatar_name?.slice(0,18) || 'Avatar'}</div>
+                                        {a.niches && <div style={{ fontSize: 7, color: TXT3 }}>{a.niches.slice(0,2).join(' · ')}</div>}
                                       </button>
                                     );
                                   })}
                                 </div>
-                                {totalPages > 1 && (
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <button onClick={function() { setAvatarPage(function(p) { return Math.max(0,p-1); }); }} disabled={safePage===0}
-                                      style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===0?TXT3:TXT2, cursor: safePage===0?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>← Prev</button>
-                                    <span style={{ fontSize: 9, color: TXT3 }}>{safePage+1}/{totalPages} · {filtered.length} avatars</span>
-                                    <button onClick={function() { setAvatarPage(function(p) { return Math.min(totalPages-1,p+1); }); }} disabled={safePage===totalPages-1}
-                                      style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===totalPages-1?TXT3:TXT2, cursor: safePage===totalPages-1?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>Next →</button>
-                                  </div>
-                                )}
+                              )}
+                              {totalPages > 1 && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <button onClick={function() { setAvatarPage(function(p) { return Math.max(0,p-1); }); }} disabled={safePage===0}
+                                    style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===0?TXT3:TXT2, cursor: safePage===0?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>← Prev</button>
+                                  <span style={{ fontSize: 9, color: TXT3 }}>{safePage+1}/{totalPages} · {filtered.length} shown</span>
+                                  <button onClick={function() { setAvatarPage(function(p) { return Math.min(totalPages-1,p+1); }); }} disabled={safePage===totalPages-1}
+                                    style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid '+BORD, background: 'transparent', color: safePage===totalPages-1?TXT3:TXT2, cursor: safePage===totalPages-1?'default':'pointer', fontFamily:'inherit', fontSize:10 }}>Next →</button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Photo Avatar Creator */}
+                        <div style={{ marginBottom: 12, border: '1px solid ' + BORD, borderRadius: 10, overflow: 'hidden' }}>
+                          <button onClick={function() { setShowCreate(function(v) { return !v; }); }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(22,61,106,.4)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>✨ Create custom avatar for your niche</span>
+                            <span style={{ fontSize: 10, color: TXT3 }}>{showCreateAvatar ? '▲' : '▼'}</span>
+                          </button>
+                          {showCreateAvatar && (
+                            <div style={{ padding: '10px 12px', background: 'rgba(15,28,50,.5)' }}>
+                              <div style={{ fontSize: 10, color: TXT3, marginBottom: 8, lineHeight: 1.5 }}>
+                                Describe an avatar and HeyGen generates it. Click a niche tab above for pre-written suggestions, or write your own description. Uses API credits (~$0.50).
                               </div>
-                            );
-                          })()
-                        )}
+                              <span style={lbl}>Appearance description</span>
+                              <textarea value={createAppearance} onChange={function(e) { setCreateApp(e.target.value); }}
+                                placeholder="e.g. Confident professional woman in business casual attire at a bright home office, friendly warm smile, natural lighting"
+                                rows={3}
+                                style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: 8 }} />
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+                                {[
+                                  { label:'Gender',    val: createGender,    set: setCreateGender,   opts:['Woman','Man','Non-binary'] },
+                                  { label:'Age',       val: createAge,       set: setCreateAge,      opts:['Young Adult','Adult','Middle Aged'] },
+                                  { label:'Ethnicity', val: createEthnicity, set: setCreateEth,      opts:['American','African American','Asian American','Hispanic','East Asian','South Asian','European','Mixed'] },
+                                  { label:'Style',     val: createStyle,     set: setCreateStyle,    opts:['Realistic','Cinematic','Natural'] },
+                                ].map(function(f) {
+                                  return (
+                                    <div key={f.label}>
+                                      <div style={{ fontSize: 9, color: TXT3, marginBottom: 3 }}>{f.label}</div>
+                                      <select value={f.val} onChange={function(e) { f.set(e.target.value); }}
+                                        style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 5, padding: '4px 6px', fontSize: 10, color: TXT, fontFamily: 'inherit' }}>
+                                        {f.opts.map(function(o) { return <option key={o}>{o}</option>; })}
+                                      </select>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              {createError && <div style={{ marginBottom: 6, padding: '5px 8px', background: 'rgba(226,75,74,.12)', borderRadius: 5, fontSize: 10, color: '#F09595' }}>{createError}</div>}
+                              {createDone && <div style={{ marginBottom: 6, padding: '5px 8px', background: 'rgba(29,158,117,.1)', border: '1px solid rgba(29,158,117,.2)', borderRadius: 5, fontSize: 10, color: ACCH }}>✅ Created! Click ↻ Refresh Avatars to see it in the grid.</div>}
+                              <button onClick={createPhotoAvatar} disabled={creating || !createAppearance.trim()}
+                                style={{ width: '100%', padding: '8px', borderRadius: 7, border: 'none', background: (creating||!createAppearance.trim()) ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 11, fontWeight: 600, cursor: (creating||!createAppearance.trim()) ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                                {creating ? <><span style={{ width: 10, height: 10, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} /> Creating (1–3 min)…</> : <>✨ Generate custom avatar</>}
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         <span style={lbl}>Choose voice</span>
                         <select value={heygenVoice} onChange={function(e) { setHeygenVoice(e.target.value); }}
