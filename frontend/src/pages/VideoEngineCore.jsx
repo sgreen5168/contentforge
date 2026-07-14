@@ -594,6 +594,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           ctaUrl: ctaUrl.trim(),
           ctaText: ctaText.trim(),
           heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
+          heygenGreenScreen: heygenGreenScreen,
+          heygenBackgroundType: heygenGreenScreen ? 'greenscreen' : heygenBgType,
         }),
       });
       const data = await res.json();
@@ -1146,6 +1148,20 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
               {scenesConfirmed && phraseClips.some(function(c) { return c.status === 'success'; }) && (
                 <div style={{ ...card(), padding: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
+                  {heygenVideoUrl ? (
+                    <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(29,158,117,.1)', border: '1px solid rgba(29,158,117,.25)', borderRadius: 6, fontSize: 10, color: ACCH, lineHeight: 1.5 }}>
+                      🎭 HeyGen avatar ready — will appear as PIP overlay in bottom-right corner of the combined video.
+                      {heygenGreenScreen && ' Green screen mode on — avatar will float transparently over scenes.'}
+                      <button onClick={function() { setHeygenUrl(''); }}
+                        style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(29,158,117,.4)', background: 'transparent', color: TXT3, fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 8, padding: '5px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, fontSize: 10, color: TXT3, lineHeight: 1.4 }}>
+                      No HeyGen avatar attached — combine will use Pexels scenes only. Generate an avatar video in the HeyGen panel below to include it.
+                    </div>
+                  )}
                   <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
                     Merges your {phraseClips.filter(function(c){return c.status==='success';}).length} matched scenes with the voiceover and music into one downloadable MP4.
                   </div>
