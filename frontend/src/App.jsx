@@ -151,7 +151,7 @@ const TUTORIAL_DATA = [
       ],
       tip:'The niche selector shapes your script tone and compliance. "Make Money from Home" scripts avoid income claims and use educational framing automatically.' },
     { title:'Step 2 — Load and choose an avatar',
-      desc:'Browse HeyGen's full avatar library filtered by niche, gender, and keyword.',
+      desc:'Browse HeyGen\'s full avatar library filtered by niche, gender, and keyword.',
       steps:[
         'In the Result tab scroll down to 🎭 HeyGen Avatar Video',
         'Click Load Avatar Options — fetches all avatars from your HeyGen account',
@@ -187,14 +187,14 @@ const TUTORIAL_DATA = [
         'Scroll through the list — it shows all English voices from your HeyGen account',
         'Voice names include gender in brackets — (male) or (female)',
         'Some voices have style descriptors: "Broadcaster", "Lifelike", "Excited"',
-        'Select a voice that matches your avatar's look and your content tone',
+        'Select a voice that matches your avatar\'s look and your content tone',
         'Casual lifestyle content: pick a warm conversational voice',
         'Professional business content: pick a clear confident voice',
         'Your selection is confirmed in the dropdown automatically',
       ],
       tip:'Match voice gender to avatar gender for the most natural result. A deep male voice on a female avatar creates an uncanny mismatch that viewers notice.' },
     { title:'Step 5 — Background removal (green screen)',
-      desc:'Remove the avatar's background so they float transparently over your scene clips.',
+      desc:'Remove the avatar\'s background so they float transparently over your scene clips.',
       steps:[
         'Find the Transparent background (green screen) toggle below the voice dropdown',
         'Click to enable — a green checkmark appears',
@@ -212,7 +212,7 @@ const TUTORIAL_DATA = [
         'The button shows: "Sending to HeyGen… checking for 2.5 min then showing dashboard link"',
         'ContentForge polls HeyGen every 30 seconds for 2.5 minutes',
         'If the video finishes within 2.5 min — it appears automatically with a preview player and download button',
-        'If not finished — a yellow panel appears: ⏳ Video is generating on HeyGen's servers',
+        'If not finished — a yellow panel appears: ⏳ Video is generating on HeyGen\'s servers',
         'Click Open HeyGen Projects → to go directly to app.heygen.com/projects',
         'Your video will be there when HeyGen finishes (10–30 minutes)',
         'Come back to ContentForge — the video URL is not needed for combining (see Step 7)',
@@ -257,7 +257,7 @@ const TUTORIAL_DATA = [
         'FTC RULES: affiliate content must be disclosed — add "this video contains affiliate links" to descriptions',
         'If Claude generates a non-compliant script — edit it directly in the script panel before approving',
       ],
-      tip:'The compliance rules are built into Claude's system prompt as absolute constraints. If a generated script still contains an income claim, regenerate — do not post it as-is.' },
+      tip:'The compliance rules are built into Claude\'s system prompt as absolute constraints. If a generated script still contains an income claim, regenerate — do not post it as-is.' },
   ]},
   { id:'scenepicker', icon:'🎬', label:'Scene Picker & Clips', topics:[
     { title:'How the phrase picker works',
@@ -329,7 +329,7 @@ const TUTORIAL_DATA = [
     { title:'Make Money from Home — compliance rules',
       desc:'This niche has the strictest compliance requirements due to Facebook and FTC advertising policies.',
       steps:[
-        'PROHIBITED: "I made $X", "I earned $300", "I've made $300 so far" — any personal dollar amounts',
+        'PROHIBITED: "I made $X", "I earned $300", "I\'ve made $300 so far" — any personal dollar amounts',
         'PROHIBITED: "guaranteed to earn", "proven income", "you will definitely make money"',
         'REQUIRED: educational third-person framing — "here are ways people earn from home"',
         'REQUIRED: honest, informational content — share what is possible, not personal claims',
@@ -338,7 +338,7 @@ const TUTORIAL_DATA = [
         'FACEBOOK POLICY: content that implies guaranteed financial outcomes can cause page suspension',
         'FTC RULES: if you personally earn from promoting something it must be disclosed',
       ],
-      tip:'The most effective approach: position yourself as someone sharing research and information, not personal results. "I've been looking into ways people earn from home and here's what I found" is compliant and authentic.' },
+      tip:'The most effective approach: position yourself as someone sharing research and information, not personal results. "I\'ve been looking into ways people earn from home and here\'s what I found" is compliant and authentic.' },
     { title:'Hook variety — 6 styles Claude uses',
       desc:'Scripts never start with "Okay" or "Okay so". Claude rotates through 6 different opening styles.',
       steps:[
@@ -346,8 +346,8 @@ const TUTORIAL_DATA = [
         '2. STATEMENT HOOK — "Most people completely overlook this home income idea."',
         '3. NUMBER HOOK — "Three things people are doing from home right now that actually work."',
         '4. CONTRAST HOOK — "Everyone talks about working from home. Nobody explains how to actually start."',
-        '5. EMPATHY HOOK — "If you've ever felt stuck in a job that doesn't fit your life, this is worth watching."',
-        '6. SCENE HOOK — "Picture this — it's 9am, you're still in your kitchen, and you're already working on something you built yourself."',
+        '5. EMPATHY HOOK — "If you\'ve ever felt stuck in a job that doesn\'t fit your life, this is worth watching."',
+        '6. SCENE HOOK — "Picture this — it\'s 9am, you\'re still in your kitchen, and you\'re already working on something you built yourself."',
         'Claude picks whichever style fits the topic and persona best',
         'Regenerating the same topic will often produce a different hook style',
       ],
@@ -664,7 +664,7 @@ function TutorialPage() {
                 {S.topics.map((t,i) => (
                   <button key={i} onClick={() => setTop(i)}
                     style={{ padding:'5px 12px', borderRadius:20, fontSize:11, cursor:'pointer', fontFamily:'inherit',
-                      border: `1px solid ${i===top ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
+                      border: '1px solid ${i===top ? '#1D9E75' : 'rgba(29,158,117,.2)'}',
                       background: i===top ? 'rgba(29,158,117,.15)' : 'transparent',
                       color: i===top ? '#5DCAA5' : '#7BAAA0', fontWeight: i===top ? 500 : 400 }}>
                     {t.title}
