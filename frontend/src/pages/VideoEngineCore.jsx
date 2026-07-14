@@ -421,7 +421,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const voiceData  = await voiceRes.json();
       setHeygenAvatars(avatarData.avatars || []);
       setHeygenVoices(voiceData.voices || []);
-      if (avatarData.avatars?.[0]) setHeygenAvatar(avatarData.avatars[0].avatar_id);
+      // Do NOT auto-select — user must explicitly choose an avatar
       if (voiceData.voices?.[0]) setHeygenVoice(voiceData.voices[0].voice_id);
     } catch(e) {
       console.warn('HeyGen config load failed:', e.message);
@@ -1497,6 +1497,52 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           </div>
                         </button>
 
+                        {/* Pre-generation preview — avatar + script */}
+                        {heygenAvatar && (function() {
+                          const selectedAvatar = heygenAvatars.find(function(a) { return a.avatar_id === heygenAvatar; });
+                          const scriptText = job?.result?.script?.fullScript || '';
+                          if (!selectedAvatar) return null;
+                          return (
+                            <div style={{ marginBottom: 12, border: '1px solid rgba(29,158,117,.25)', borderRadius: 10, overflow: 'hidden' }}>
+                              <div style={{ padding: '8px 12px', background: 'rgba(29,158,117,.08)', fontSize: 10, fontWeight: 600, color: ACCH }}>
+                                ✅ Preview — this avatar will speak this script
+                              </div>
+                              <div style={{ display: 'flex', gap: 0 }}>
+                                {/* Avatar image */}
+                                <div style={{ width: 90, flexShrink: 0, background: 'rgba(22,61,106,.4)' }}>
+                                  {selectedAvatar.preview_image_url ? (
+                                    <img src={selectedAvatar.preview_image_url} alt={selectedAvatar.avatar_name}
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
+                                  ) : (
+                                    <div style={{ width: '100%', height: '100%', minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>👤</div>
+                                  )}
+                                </div>
+                                {/* Script preview */}
+                                <div style={{ flex: 1, padding: '10px 12px' }}>
+                                  <div style={{ fontSize: 10, fontWeight: 600, color: TXT, marginBottom: 4 }}>{selectedAvatar.avatar_name}</div>
+                                  <div style={{ fontSize: 9, color: TXT3, marginBottom: 6 }}>
+                                    {selectedAvatar.gender && <span style={{ marginRight: 6 }}>{selectedAvatar.gender}</span>}
+                                    {selectedAvatar.niches && <span>{selectedAvatar.niches.slice(0,2).join(' · ')}</span>}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: TXT2, lineHeight: 1.6, maxHeight: 100, overflow: 'hidden' }}>
+                                    {scriptText.slice(0, 220)}{scriptText.length > 220 ? '…' : ''}
+                                  </div>
+                                  <button onClick={function() { setHeygenAvatar(''); }}
+                                    style={{ marginTop: 8, padding: '3px 10px', borderRadius: 5, border: '1px solid rgba(226,75,74,.4)', background: 'transparent', color: '#F09595', fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    ✕ Change avatar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {!heygenAvatar && (
+                          <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 8, fontSize: 11, color: '#FAC775', lineHeight: 1.5 }}>
+                            ⚠ No avatar selected — click an avatar card above before generating. The Generate button will activate once you choose one.
+                          </div>
+                        )}
+
                         <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
                           This will submit your script to HeyGen for Avatar IV generation. It takes 10–30 minutes. ContentForge will check for 2.5 minutes, then give you a direct link to your HeyGen projects page where it will appear when ready. Uses your HeyGen API balance (~$0.50–$2 depending on length).
                         </div>
@@ -1541,7 +1587,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
                               Submitting to HeyGen… checking for 2.5 min then showing dashboard link
                             </>
-                          ) : <>🎭 Generate Avatar IV Video</>}
+                          ) : heygenAvatar ? <>🎭 Generate Avatar IV Video</> : <>Select an avatar above first</>}
                         </button>
                       </div>
                     )}
