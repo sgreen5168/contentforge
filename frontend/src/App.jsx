@@ -664,7 +664,7 @@ function TutorialPage() {
                 {S.topics.map((t,i) => (
                   <button key={i} onClick={() => setTop(i)}
                     style={{ padding:'5px 12px', borderRadius:20, fontSize:11, cursor:'pointer', fontFamily:'inherit',
-                      border: '1px solid ${i===top ? '#1D9E75' : 'rgba(29,158,117,.2)'}',
+                      border: `1px solid ${i===top ? '#1D9E75' : 'rgba(29,158,117,.2)'}`,
                       background: i===top ? 'rgba(29,158,117,.15)' : 'transparent',
                       color: i===top ? '#5DCAA5' : '#7BAAA0', fontWeight: i===top ? 500 : 400 }}>
                     {t.title}
