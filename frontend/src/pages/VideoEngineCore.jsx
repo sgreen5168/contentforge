@@ -1705,27 +1705,105 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       {/* HISTORY TAB */}
       {tab === 'history' && (
         <div style={{ maxWidth: 700 }}>
+
+          {/* Saved auto-assembled videos section */}
+          {jobs.filter(function(j) { return j.result && j.result.finalVideoUrl && j.result.autoAssembled; }).length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: ACCH, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                ⚡ Saved Auto-Assembled Videos
+              </div>
+              {jobs.filter(function(j) { return j.result && j.result.finalVideoUrl && j.result.autoAssembled; }).map(function(j, i) {
+                const topic = (j.data && j.data.topic) || 'Auto Video';
+                const date  = j.result && j.result.savedAt ? new Date(j.result.savedAt).toLocaleString() : (j.createdAt ? new Date(j.createdAt).toLocaleString() : '');
+                const ratio = j.result && j.result.aspectRatio || '';
+                const clips = j.result && j.result.clipsCount || 0;
+                return (
+                  <div key={i} style={{ ...card(), marginBottom: 8, border: '1px solid rgba(29,158,117,.25)' }}>
+                    <div style={{ padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: ACC, marginTop: 3 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: TXT, marginBottom: 2 }}>{topic}</div>
+                          <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
+                            {date} · {ratio} · {clips} scenes · auto-assembled
+                          </div>
+                          {j.result && j.result.script && j.result.script.hook && (
+                            <div style={{ fontSize: 11, color: TXT2, marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
+                              "{j.result.script.hook.slice(0, 100)}{j.result.script.hook.length > 100 ? '...' : ''}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <a href={j.result.finalVideoUrl} download={'contentforge-' + (ratio || '').replace(':','-') + '-' + j.id + '.mp4'}
+                          style={{ flex: 1, display: 'block', textAlign: 'center', padding: '7px', borderRadius: 8, background: ACC, color: 'white', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>
+                          ⬇ Download
+                        </a>
+                        <button onClick={function() { setJob(j); setTab('result'); }}
+                          style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          View
+                        </button>
+                        <button onClick={function() {
+                          if (!window.confirm('Delete this video? This cannot be undone.')) return;
+                          fetch(API + '/api/video/job/' + j.id, { method: 'DELETE' })
+                            .then(function() { loadJobs(); })
+                            .catch(function(e) { alert('Delete failed: ' + e.message); });
+                        }}
+                          style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          🗑 Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* All jobs history */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: TXT3, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            All Sessions
+          </div>
           {jobs.length === 0 && (
             <div style={{ ...card(), textAlign: 'center', padding: 40 }}>
               <div style={{ fontSize: 13, color: TXT2 }}>No videos generated yet</div>
             </div>
           )}
           {jobs.map(function(j, i) {
-            const topic = (j.data && j.data.topic) || 'Video';
-            const date = j.createdAt || j.created_at;
-            const dateStr = date ? new Date(date).toLocaleDateString() : 'Unknown date';
+            const topic  = (j.data && j.data.topic) || 'Video';
+            const date   = j.createdAt || j.created_at;
+            const dateStr = date ? new Date(date).toLocaleString() : 'Unknown date';
+            const isAuto = j.result && j.result.autoAssembled;
+            const hasFinalVideo = j.result && j.result.finalVideoUrl;
             return (
-              <div key={i} style={card()}>
+              <div key={i} style={{ ...card(), marginBottom: 6 }}>
                 <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: j.status === 'completed' ? ACC : j.status === 'failed' ? '#E24B4A' : '#F5A623' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: TXT }}>{topic}</div>
-                    <div style={{ fontSize: 11, color: TXT3 }}>{dateStr} — {j.status}</div>
+                    <div style={{ fontSize: 12, color: TXT }}>{topic} {isAuto && <span style={{ fontSize: 9, color: ACCH, marginLeft: 4 }}>⚡ auto</span>}</div>
+                    <div style={{ fontSize: 10, color: TXT3 }}>{dateStr} · {j.status}</div>
                   </div>
-                  <button onClick={function() { setJob(j); setTab('result'); }}
-                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    View
-                  </button>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {hasFinalVideo && (
+                      <a href={j.result.finalVideoUrl} download="contentforge-video.mp4"
+                        style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, background: ACC, color: 'white', textDecoration: 'none' }}>
+                        ⬇
+                      </a>
+                    )}
+                    <button onClick={function() { setJob(j); setTab('result'); }}
+                      style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      View
+                    </button>
+                    <button onClick={function() {
+                      if (!window.confirm('Delete this session?')) return;
+                      fetch(API + '/api/video/job/' + j.id, { method: 'DELETE' })
+                        .then(function() { loadJobs(); })
+                        .catch(function(e) { console.warn('Delete failed:', e.message); });
+                    }}
+                      style={{ fontSize: 10, padding: '3px 8px', borderRadius: 5, border: '1px solid rgba(226,75,74,.2)', background: 'transparent', color: '#F09595', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
             );
