@@ -161,7 +161,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const audioPreviewRef = React.useRef(null);
   const creatorPanelRef = React.useRef(null);
   const [durMode, setDurMode]   = useState('short');
-  const [cropStyle, setCropStyle] = useState('center');
+  const [cropStyle, setCropStyle]     = useState('center');
+  const [autoAssemble, setAutoAssemble] = useState(false);
+  const [autoResult, setAutoResult]   = useState(null);
   const [niche, setNiche]         = useState('');
   const [subNiche, setSubNiche]   = useState('');
   const [showNichePanel, setShowNichePanel] = useState(false);
@@ -296,7 +298,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     try {
       const res = await fetch(API + '/api/video/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputMode:'topic', topic, videoType, persona, duration, platforms, voice, niche, subNiche }),
+        body: JSON.stringify({ inputMode:'topic', topic, videoType, persona, duration, platforms, voice, niche, subNiche, autoAssemble, aspectRatio }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
@@ -956,6 +958,58 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
               </div>
             </div>
 
+            {/* Auto-assembly mode toggle */}
+            <div style={card()}>
+              <div style={hdr()}>
+                <span>⚡ Auto-assemble mode</span>
+                <span style={{ fontSize: 10, color: TXT3 }}>No manual scene picking needed</span>
+              </div>
+              <div style={body()}>
+                <button onClick={function() { setAutoAssemble(function(v) { return !v; }); }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', border: '1px solid ' + (autoAssemble ? '#1D9E75' : 'rgba(29,158,117,.2)'), background: autoAssemble ? 'rgba(29,158,117,.1)' : 'transparent', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, background: autoAssemble ? '#1D9E75' : 'transparent', border: '2px solid ' + (autoAssemble ? '#1D9E75' : 'rgba(29,158,117,.4)'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {autoAssemble && <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: autoAssemble ? '#5DCAA5' : TXT }}>
+                      {autoAssemble ? '⚡ Auto-assemble ON — one click creates the full video' : 'Enable auto-assemble'}
+                    </div>
+                    <div style={{ fontSize: 10, color: TXT3, marginTop: 2, lineHeight: 1.4 }}>
+                      {autoAssemble
+                        ? 'ContentForge will write the script, generate voiceover, extract scene keywords, fetch Pexels clips, and assemble the final ' + aspectRatio + ' video automatically.'
+                        : 'Turn on to skip manual scene picking — script, voiceover, clips and final video all generated in one step.'}
+                    </div>
+                  </div>
+                </button>
+
+                {autoAssemble && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[
+                      { icon:'✍️', label:'Script', desc:'Claude writes your script from the topic' },
+                      { icon:'🎙', label:'Voiceover', desc:'OpenAI TTS reads the script aloud' },
+                      { icon:'🔍', label:'Keywords', desc:'Claude extracts a Pexels search term per sentence' },
+                      { icon:'🎬', label:'Clips', desc:'Pexels stock clips fetched for each keyword' },
+                      { icon:'🎞', label:'Assembly', desc:'FFmpeg syncs clips to voiceover duration + trims to ' + aspectRatio },
+                      { icon:'⬇', label:'Download', desc:'Final MP4 ready to post — no editing needed' },
+                    ].map(function(step, i) {
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 8px', borderRadius: 6, background: 'rgba(29,158,117,.04)' }}>
+                          <span style={{ fontSize: 14, flexShrink: 0 }}>{step.icon}</span>
+                          <div>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: TXT, marginRight: 6 }}>{step.label}</span>
+                            <span style={{ fontSize: 10, color: TXT3 }}>{step.desc}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div style={{ marginTop: 4, padding: '6px 8px', background: 'rgba(245,166,35,.06)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 6, fontSize: 10, color: '#FAC775', lineHeight: 1.4 }}>
+                      ⏱ Takes 2–4 minutes end to end. The video downloads automatically when ready.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {error && (
               <div style={{ padding: '10px 12px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 10, color: '#F09595', fontSize: 12, marginBottom: 10 }}>
                 {error}
@@ -963,8 +1017,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
             )}
 
             <button onClick={generate} disabled={loading || !topic.trim()}
-              style={{ width: '100%', padding: 13, borderRadius: 10, border: 'none', background: ACC, color: 'white', fontSize: 15, fontWeight: 700, cursor: loading || !topic.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: loading || !topic.trim() ? 0.5 : 1 }}>
-              {loading ? 'Queuing...' : 'Generate Video'}
+              style={{ width: '100%', padding: 13, borderRadius: 10, border: 'none', background: autoAssemble ? '#1D9E75' : ACC, color: 'white', fontSize: 15, fontWeight: 700, cursor: loading || !topic.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: loading || !topic.trim() ? 0.5 : 1 }}>
+              {loading ? 'Working...' : autoAssemble ? '⚡ Generate + Assemble Full Video' : 'Generate Video'}
             </button>
           </div>
         </div>
@@ -995,6 +1049,39 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   <div style={{ fontSize: 12, color: TXT2 }}>{job.step || 'Waiting...'}</div>
                 </div>
               </div>
+
+              {/* Auto-assembled video result */}
+              {job.result && job.result.autoAssembled && job.result.finalVideoUrl && (
+                <div style={{ ...card(), border: '1px solid rgba(29,158,117,.4)', background: 'rgba(29,158,117,.06)' }}>
+                  <div style={hdr()}>
+                    <span>⚡ Auto-assembled video ready</span>
+                    <span style={{ fontSize: 10, color: '#5DCAA5' }}>{job.result.aspectRatio} · {job.result.clipsCount} scenes</span>
+                  </div>
+                  <div style={body()}>
+                    <div style={{ marginBottom: 12, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
+                      Your complete video was assembled automatically — script, voiceover, {job.result.clipsCount} Pexels scenes, and audio sync. Ready to download and post.
+                    </div>
+                    <a href={job.result.finalVideoUrl} download={'contentforge-' + (job.result.aspectRatio || '').replace(':','-') + '.mp4'}
+                      style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none', marginBottom: 8 }}>
+                      ⬇ Download Auto-Assembled Video
+                    </a>
+                    <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
+                      You can also scroll down to add a HeyGen avatar overlay, or use the manual scene picker below to customise individual clips.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {job.result && job.result.autoAssembleFailed && (
+                <div style={{ ...card(), border: '1px solid rgba(245,166,35,.3)', background: 'rgba(245,166,35,.05)' }}>
+                  <div style={hdr()}>⚠ Auto-assembly couldn't complete</div>
+                  <div style={body()}>
+                    <div style={{ fontSize: 11, color: '#FAC775', lineHeight: 1.5, marginBottom: 8 }}>
+                      {job.step || 'Auto-assembly encountered an issue.'} Your script and voiceover are ready — use the manual scene picker below to select clips and combine manually.
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {job.result && job.result.script && (
                 <div style={card()}>
