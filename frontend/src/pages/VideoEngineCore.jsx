@@ -213,6 +213,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenBgType, setHeygenBgType]   = useState('color');
   const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
   const [heygenGreenScreen, setHeygenGS]  = useState(false);
+  const [avatarLayout, setAvatarLayout]   = useState('');      // '' until user picks — no default
+  const [avatarCaptions, setAvatarCaps]   = useState(false);   // gold caption toggle, off by default
   const [createBgType, setCreateBgType]   = useState('color');
   const [createBgUrl, setCreateBgUrl]     = useState('');
   const [imgToClipUrl, setImgToClipUrl]   = useState('');
@@ -390,6 +392,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
           heygenBackgroundType: heygenGreenScreen ? 'greenscreen' : heygenBgType,
           heygenGreenScreen: heygenGreenScreen,
+          avatarLayout: avatarLayout,
+          avatarCaptions: avatarCaptions,
+          avatarCaptionWords: avatarCaptions ? clips.map(c => (sceneKeywords[c.phrase] || c.pexelsQuery || '')) : [],
         }),
       });
       if (!res.ok) {
@@ -598,6 +603,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           heygenVideoUrl: heygenVideoUrl ? heygenVideoUrl.trim() : '',
           heygenGreenScreen: heygenGreenScreen,
           heygenBackgroundType: heygenGreenScreen ? 'greenscreen' : heygenBgType,
+          avatarLayout: avatarLayout,
+          avatarCaptions: avatarCaptions,
+          avatarCaptionWords: avatarCaptions ? clips.map(c => (sceneKeywords[c.phrase] || c.pexelsQuery || '')) : [],
         }),
       });
       const data = await res.json();
@@ -1298,13 +1306,51 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 <div style={{ ...card(), padding: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
                   {heygenVideoUrl ? (
-                    <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(29,158,117,.1)', border: '1px solid rgba(29,158,117,.25)', borderRadius: 6, fontSize: 10, color: ACCH, lineHeight: 1.5 }}>
-                      🎭 HeyGen avatar ready — will appear as PIP overlay in bottom-right corner of the combined video.
-                      {heygenGreenScreen && ' Green screen mode on — avatar will float transparently over scenes.'}
-                      <button onClick={function() { setHeygenUrl(''); }}
-                        style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(29,158,117,.4)', background: 'transparent', color: TXT3, fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Remove
-                      </button>
+                    <div>
+                      <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(29,158,117,.1)', border: '1px solid rgba(29,158,117,.25)', borderRadius: 6, fontSize: 10, color: ACCH, lineHeight: 1.5 }}>
+                        🎭 Avatar attached — it will read your script in front of your Pexels scenes, combined into one MP4 you download here (HeyGen's site is bypassed).
+                        {heygenGreenScreen ? ' Green screen ON — avatar floats with no background box.' : ' Tip: turn on green screen in the HeyGen panel for a clean cut-out.'}
+                        <button onClick={function() { setHeygenUrl(''); }}
+                          style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(29,158,117,.4)', background: 'transparent', color: TXT3, fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Remove
+                        </button>
+                      </div>
+
+                      <div style={{ marginBottom: 10 }}>
+                        <span style={lbl}>Avatar layout — pick one before combining</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          {[
+                            { id:'presenter', title:'Presenter', desc:'Large avatar, scene behind', icon:'🧍' },
+                            { id:'corner',    title:'Corner box', desc:'Small avatar, bottom-right', icon:'⬛' },
+                          ].map(function(opt) {
+                            var active = avatarLayout === opt.id;
+                            return (
+                              <button key={opt.id} onClick={function() { setAvatarLayout(opt.id); }}
+                                style={{ textAlign: 'left', padding: '10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                                  border: active ? '2px solid ' + ACC : '1px solid ' + BORD,
+                                  background: active ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)' }}>
+                                <div style={{ fontSize: 16, marginBottom: 3 }}>{opt.icon}</div>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: active ? ACCH : TXT }}>{opt.title}{active ? ' ✓' : ''}</div>
+                                <div style={{ fontSize: 10, color: TXT3, marginTop: 1, lineHeight: 1.3 }}>{opt.desc}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {!avatarLayout && (
+                          <div style={{ fontSize: 10, color: '#FAC775', marginTop: 6 }}>⚠ Pick a layout above — the combine button stays locked until you choose.</div>
+                        )}
+                      </div>
+
+                      <div onClick={function() { setAvatarCaps(function(v){return !v;}); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, border: '1px solid ' + BORD, cursor: 'pointer' }}>
+                        <div style={{ width: 36, height: 20, borderRadius: 10, background: avatarCaptions ? ACC : 'rgba(255,255,255,.1)', position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+                          <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 2, left: avatarCaptions ? 18 : 2, transition: 'left .2s' }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, color: TXT, fontWeight: 500 }}>Gold keyword captions</div>
+                          <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.3 }}>Timed keyword words appear at the bottom as the script is read</div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ marginBottom: 8, padding: '5px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, fontSize: 10, color: TXT3, lineHeight: 1.4 }}>
@@ -1367,12 +1413,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     </div>
                   )}
 
-                  <button onClick={assembleAndDownload} disabled={assembling}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none', background: assembling ? 'rgba(29,158,117,.4)' : ACC, color: 'white', fontSize: 13, fontWeight: 600, cursor: assembling ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {(function() {
+                    var needsLayout = !!heygenVideoUrl && !avatarLayout;
+                    var locked = assembling || needsLayout;
+                    return (
+                  <button onClick={assembleAndDownload} disabled={locked}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: 'none', background: locked ? 'rgba(29,158,117,.4)' : ACC, color: 'white', fontSize: 13, fontWeight: 600, cursor: locked ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     {assembling ? (
                       <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />Combining clips and audio…</>
-                    ) : <>⬇ Combine &amp; Download Final Video</>}
+                    ) : needsLayout ? <>Pick an avatar layout first</> : heygenVideoUrl ? <>⬇ Combine avatar + scenes → Download</> : <>⬇ Combine &amp; Download Final Video</>}
                   </button>
+                    );
+                  })()}
 
                   <div style={{ marginTop: 14, padding: 12, background: 'rgba(255,0,0,.05)', border: '1px solid rgba(255,0,0,.2)', borderRadius: 10 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Publish to YouTube</div>
