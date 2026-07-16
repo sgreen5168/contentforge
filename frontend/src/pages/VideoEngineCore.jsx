@@ -1051,7 +1051,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
               </div>
 
               {/* Auto-assembled video result */}
-              {job.result && job.result.autoAssembled && job.result.finalVideoUrl && (
+              {job.result && job.result.autoAssembled && (
                 <div style={{ ...card(), border: '1px solid rgba(29,158,117,.4)', background: 'rgba(29,158,117,.06)' }}>
                   <div style={hdr()}>
                     <span>⚡ Auto-assembled video ready</span>
@@ -1061,35 +1061,60 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ marginBottom: 12, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
                       Your complete video was assembled automatically — script, voiceover, {job.result.clipsCount} Pexels scenes, and audio sync. Ready to download and post.
                     </div>
-                    <button onClick={function() {
-                        const url = job.result.finalVideoUrl;
-                        const filename = 'contentforge-' + (job.result.aspectRatio || '9-16').replace(':','-') + '.mp4';
-                        fetch(url)
-                          .then(function(r) { return r.blob(); })
-                          .then(function(blob) {
-                            const blobUrl = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = blobUrl;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(blobUrl);
-                          })
-                          .catch(function(e) {
-                            // Fallback: open in new tab if fetch fails (CORS)
-                            window.open(url, '_blank');
-                          });
-                      }}
-                      style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 12px rgba(29,158,117,.4)' }}>
-                      ⬇ Download Auto-Assembled Video
-                    </button>
-                    <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                      <a href={job.result.finalVideoUrl} target="_blank" rel="noreferrer"
-                        style={{ fontSize: 10, color: TXT3, textDecoration: 'underline' }}>
-                        Or open in new tab if download doesn't start
-                      </a>
-                    </div>
+                    {job.result.finalVideoUrl ? (
+                      <div>
+                        <button onClick={function() {
+                            const raw = job.result.finalVideoUrl;
+                            const url = raw.startsWith('/') ? (API + raw) : raw;
+                            const filename = 'contentforge-' + (job.result.aspectRatio || '9-16').replace(':','-') + '.mp4';
+                            fetch(url)
+                              .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+                              .then(function(blob) {
+                                const blobUrl = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = blobUrl; a.download = filename;
+                                document.body.appendChild(a); a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(blobUrl);
+                              })
+                              .catch(function() { window.open(url, '_blank'); });
+                          }}
+                          style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 12px rgba(29,158,117,.4)' }}>
+                          ⬇ Download Auto-Assembled Video
+                        </button>
+                        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                          <a href={job.result.finalVideoUrl.startsWith('/') ? API + job.result.finalVideoUrl : job.result.finalVideoUrl}
+                            target="_blank" rel="noreferrer"
+                            style={{ fontSize: 10, color: TXT3, textDecoration: 'underline' }}>
+                            Or open in new tab if download doesn't start
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '14px', borderRadius: 10, background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.3)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 12, color: '#FAC775', marginBottom: 8 }}>
+                          ⏳ Video assembled — preparing download link...
+                        </div>
+                        <button onClick={function() {
+                            const url = API + '/api/video/download/' + job.id;
+                            const filename = 'contentforge-' + (job.result.aspectRatio || '9-16').replace(':','-') + '.mp4';
+                            fetch(url)
+                              .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+                              .then(function(blob) {
+                                const blobUrl = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = blobUrl; a.download = filename;
+                                document.body.appendChild(a); a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(blobUrl);
+                              })
+                              .catch(function(e) { alert('Download failed: ' + e.message + '. Try refreshing the page.'); });
+                          }}
+                          style={{ width: '100%', padding: '12px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(29,158,117,.4)' }}>
+                          ⬇ Download Video Now
+                        </button>
+                      </div>
+                    )}
                     <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
                       You can also scroll down to add a HeyGen avatar overlay, or use the manual scene picker below to customise individual clips.
                     </div>
