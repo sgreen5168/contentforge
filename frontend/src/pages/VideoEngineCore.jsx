@@ -1061,10 +1061,35 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ marginBottom: 12, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
                       Your complete video was assembled automatically — script, voiceover, {job.result.clipsCount} Pexels scenes, and audio sync. Ready to download and post.
                     </div>
-                    <a href={job.result.finalVideoUrl} download={'contentforge-' + (job.result.aspectRatio || '').replace(':','-') + '.mp4'}
-                      style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none', marginBottom: 8 }}>
+                    <button onClick={function() {
+                        const url = job.result.finalVideoUrl;
+                        const filename = 'contentforge-' + (job.result.aspectRatio || '9-16').replace(':','-') + '.mp4';
+                        fetch(url)
+                          .then(function(r) { return r.blob(); })
+                          .then(function(blob) {
+                            const blobUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(blobUrl);
+                          })
+                          .catch(function(e) {
+                            // Fallback: open in new tab if fetch fails (CORS)
+                            window.open(url, '_blank');
+                          });
+                      }}
+                      style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px', borderRadius: 10, background: '#1D9E75', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 12px rgba(29,158,117,.4)' }}>
                       ⬇ Download Auto-Assembled Video
-                    </a>
+                    </button>
+                    <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                      <a href={job.result.finalVideoUrl} target="_blank" rel="noreferrer"
+                        style={{ fontSize: 10, color: TXT3, textDecoration: 'underline' }}>
+                        Or open in new tab if download doesn't start
+                      </a>
+                    </div>
                     <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
                       You can also scroll down to add a HeyGen avatar overlay, or use the manual scene picker below to customise individual clips.
                     </div>
@@ -1116,17 +1141,29 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <input style={inp}
                       placeholder="https://example.com/your-photo.jpg"
                       value={imgToClipUrl}
-                      onChange={function(e) { setImgToClipUrl(e.target.value); setImgClipErr(''); }} />
+                      onChange={function(e) {
+                        // Sanitise pasted URLs — strip invisible chars, smart quotes
+                        const raw = e.target.value;
+                        const cleaned = raw
+                          .replace(/[​-‍﻿ ]/g, '') // zero-width + nbsp
+                          .replace(/[‘’“”]/g, '')   // smart quotes
+                          .trim();
+                        setImgToClipUrl(cleaned);
+                        setImgClipErr('');
+                      }} />
                     {imgToClipError && (
                       <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(226,75,74,.12)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>
                         {imgToClipError}
                       </div>
                     )}
                     <button onClick={convertImageToClip} disabled={imgToClipLoading || !imgToClipUrl.trim()}
-                      style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none',
-                        background: (imgToClipLoading || !imgToClipUrl.trim()) ? 'rgba(29,158,117,.3)' : ACC,
-                        color: 'white', fontSize: 12, fontWeight: 600, cursor: (imgToClipLoading || !imgToClipUrl.trim()) ? 'default' : 'pointer', fontFamily: 'inherit',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      style={{ width: '100%', padding: '11px', borderRadius: 8, border: 'none',
+                        background: (imgToClipLoading || !imgToClipUrl.trim()) ? 'rgba(29,158,117,.25)' : '#1D9E75',
+                        boxShadow: (!imgToClipLoading && imgToClipUrl.trim()) ? '0 2px 12px rgba(29,158,117,.45)' : 'none',
+                        color: (imgToClipLoading || !imgToClipUrl.trim()) ? 'rgba(255,255,255,.5)' : 'white',
+                        fontSize: 13, fontWeight: 700, cursor: (imgToClipLoading || !imgToClipUrl.trim()) ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        transition: 'all 0.2s ease' }}>
                       {imgToClipLoading ? (
                         <>
                           <span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} />
@@ -1735,10 +1772,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <a href={j.result.finalVideoUrl} download={'contentforge-' + (ratio || '').replace(':','-') + '-' + j.id + '.mp4'}
-                          style={{ flex: 1, display: 'block', textAlign: 'center', padding: '7px', borderRadius: 8, background: ACC, color: 'white', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>
+                        <button onClick={function() {
+                            const url = j.result.finalVideoUrl;
+                            const filename = 'contentforge-' + (ratio || '9-16').replace(':','-') + '-' + j.id + '.mp4';
+                            fetch(url).then(function(r) { return r.blob(); }).then(function(blob) {
+                              const blobUrl = URL.createObjectURL(blob);
+                              const a = document.createElement('a'); a.href = blobUrl; a.download = filename;
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(blobUrl);
+                            }).catch(function() { window.open(url, '_blank'); });
+                          }}
+                          style={{ flex: 1, padding: '7px', borderRadius: 8, background: ACC, color: 'white', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                           ⬇ Download
-                        </a>
+                        </button>
                         <button onClick={function() { setJob(j); setTab('result'); }}
                           style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                           View
