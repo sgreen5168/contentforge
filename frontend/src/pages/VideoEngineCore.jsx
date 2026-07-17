@@ -192,6 +192,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenGenerating, setHeygenGen]  = useState(false);
   const [heygenVideoId, setHeygenVideoId] = useState('');
   const [heygenVideoUrl, setHeygenUrl]    = useState('');
+  const [heygenChecking, setHeygenCheck]  = useState(false);
+  const [manualHeygenUrl, setManualUrl]   = useState('');
   const [heygenError, setHeygenError]     = useState('');
   const [heygenConfigured, setHeygenConf] = useState(false);
   const [heygenLoaded, setHeygenLoaded]   = useState(false);
@@ -517,6 +519,37 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const data = await res.json();
       setNicheSugg(data.suggestions || []);
     } catch(e) { setNicheSugg([]); }
+  }
+
+  // Re-check a HeyGen video that was still generating when polling timed out
+  async function checkHeyGenReady(videoId) {
+    if (!videoId) return;
+    setHeygenCheck(true);
+    try {
+      const res = await fetch(API + '/api/heygen/video/' + videoId);
+      const data = await res.json();
+      if (data.status === 'completed' && data.videoUrl) {
+        setHeygenUrl(data.videoUrl);
+        setHeygenError('');
+      } else if (data.status === 'failed') {
+        setHeygenError('HeyGen generation failed for this video.');
+      } else {
+        setHeygenError('READY_CHECK_STILL:' + videoId);
+      }
+    } catch(e) {
+      setHeygenError('Could not check status: ' + e.message);
+    } finally {
+      setHeygenCheck(false);
+    }
+  }
+
+  // Attach a manually pasted HeyGen video URL
+  function attachManualHeyGenUrl() {
+    var u = (manualHeygenUrl || '').trim();
+    if (!u) return;
+    setHeygenUrl(u);
+    setHeygenError('');
+    setManualUrl('');
   }
 
   async function generateHeyGenVideo() {
@@ -1764,15 +1797,42 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           This will submit your script to HeyGen for Avatar IV generation. It takes 10–30 minutes. ContentForge will check for 2.5 minutes, then give you a direct link to your HeyGen projects page where it will appear when ready. Uses your HeyGen API balance (~$0.50–$2 depending on length).
                         </div>
 
-                        {heygenError && heygenError.startsWith('READY_CHECK:') ? (
+                        {heygenError && (heygenError.startsWith('READY_CHECK:') || heygenError.startsWith('READY_CHECK_STILL:')) ? (
                           <div style={{ marginBottom: 10, padding: '10px 12px', background: 'rgba(245,166,35,.08)', border: '1px solid rgba(245,166,35,.25)', borderRadius: 8, fontSize: 11, color: '#FAC775', lineHeight: 1.6 }}>
                             <div style={{ fontWeight: 600, marginBottom: 6 }}>⏳ Video is generating on HeyGen's servers</div>
-                            <div style={{ marginBottom: 8 }}>HeyGen typically takes 10–30 minutes for Avatar IV videos. Your video is in the queue and will appear in your HeyGen projects when ready.</div>
-                            <a href={'https://app.heygen.com/projects'} target="_blank" rel="noreferrer"
-                              style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 6, background: 'rgba(245,166,35,.2)', color: '#FAC775', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
-                              Open HeyGen Projects →
-                            </a>
-                            <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(250,199,117,.6)' }}>Video ID: {heygenError.replace('READY_CHECK:', '')}</div>
+                            <div style={{ marginBottom: 8 }}>HeyGen typically takes 10–30 minutes. When it's done, click the button below to pull it in automatically — no need to visit HeyGen's download page.</div>
+
+                            {(function() {
+                              var vid = heygenError.replace('READY_CHECK_STILL:', '').replace('READY_CHECK:', '');
+                              return (
+                                <div>
+                                  <button onClick={function() { checkHeyGenReady(vid); }} disabled={heygenChecking}
+                                    style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none', background: heygenChecking ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 12, fontWeight: 600, cursor: heygenChecking ? 'default' : 'pointer', fontFamily: 'inherit', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    {heygenChecking ? <><span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'cf-spin 0.8s linear infinite' }} /> Checking HeyGen…</> : <>✓ Check if my video is ready now</>}
+                                  </button>
+                                  {heygenError.startsWith('READY_CHECK_STILL:') && (
+                                    <div style={{ fontSize: 10, color: 'rgba(250,199,117,.8)', marginBottom: 8 }}>Still rendering — give it a few more minutes, then check again.</div>
+                                  )}
+                                  <a href={'https://app.heygen.com/projects'} target="_blank" rel="noreferrer"
+                                    style={{ display: 'inline-block', padding: '5px 12px', borderRadius: 6, background: 'rgba(245,166,35,.15)', color: '#FAC775', textDecoration: 'none', fontSize: 10, fontWeight: 600, marginBottom: 10 }}>
+                                    Open HeyGen Projects →
+                                  </a>
+                                  <div style={{ borderTop: '1px solid rgba(250,199,117,.2)', paddingTop: 8 }}>
+                                    <div style={{ fontSize: 10, color: 'rgba(250,199,117,.8)', marginBottom: 5 }}>Or paste the video URL from HeyGen if you have it:</div>
+                                    <div style={{ display: 'flex', gap: 5 }}>
+                                      <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value); }}
+                                        placeholder="https://...heygen...mp4"
+                                        style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '5px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                                      <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
+                                        style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.3)', color: 'white', fontSize: 10, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                                        Attach
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div style={{ marginTop: 8, fontSize: 9, color: 'rgba(250,199,117,.6)' }}>Video ID: {vid}</div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : heygenError ? (
                           <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.12)', border: '1px solid rgba(226,75,74,.3)', borderRadius: 8, fontSize: 12, color: '#F09595', wordBreak: 'break-word' }}>
@@ -1789,7 +1849,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                               ⬇ Download Avatar Video (standalone)
                             </a>
                             <div style={{ padding: '8px 10px', background: 'rgba(29,158,117,.08)', border: '1px solid rgba(29,158,117,.2)', borderRadius: 8, fontSize: 11, color: ACCH, lineHeight: 1.5 }}>
-                              ✅ Avatar ready — scroll up and click <strong style={{ color: TXT }}>⬇ Combine &amp; Download Final Video</strong> to merge your Pexels scenes with this avatar as a corner overlay. The avatar will appear in the bottom-right of the frame.
+                              ✅ Avatar attached — scroll up to the <strong style={{ color: TXT }}>Combine clips into final video</strong> section. Pick a layout (Presenter or Corner box), then click Combine to merge it with your Pexels scenes into one downloadable MP4.
                             </div>
                           </div>
                         )}
