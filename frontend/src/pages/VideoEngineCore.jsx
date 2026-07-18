@@ -209,6 +209,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [heygenVideoUrl, setHeygenUrl]    = useState('');
   const [heygenChecking, setHeygenCheck]  = useState(false);
   const [manualHeygenUrl, setManualUrl]   = useState('');
+  const [uploadingAvatar, setUploading]   = useState(false);
+  const [uploadProgress, setUploadProg]   = useState('');
+  const avatarUploadRef                   = React.useRef(null);
   const [heygenError, setHeygenError]     = useState('');
   const [heygenConfigured, setHeygenConf] = useState(false);
   const [heygenLoaded, setHeygenLoaded]   = useState(false);
@@ -565,6 +568,31 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     setHeygenUrl(u);
     setHeygenError('');
     setManualUrl('');
+  }
+
+  // Upload a locally downloaded HeyGen MP4 to Railway, then attach as heygenVideoUrl
+  async function uploadAvatarFile(file) {
+    if (!file) return;
+    setUploading(true);
+    setUploadProg('Uploading ' + file.name + '…');
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetch(API + '/api/heygen/upload-avatar', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setHeygenUrl(data.videoUrl);
+      setHeygenError('');
+      setUploadProg('');
+      console.log('✅ Avatar uploaded:', data.videoUrl);
+    } catch(e) {
+      setUploadProg('Upload failed: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function generateHeyGenVideo() {
@@ -1893,15 +1921,35 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                                     Open HeyGen Projects →
                                   </a>
                                   <div style={{ borderTop: '1px solid rgba(250,199,117,.2)', paddingTop: 8 }}>
-                                    <div style={{ fontSize: 10, color: 'rgba(250,199,117,.8)', marginBottom: 5 }}>Or paste the video URL from HeyGen if you have it:</div>
-                                    <div style={{ display: 'flex', gap: 5 }}>
-                                      <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value); }}
-                                        placeholder="https://...heygen...mp4"
-                                        style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '5px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
-                                      <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
-                                        style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.3)', color: 'white', fontSize: 10, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
-                                        Attach
+                                    <div style={{ fontSize: 10, color: 'rgba(250,199,117,.8)', marginBottom: 6, fontWeight: 600 }}>Attach your downloaded HeyGen video:</div>
+
+                                    {/* Option A: Upload MP4 file from computer */}
+                                    <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(29,158,117,.06)', border: '1px solid rgba(29,158,117,.2)', borderRadius: 6 }}>
+                                      <div style={{ fontSize: 10, color: ACCH, fontWeight: 600, marginBottom: 5 }}>📁 Option A — Upload the MP4 file from your computer</div>
+                                      <div style={{ fontSize: 9, color: TXT3, marginBottom: 6, lineHeight: 1.4 }}>Download the video from HeyGen Projects, then upload it here. ContentForge serves it for combining — no HeyGen download site needed.</div>
+                                      <input ref={avatarUploadRef} type="file" accept="video/mp4,video/*" style={{ display: 'none' }}
+                                        onChange={function(e) { if (e.target.files[0]) uploadAvatarFile(e.target.files[0]); }} />
+                                      <button onClick={function() { avatarUploadRef.current && avatarUploadRef.current.click(); }}
+                                        disabled={uploadingAvatar}
+                                        style={{ width: '100%', padding: '7px', borderRadius: 6, border: 'none', background: uploadingAvatar ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 11, fontWeight: 600, cursor: uploadingAvatar ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                        {uploadingAvatar
+                                          ? <><span style={{ width: 11, height: 11, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> {uploadProgress}</>
+                                          : <>📁 Choose MP4 file from computer</>}
                                       </button>
+                                    </div>
+
+                                    {/* Option B: Paste URL */}
+                                    <div style={{ padding: '8px 10px', background: 'rgba(22,61,106,.2)', border: '1px solid ' + BORD, borderRadius: 6 }}>
+                                      <div style={{ fontSize: 10, color: TXT2, fontWeight: 600, marginBottom: 5 }}>🔗 Option B — Paste the video URL from HeyGen Projects</div>
+                                      <div style={{ display: 'flex', gap: 5 }}>
+                                        <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value); }}
+                                          placeholder="https://...heygen...mp4"
+                                          style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '5px 8px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                                        <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
+                                          style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.3)', color: 'white', fontSize: 10, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                                          Attach
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                   <div style={{ marginTop: 8, fontSize: 9, color: 'rgba(250,199,117,.6)' }}>Video ID: {vid}</div>
