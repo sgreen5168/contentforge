@@ -163,6 +163,21 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [durMode, setDurMode]   = useState('short');
   const [cropStyle, setCropStyle]     = useState('center');
   const [autoAssemble, setAutoAssemble] = useState(false);
+  // ── Full Auto Workflow state ──────────────────────────────────────────────
+  const [wfTopic, setWfTopic]         = useState('');
+  const [wfAffUrl, setWfAffUrl]       = useState('');
+  const [wfAffText, setWfAffText]     = useState('');
+  const [wfNiche, setWfNiche]         = useState('home-business');
+  const [wfRatio, setWfRatio]         = useState('9:16');
+  const [wfLayout, setWfLayout]       = useState('presenter');
+  const [wfVoice, setWfVoice]         = useState('nova');
+  const [wfDuration, setWfDuration]   = useState('30s');
+  const [wfJobId, setWfJobId]         = useState('');
+  const [wfJob, setWfJob]             = useState(null);
+  const [wfRunning, setWfRunning]     = useState(false);
+  const [wfError, setWfError]         = useState('');
+  const [wfPollRef]                   = useState({ current: null });
+  const [savedWorkflows, setSavedWf]  = useState([]);
   const [autoResult, setAutoResult]   = useState(null);
   const [niche, setNiche]         = useState('');
   const [subNiche, setSubNiche]   = useState('');
@@ -702,6 +717,66 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   const progress = (job && job.progress) || 0;
 
+  // ── Workflow functions ───────────────────────────────────────────────────
+  async function startWorkflow() {
+    if (!wfTopic.trim()) { setWfError('Enter a topic first.'); return; }
+    setWfRunning(true); setWfError(''); setWfJob(null); setWfJobId('');
+    try {
+      const res = await fetch(API + '/api/workflow/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: wfTopic.trim(), affiliateUrl: wfAffUrl.trim(),
+          affiliateText: wfAffText.trim(), niche: wfNiche,
+          aspectRatio: wfRatio, avatarLayout: wfLayout,
+          voice: wfVoice, duration: wfDuration,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Workflow start failed');
+      setWfJobId(data.jobId);
+      wfPollRef.current = setInterval(async function() {
+        try {
+          const pr = await fetch(API + '/api/workflow/' + data.jobId);
+          const pd = await pr.json();
+          setWfJob(pd);
+          if (pd.status === 'completed' || pd.status === 'failed') {
+            clearInterval(wfPollRef.current);
+            setWfRunning(false);
+            if (pd.status === 'completed') loadSavedWorkflows();
+          }
+        } catch(e) { /* keep polling */ }
+      }, 8000);
+    } catch(e) { setWfError(e.message); setWfRunning(false); }
+  }
+
+  async function loadSavedWorkflows() {
+    try {
+      const r = await fetch(API + '/api/workflow');
+      const d = await r.json();
+      setSavedWf(d.jobs || []);
+    } catch {}
+  }
+
+  async function deleteWorkflow(jobId) {
+    if (!window.confirm('Delete this video?')) return;
+    await fetch(API + '/api/workflow/' + jobId, { method: 'DELETE' });
+    loadSavedWorkflows();
+  }
+
+  function downloadWorkflow(job) {
+    const raw = job.result && job.result.finalVideoUrl;
+    if (!raw) return;
+    const url = raw.startsWith('/') ? API + raw : raw;
+    fetch(url).then(function(r) { return r.blob(); }).then(function(blob) {
+      const burl = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = burl;
+      a.download = 'contentforge-' + job.id + '.mp4';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(burl);
+    }).catch(function() { window.open(url, '_blank'); });
+  }
+
   return (
     <div style={{ fontFamily: 'inherit' }}>
       <div style={{ marginBottom: 16 }}>
@@ -714,7 +789,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {[['generate','Generate'],['result','Result'],['history','History']].map(function(t) {
+        {[['generate','Generate'],['result','Result'],['history','History'],['workflow','⚡ Auto Workflow']].map(function(t) {
           var id = t[0]; var label = t[1];
           return (
             <button key={id} onClick={function() { setTab(id); }}
@@ -1993,7 +2068,217 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } } @keyframes cf-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }' }} />
+
+      {/* ⚡ AUTO WORKFLOW TAB */}
+      {tab === 'workflow' && (
+        <div style={{ maxWidth: 700 }}>
+
+          {/* Intro card */}
+          <div style={{ ...card(), marginBottom: 12, border: '1px solid rgba(29,158,117,.3)', background: 'rgba(29,158,117,.05)' }}>
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: TXT, marginBottom: 6 }}>⚡ Full Auto Video Workflow</div>
+              <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.6, marginBottom: 10 }}>
+                Enter your topic, affiliate link, and preferences — ContentForge writes the script, generates the voiceover, auto-selects an avatar for your niche, fetches matching Pexels scenes, composites the avatar over the scenes, burns your affiliate link into the final 5 seconds, and delivers one complete MP4 to download. No manual steps.
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {['✍️ Script','🎙 Voiceover','🎭 Avatar','🎬 Scenes','🎞 Assembly','🔗 Affiliate CTA','⬇ Download'].map(function(step) {
+                  return <span key={step} style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(29,158,117,.1)', color: ACCH, fontSize: 10, border: '1px solid rgba(29,158,117,.2)' }}>{step}</span>;
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Input form */}
+          <div style={card()}>
+            <div style={hdr()}>
+              <span>Video settings</span>
+              <span style={{ fontSize: 10, color: TXT3 }}>All fields except topic are optional</span>
+            </div>
+            <div style={body()}>
+
+              <span style={lbl}>Topic * — what this video is about</span>
+              <textarea value={wfTopic} onChange={function(e) { setWfTopic(e.target.value); }}
+                placeholder="e.g. Three ways to make money from home with no experience"
+                rows={2}
+                style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 8, padding: '8px 10px', fontSize: 12, color: TXT, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: 10 }} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <span style={lbl}>Affiliate / CTA URL</span>
+                  <input value={wfAffUrl} onChange={function(e) { setWfAffUrl(e.target.value); }}
+                    placeholder="https://your-link.com"
+                    style={{ ...inp, marginBottom: 0 }} />
+                </div>
+                <div>
+                  <span style={lbl}>Display text (optional)</span>
+                  <input value={wfAffText} onChange={function(e) { setWfAffText(e.target.value); }}
+                    placeholder="e.g. Link in bio"
+                    style={{ ...inp, marginBottom: 0 }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <span style={lbl}>Content niche</span>
+                  <select value={wfNiche} onChange={function(e) { setWfNiche(e.target.value); }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 11, color: TXT, fontFamily: 'inherit' }}>
+                    {[['home-business','🏠 Home Business'],['healthy-eating','🥗 Healthy Eating'],['fitness','💪 Fitness'],['cooking','👨‍🍳 Cooking'],['lifestyle','✨ Lifestyle']].map(function(n) {
+                      return <option key={n[0]} value={n[0]}>{n[1]}</option>;
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <span style={lbl}>Aspect ratio</span>
+                  <select value={wfRatio} onChange={function(e) { setWfRatio(e.target.value); }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 11, color: TXT, fontFamily: 'inherit' }}>
+                    {['9:16','16:9','1:1','4:5','4:3'].map(function(r) { return <option key={r}>{r}</option>; })}
+                  </select>
+                </div>
+                <div>
+                  <span style={lbl}>Video length</span>
+                  <select value={wfDuration} onChange={function(e) { setWfDuration(e.target.value); }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 11, color: TXT, fontFamily: 'inherit' }}>
+                    {[['30s','30 seconds'],['45s','45 seconds'],['60s','60 seconds']].map(function(d) { return <option key={d[0]} value={d[0]}>{d[1]}</option>; })}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <span style={lbl}>Avatar layout</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {[['presenter','🧍 Presenter (large)'],['corner','⬛ Corner box']].map(function(opt) {
+                      var active = wfLayout === opt[0];
+                      return (
+                        <button key={opt[0]} onClick={function() { setWfLayout(opt[0]); }}
+                          style={{ padding: '7px 6px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid ' + ACC : '1px solid ' + BORD, background: active ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)', color: active ? ACCH : TXT2, textAlign: 'center', fontWeight: active ? 600 : 400 }}>
+                          {opt[1]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <span style={lbl}>Voiceover voice</span>
+                  <select value={wfVoice} onChange={function(e) { setWfVoice(e.target.value); }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 11, color: TXT, fontFamily: 'inherit' }}>
+                    {[['nova','Nova (female — warm)'],['shimmer','Shimmer (female — professional)'],['alloy','Alloy (female — versatile)'],['onyx','Onyx (male — authoritative)'],['echo','Echo (male — confident)'],['fable','Fable (male — expressive)']].map(function(v) {
+                      return <option key={v[0]} value={v[0]}>{v[1]}</option>;
+                    })}
+                  </select>
+                </div>
+              </div>
+
+              {wfError && (
+                <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>{wfError}</div>
+              )}
+
+              {!process.env.HEYGEN_API_KEY && (
+                <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(245,166,35,.06)', borderRadius: 6, fontSize: 10, color: '#FAC775', border: '1px solid rgba(245,166,35,.2)' }}>
+                  ⚠ No HeyGen API key — workflow will run without avatar overlay. Add HEYGEN_API_KEY to Railway to include an avatar presenter.
+                </div>
+              )}
+
+              <button onClick={startWorkflow} disabled={wfRunning || !wfTopic.trim()}
+                style={{ width: '100%', padding: 14, borderRadius: 10, border: 'none', background: (wfRunning || !wfTopic.trim()) ? 'rgba(29,158,117,.35)' : ACC, color: 'white', fontSize: 14, fontWeight: 700, cursor: (wfRunning || !wfTopic.trim()) ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {wfRunning
+                  ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> Building your video…</>
+                  : <>⚡ Build Full Video — Script + Avatar + Scenes + Download</>}
+              </button>
+            </div>
+          </div>
+
+          {/* Live progress */}
+          {wfJob && (
+            <div style={{ ...card(), marginBottom: 12 }}>
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(22,61,106,.5)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 3, background: wfJob.status === 'failed' ? '#E24B4A' : ACC, width: (wfJob.progress || 0) + '%', transition: 'width 0.5s ease' }} />
+                  </div>
+                  <span style={{ fontSize: 11, color: TXT3, flexShrink: 0 }}>{wfJob.progress || 0}%</span>
+                </div>
+                <div style={{ fontSize: 12, color: wfJob.status === 'failed' ? '#F09595' : TXT2 }}>{wfJob.step}</div>
+                {wfJob.avatarName && (
+                  <div style={{ fontSize: 10, color: TXT3, marginTop: 4 }}>🎭 Avatar: {wfJob.avatarName}</div>
+                )}
+                {wfJob.heygenVideoId && wfJob.status !== 'completed' && (
+                  <div style={{ fontSize: 10, color: TXT3, marginTop: 3 }}>HeyGen Video ID: {wfJob.heygenVideoId}</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Completed video */}
+          {wfJob && wfJob.status === 'completed' && wfJob.result && (
+            <div style={{ ...card(), marginBottom: 12, border: '1px solid rgba(29,158,117,.35)', background: 'rgba(29,158,117,.06)' }}>
+              <div style={hdr()}>
+                <span>✅ Video ready</span>
+                <span style={{ fontSize: 10, color: ACCH }}>{wfJob.result.aspectRatio} · {wfJob.result.clipsCount} scenes{wfJob.result.hasAvatar ? ' · avatar' : ''}{wfJob.result.hasAffiliate ? ' · CTA' : ''}</span>
+              </div>
+              <div style={body()}>
+                {wfJob.result.script?.hook && (
+                  <div style={{ fontSize: 12, color: TXT2, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5, padding: '6px 8px', background: 'rgba(22,61,106,.3)', borderRadius: 6 }}>
+                    "{wfJob.result.script.hook}"
+                  </div>
+                )}
+                <button onClick={function() { downloadWorkflow(wfJob); }}
+                  style={{ width: '100%', padding: 13, borderRadius: 10, border: 'none', background: ACC, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 14px rgba(29,158,117,.4)' }}>
+                  ⬇ Download Your Video
+                </button>
+                <div style={{ textAlign: 'center' }}>
+                  <a href={wfJob.result.finalVideoUrl && wfJob.result.finalVideoUrl.startsWith('/') ? API + wfJob.result.finalVideoUrl : wfJob.result.finalVideoUrl}
+                    target="_blank" rel="noreferrer"
+                    style={{ fontSize: 10, color: TXT3, textDecoration: 'underline' }}>
+                    Or open in new tab
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Past workflows */}
+          {savedWorkflows.length === 0 && !wfJob && (
+            <button onClick={loadSavedWorkflows}
+              style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Load past workflows
+            </button>
+          )}
+          {savedWorkflows.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Past videos</div>
+              {savedWorkflows.map(function(wf) {
+                var done = wf.status === 'completed' && wf.result?.finalVideoUrl;
+                return (
+                  <div key={wf.id} style={{ ...card(), marginBottom: 6 }}>
+                    <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: wf.status === 'completed' ? ACC : wf.status === 'failed' ? '#E24B4A' : '#F5A623' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: TXT, fontWeight: 500 }}>{wf.topic}</div>
+                        <div style={{ fontSize: 10, color: TXT3 }}>{new Date(wf.createdAt).toLocaleString()} · {wf.status}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        {done && (
+                          <button onClick={function() { downloadWorkflow(wf); }}
+                            style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: ACC, color: 'white', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            ⬇ Download
+                          </button>
+                        )}
+                        <button onClick={function() { deleteWorkflow(wf.id); }}
+                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
