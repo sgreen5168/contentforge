@@ -214,6 +214,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const avatarUploadRef                   = React.useRef(null);
   const [heygenError, setHeygenError]     = useState('');
   const [heygenConfigured, setHeygenConf] = useState(false);
+  const [serverKeyStatus, setServerKeys]  = useState(null); // checked from server, not process.env
   const [heygenLoaded, setHeygenLoaded]   = useState(false);
   const [avatarFilter, setAvatarFilter]   = useState('all');
   const [avatarSearch, setAvatarSearch]   = useState('');
@@ -268,6 +269,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   useEffect(() => {
     if (tab === 'history') loadJobs();
+    if (tab === 'workflow' && !serverKeyStatus) checkServerKeys();
   }, [tab]);
 
   useEffect(() => {
@@ -431,6 +433,18 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       URL.revokeObjectURL(url);
     } catch(e) { setCombineError(e.message); }
     finally { setAssembling(false); }
+  }
+
+  // Check which API keys are configured on the server
+  // Cannot use process.env in browser — must ask the server
+  async function checkServerKeys() {
+    try {
+      const res = await fetch(API + '/api/status/keys');
+      const data = await res.json();
+      setServerKeys(data);
+    } catch(e) {
+      console.warn('Key status check failed:', e.message);
+    }
   }
 
   async function loadHeyGenConfig() {
@@ -2341,9 +2355,19 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>{wfError}</div>
               )}
 
-              {!process.env.HEYGEN_API_KEY && (
+              {serverKeyStatus && !serverKeyStatus.heygen && (
                 <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(245,166,35,.06)', borderRadius: 6, fontSize: 10, color: '#FAC775', border: '1px solid rgba(245,166,35,.2)' }}>
-                  ⚠ No HeyGen API key — workflow will run without avatar overlay. Add HEYGEN_API_KEY to Railway to include an avatar presenter.
+                  ⚠ No HeyGen API key on server — workflow will run without avatar overlay. Add HEYGEN_API_KEY to Railway Variables.
+                </div>
+              )}
+              {serverKeyStatus && serverKeyStatus.heygen && (
+                <div style={{ marginBottom: 10, padding: '5px 10px', background: 'rgba(29,158,117,.06)', borderRadius: 6, fontSize: 10, color: ACCH, border: '1px solid rgba(29,158,117,.15)' }}>
+                  ✅ HeyGen connected · {serverKeyStatus.openai ? '✅ Voiceover ready' : '⚠ No OpenAI key — add OPENAI_API_KEY for voiceover'} · {serverKeyStatus.pexels ? '✅ Pexels clips ready' : '⚠ No Pexels key'}
+                </div>
+              )}
+              {!serverKeyStatus && (
+                <div style={{ marginBottom: 10, padding: '5px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, fontSize: 10, color: TXT3 }}>
+                  Checking API connections…
                 </div>
               )}
 
