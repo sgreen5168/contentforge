@@ -230,6 +230,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [createError, setCreateError]     = useState('');
   const [createDone, setCreateDone]       = useState(false);
   const [nicheSuggestions, setNicheSugg]  = useState([]);
+  const [smartSuggestions, setSmartSugg]  = useState(null);   // { topAvatars, recommendedVoice, voiceReason, signals }
+  const [loadingSmartSugg, setLoadingSmart] = useState(false);
   const [heygenBgType, setHeygenBgType]   = useState('color');
   const [heygenBgValue, setHeygenBgValue] = useState('#18202e');
   const [heygenGreenScreen, setHeygenGS]  = useState(false);
@@ -528,6 +530,31 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       setCreateError(e.message);
       setCreating(false);
     }
+  }
+
+  // Fetch AI-powered avatar + voice suggestions based on the current script
+  async function getSmartSuggestions() {
+    if (!job?.result?.script) return;
+    setLoadingSmart(true);
+    try {
+      const res = await fetch(API + '/api/heygen/smart-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic:        job.data?.topic || '',
+          script:       job.result.script.fullScript || '',
+          niche:        job.data?.niche  || avatarNiche || 'lifestyle',
+          avatarLayout: avatarLayout     || 'presenter',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSmartSugg(data);
+        // Auto-set recommended voice
+        if (data.recommendedVoice) setHeygenVoice(data.recommendedVoice);
+      }
+    } catch(e) { console.warn('Smart suggestions failed:', e.message); }
+    finally { setLoadingSmart(false); }
   }
 
   async function loadNicheSuggestions(niche) {
@@ -1351,8 +1378,22 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <span style={{ fontSize: 11, color: TXT3 }}>{selectedPhrases.length} selected</span>
                   </div>
                   <div style={body()}>
-                    <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
-                      Click any sentence to select it. Claude suggests a keyword for the scene — edit it and click Re-match to find a better clip.
+                    <div style={{ padding: '8px 10px', background: 'rgba(29,158,117,.04)', border: '1px solid rgba(29,158,117,.1)', borderRadius: 8, marginBottom: 8, fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
+                      💡 <strong style={{ color: TXT2 }}>Smart scene matching:</strong> Click any sentence to select it. Claude suggests a keyword based on the sentence content, its position in the script, and your content niche — first sentence gets an establishing scene, last gets a closing/success scene, middle sentences match the specific action described. Edit the keyword and click Re-match to refine.
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                      <button onClick={function() {
+                        splitIntoPhrases(job.result.script.fullScript).forEach(function(phrase) {
+                          if (!selectedPhrases[phrase]) matchScene(phrase);
+                        });
+                      }}
+                        style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ✨ Auto-match all scenes
+                      </button>
+                      <button onClick={function() { setSelectedPhrases({}); }}
+                        style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Clear all
+                      </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                       {splitIntoPhrases(job.result.script.fullScript).map(function(phrase, i) {
@@ -1654,6 +1695,84 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     )}
                     {heygenLoaded && heygenConfigured && (
                       <div>
+
+                        {/* ✨ AI Smart Recommendations panel */}
+                        <div style={{ marginBottom: 12, border: '1px solid rgba(29,158,117,.2)', borderRadius: 10, overflow: 'hidden' }}>
+                          <div style={{ padding: '10px 12px', background: 'rgba(29,158,117,.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: TXT }}>✨ AI Recommendations</div>
+                              <div style={{ fontSize: 10, color: TXT3, marginTop: 1 }}>
+                                {smartSuggestions ? 'Based on your script content — click any to select' : 'Click to get avatar + voice suggestions matched to your script'}
+                              </div>
+                            </div>
+                            <button onClick={getSmartSuggestions} disabled={loadingSmartSugg || !job?.result?.script}
+                              style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: (loadingSmartSugg || !job?.result?.script) ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 11, fontWeight: 600, cursor: (loadingSmartSugg || !job?.result?.script) ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {loadingSmartSugg ? <><span style={{ width: 10, height: 10, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />Analysing…</> : <>✨ Match to script</>}
+                            </button>
+                          </div>
+
+                          {smartSuggestions && (
+                            <div style={{ padding: '10px 12px' }}>
+
+                              {/* Signals summary */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                                {[
+                                  smartSuggestions.signals?.presenterStyle && { label: smartSuggestions.signals.presenterStyle + ' style', icon: '👔' },
+                                  smartSuggestions.signals?.setting && { label: smartSuggestions.signals.setting, icon: '📍' },
+                                  smartSuggestions.signals?.tone && { label: smartSuggestions.signals.tone + ' tone', icon: '🎭' },
+                                  smartSuggestions.signals?.suggestedGender && smartSuggestions.signals.suggestedGender !== 'any' && { label: smartSuggestions.signals.suggestedGender + ' presenter', icon: '👤' },
+                                  smartSuggestions.signals?.contentMood && { label: smartSuggestions.signals.contentMood, icon: '✨' },
+                                ].filter(Boolean).map(function(tag, i) {
+                                  return (
+                                    <span key={i} style={{ padding: '2px 8px', borderRadius: 20, background: 'rgba(29,158,117,.1)', border: '1px solid rgba(29,158,117,.2)', fontSize: 9, color: ACCH }}>
+                                      {tag.icon} {tag.label}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Voice recommendation */}
+                              {smartSuggestions.recommendedVoice && (
+                                <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 7, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ fontSize: 14 }}>🎙</span>
+                                  <div>
+                                    <span style={{ fontSize: 11, fontWeight: 600, color: ACCH }}>{smartSuggestions.recommendedVoice}</span>
+                                    <span style={{ fontSize: 10, color: TXT3, marginLeft: 6 }}>recommended voice</span>
+                                    {smartSuggestions.voiceReason && <div style={{ fontSize: 9, color: TXT3, marginTop: 1 }}>{smartSuggestions.voiceReason}</div>}
+                                  </div>
+                                  <button onClick={function() { setHeygenVoice(smartSuggestions.recommendedVoice); }}
+                                    style={{ marginLeft: 'auto', padding: '3px 8px', borderRadius: 5, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    Use this voice
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Top avatar matches */}
+                              <div style={{ fontSize: 10, fontWeight: 600, color: TXT3, marginBottom: 6 }}>Top avatar matches for your script:</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                                {(smartSuggestions.topAvatars || []).slice(0, 8).map(function(a) {
+                                  var active = heygenAvatar === a.avatar_id;
+                                  return (
+                                    <button key={a.avatar_id}
+                                      onClick={function() { setHeygenAvatar(a.avatar_id); }}
+                                      style={{ padding: '4px 3px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', border: '2px solid ' + (active ? ACC : 'rgba(29,158,117,.2)'), background: active ? 'rgba(29,158,117,.15)' : 'rgba(22,61,106,.2)', position: 'relative' }}>
+                                      {active && <div style={{ position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: '50%', background: ACC, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, color: 'white' }}>✓</div>}
+                                      <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: 5, overflow: 'hidden', marginBottom: 3, background: 'rgba(22,61,106,.4)' }}>
+                                        {a.preview_image_url
+                                          ? <img src={a.preview_image_url} alt={a.avatar_name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={function(e) { e.target.style.display='none'; }} />
+                                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👤</div>}
+                                      </div>
+                                      <div style={{ fontSize: 7, color: active ? ACCH : TXT2, fontWeight: active ? 600 : 400, lineHeight: 1.2 }}>{(a.avatar_name || '').slice(0,16)}</div>
+                                      <div style={{ fontSize: 6, color: TXT3, lineHeight: 1.2, marginTop: 1 }}>{a.matchReason}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div style={{ marginTop: 8, fontSize: 9, color: TXT3 }}>Click any avatar above to select it, or browse the full library below.</div>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Niche filter tabs */}
                         <div style={{ marginBottom: 8 }}>
                           <span style={lbl}>Filter by content niche</span>
@@ -1831,7 +1950,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           )}
                         </div>
 
-                        <span style={lbl}>Choose voice</span>
+                        <span style={lbl}>Choose voice {smartSuggestions?.recommendedVoice && <span style={{ fontSize: 9, color: ACCH, marginLeft: 4 }}>✨ AI suggests: {smartSuggestions.recommendedVoice}</span>}</span>
                         <select value={heygenVoice} onChange={function(e) { setHeygenVoice(e.target.value); }}
                           style={{ ...inp, marginBottom: 12 }}>
                           {heygenVoices.map(function(v) {
