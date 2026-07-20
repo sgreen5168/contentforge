@@ -2073,6 +2073,52 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                           </div>
                         )}
 
+                        {/* ── Always-visible: attach a downloaded HeyGen MP4 ── */}
+                        {!heygenVideoUrl && (
+                          <div style={{ marginBottom: 12, border: '1px solid rgba(29,158,117,.25)', borderRadius: 10, overflow: 'hidden' }}>
+                            <div style={{ padding: '8px 12px', background: 'rgba(29,158,117,.07)', fontSize: 11, fontWeight: 600, color: ACCH }}>
+                              📁 Already have a HeyGen video? Attach it here
+                            </div>
+                            <div style={{ padding: '10px 12px' }}>
+                              <div style={{ fontSize: 10, color: TXT3, marginBottom: 8, lineHeight: 1.5 }}>
+                                Made a video on <strong style={{ color: TXT2 }}>app.heygen.com</strong> using your 650 monthly credits? Download the MP4 and upload it here — no API credits needed. ContentForge will combine it with your scenes.
+                              </div>
+
+                              {/* Upload file button */}
+                              <input ref={avatarUploadRef} type="file" accept="video/mp4,video/*" style={{ display: 'none' }}
+                                onChange={function(e) { if (e.target.files[0]) uploadAvatarFile(e.target.files[0]); }} />
+                              <button onClick={function() { avatarUploadRef.current && avatarUploadRef.current.click(); }}
+                                disabled={uploadingAvatar}
+                                style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: uploadingAvatar ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 12, fontWeight: 700, cursor: uploadingAvatar ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8, boxShadow: uploadingAvatar ? 'none' : '0 2px 8px rgba(29,158,117,.3)' }}>
+                                {uploadingAvatar
+                                  ? <><span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />{uploadProgress || 'Uploading…'}</>
+                                  : <>📁 Upload MP4 from my computer</>}
+                              </button>
+
+                              {/* Paste URL option */}
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value.trim()); }}
+                                  placeholder="Or paste HeyGen video URL here…"
+                                  style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '7px 10px', fontSize: 10, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                                <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
+                                  style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.25)', color: 'white', fontSize: 10, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                                  Attach
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {heygenVideoUrl && (
+                          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(29,158,117,.08)', border: '1px solid rgba(29,158,117,.25)', borderRadius: 10, fontSize: 11, color: ACCH, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>✅ Avatar video attached — scroll up to Combine &amp; Download</span>
+                            <button onClick={function() { setHeygenUrl(''); }}
+                              style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: TXT3, fontSize: 9, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Remove
+                            </button>
+                          </div>
+                        )}
+
                         <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 8, fontSize: 11, color: TXT2, lineHeight: 1.5 }}>
                           This will submit your script to HeyGen for Avatar IV generation. It takes 10–30 minutes. ContentForge will check for 2.5 minutes, then give you a direct link to your HeyGen projects page where it will appear when ready. Uses your HeyGen API balance (~$0.50–$2 depending on length).
                         </div>
