@@ -360,11 +360,17 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     const isSelected = selectedPhrases.includes(phrase);
     setSelectedPhrases(prev => isSelected ? prev.filter(p => p !== phrase) : [...prev, phrase]);
     setScenesConfirmed(false);
-    if (isSelected) {
-      setSceneKeywords(prev => { const n={...prev}; delete n[phrase]; return n; });
-      setSceneMatches(prev => { const n={...prev}; delete n[phrase]; return n; });
-      setSceneMatchError(prev => { const n={...prev}; delete n[phrase]; return n; });
+    if (isCurrentlySelected) {
+      setSelectedPhrases(function(prev) {
+        return Array.isArray(prev) ? prev.filter(function(p) { return p !== phrase; }) : prev;
+      });
+      setSceneKeywords(function(prev) { const n={...prev}; delete n[phrase]; return n; });
+      setSceneMatches(function(prev) { const n={...prev}; delete n[phrase]; return n; });
+      setSceneMatchError(function(prev) { const n={...prev}; delete n[phrase]; return n; });
     } else {
+      setSelectedPhrases(function(prev) {
+        return Array.isArray(prev) ? [...prev, phrase] : [phrase];
+      });
       matchScene(phrase, null);
     }
   }
@@ -1398,31 +1404,26 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                       <button onClick={async function() {
                         const phrases = splitIntoPhrases(job.result.script.fullScript);
-                        for (var i = 0; i < phrases.length; i++) {
-                          var phrase = phrases[i];
-                          // Select the phrase
-                          setSelectedPhrases(function(prev) {
-                            if (Array.isArray(prev)) return [...prev, phrase];
-                            return { ...prev, [phrase]: true };
-                          });
-                          // Match it — await each one so they run sequentially
-                          await matchScene(phrase, null);
-                          // Small pause between requests to avoid overwhelming the server
-                          if (i < phrases.length - 1) await new Promise(function(r) { return setTimeout(r, 500); });
-                        }
+                        // Select all phrases first so keyword inputs become visible
+                        setSelectedPhrases(phrases.slice());
                         setScenesConfirmed(false);
+                        // Then match each one sequentially
+                        for (var i = 0; i < phrases.length; i++) {
+                          await matchScene(phrases[i], null);
+                          if (i < phrases.length - 1) await new Promise(function(r) { return setTimeout(r, 400); });
+                        }
                       }}
                         style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + ACC, background: 'rgba(29,158,117,.08)', color: ACCH, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                         ✨ Auto-match all scenes
                       </button>
-                      <button onClick={function() { setSelectedPhrases(Array.isArray(selectedPhrases) ? [] : {}); }}
+                      <button onClick={function() { setSelectedPhrases([]); }}
                         style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                         Clear all
                       </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                       {splitIntoPhrases(job.result.script.fullScript).map(function(phrase, i) {
-                        const isSelected = selectedPhrases.includes(phrase);
+                        const isSelected = Array.isArray(selectedPhrases) ? selectedPhrases.includes(phrase) : !!selectedPhrases[phrase];
                         const keyword = sceneKeywords[phrase] || '';
                         const match = sceneMatches[phrase];
                         const matching = !!sceneMatching[phrase];
