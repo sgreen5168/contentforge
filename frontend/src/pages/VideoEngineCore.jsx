@@ -1544,8 +1544,52 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                       </div>
                     </div>
                   ) : (
-                    <div style={{ marginBottom: 8, padding: '5px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, fontSize: 10, color: TXT3, lineHeight: 1.4 }}>
-                      No HeyGen avatar attached — combine will use Pexels scenes only. Generate an avatar video in the HeyGen panel below to include it.
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, fontSize: 10, color: TXT3, lineHeight: 1.5 }}>
+                        No avatar attached yet. Attach one using either option below, then pick a layout and combine.
+                      </div>
+
+                      {/* Always-visible upload panel */}
+                      <div style={{ border: '1px solid rgba(29,158,117,.25)', borderRadius: 10, overflow: 'hidden', marginBottom: 0 }}>
+                        <div style={{ padding: '8px 12px', background: 'rgba(29,158,117,.07)', fontSize: 11, fontWeight: 600, color: ACCH }}>
+                          📁 Attach your HeyGen avatar video
+                        </div>
+                        <div style={{ padding: '10px 12px' }}>
+
+                          {/* Option A — Upload file */}
+                          <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(29,158,117,.05)', border: '1px solid rgba(29,158,117,.15)', borderRadius: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 3 }}>📁 Option A — Upload MP4 from your computer</div>
+                            <div style={{ fontSize: 10, color: TXT3, marginBottom: 8, lineHeight: 1.4 }}>
+                              Make the avatar video on <strong>app.heygen.com</strong> using your 650 monthly credits, download the MP4, then upload it here. No API credits needed.
+                            </div>
+                            <input ref={avatarUploadRef} type="file" accept="video/mp4,video/*" style={{ display: 'none' }}
+                              onChange={function(e) { if (e.target.files[0]) uploadAvatarFile(e.target.files[0]); }} />
+                            <button onClick={function() { avatarUploadRef.current && avatarUploadRef.current.click(); }}
+                              disabled={uploadingAvatar}
+                              style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: uploadingAvatar ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 12, fontWeight: 700, cursor: uploadingAvatar ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, boxShadow: uploadingAvatar ? 'none' : '0 2px 8px rgba(29,158,117,.3)' }}>
+                              {uploadingAvatar
+                                ? <><span style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />{uploadProgress || 'Uploading…'}</>
+                                : <>📁 Choose MP4 file from your computer</>}
+                            </button>
+                          </div>
+
+                          {/* Option B — Paste URL */}
+                          <div style={{ padding: '8px 10px', background: 'rgba(22,61,106,.2)', border: '1px solid ' + BORD, borderRadius: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 3 }}>🔗 Option B — Paste video URL</div>
+                            <div style={{ fontSize: 10, color: TXT3, marginBottom: 6, lineHeight: 1.4 }}>If HeyGen generated it via ContentForge and gave you a URL, paste it here.</div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value.trim()); }}
+                                placeholder="https://…heygen….mp4"
+                                style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '7px 10px', fontSize: 11, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                              <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
+                                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.3)', color: 'white', fontSize: 11, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                                Attach
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
