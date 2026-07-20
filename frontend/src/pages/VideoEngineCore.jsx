@@ -1396,15 +1396,26 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                       💡 <strong style={{ color: TXT2 }}>Smart scene matching:</strong> Click any sentence to select it. Claude suggests a keyword based on the sentence content, its position in the script, and your content niche — first sentence gets an establishing scene, last gets a closing/success scene, middle sentences match the specific action described. Edit the keyword and click Re-match to refine.
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                      <button onClick={function() {
-                        splitIntoPhrases(job.result.script.fullScript).forEach(function(phrase) {
-                          if (!selectedPhrases[phrase]) matchScene(phrase);
-                        });
+                      <button onClick={async function() {
+                        const phrases = splitIntoPhrases(job.result.script.fullScript);
+                        for (var i = 0; i < phrases.length; i++) {
+                          var phrase = phrases[i];
+                          // Select the phrase
+                          setSelectedPhrases(function(prev) {
+                            if (Array.isArray(prev)) return [...prev, phrase];
+                            return { ...prev, [phrase]: true };
+                          });
+                          // Match it — await each one so they run sequentially
+                          await matchScene(phrase, null);
+                          // Small pause between requests to avoid overwhelming the server
+                          if (i < phrases.length - 1) await new Promise(function(r) { return setTimeout(r, 500); });
+                        }
+                        setScenesConfirmed(false);
                       }}
-                        style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + ACC, background: 'rgba(29,158,117,.08)', color: ACCH, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                         ✨ Auto-match all scenes
                       </button>
-                      <button onClick={function() { setSelectedPhrases({}); }}
+                      <button onClick={function() { setSelectedPhrases(Array.isArray(selectedPhrases) ? [] : {}); }}
                         style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + BORD, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                         Clear all
                       </button>
