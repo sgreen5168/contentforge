@@ -1404,14 +1404,21 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                       <button onClick={async function() {
                         const phrases = splitIntoPhrases(job.result.script.fullScript);
-                        // Select all phrases first so keyword inputs become visible
                         setSelectedPhrases(phrases.slice());
                         setScenesConfirmed(false);
-                        // Then match each one sequentially
                         for (var i = 0; i < phrases.length; i++) {
                           await matchScene(phrases[i], null);
                           if (i < phrases.length - 1) await new Promise(function(r) { return setTimeout(r, 400); });
                         }
+                        // Auto-confirm after all scenes matched
+                        setTimeout(function() {
+                          var clips = phrases.map(function(phrase, idx) {
+                            var m = sceneMatches[phrase];
+                            return { scene: idx+1, phrase: phrase, status: (m && m.matched && m.videoUrl) ? 'success' : 'failed', videoUrl: m ? m.videoUrl : null, pexelsQuery: sceneKeywords[phrase] || '' };
+                          });
+                          setPhraseClips(clips);
+                          setScenesConfirmed(true);
+                        }, 1000);
                       }}
                         style={{ padding: '5px 12px', borderRadius: 7, border: '1px solid ' + ACC, background: 'rgba(29,158,117,.08)', color: ACCH, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                         ✨ Auto-match all scenes
@@ -1505,7 +1512,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 </div>
               )}
 
-              {scenesConfirmed && phraseClips.some(function(c) { return c.status === 'success'; }) && (
+              {(scenesConfirmed && phraseClips.some(function(c) { return c.status === 'success'; })) || heygenVideoUrl ? (
                 <div style={{ ...card(), padding: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: TXT, marginBottom: 4 }}>Combine clips into final video</div>
                   {heygenVideoUrl ? (
@@ -1715,7 +1722,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* HeyGen Avatar Video Panel */}
               {job && job.result && job.result.script && (
