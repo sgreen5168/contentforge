@@ -1740,6 +1740,47 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                       </div>
                     </div>
 
+                    {/* ── ALWAYS VISIBLE: Upload downloaded HeyGen MP4 ─────── */}
+                    {!heygenVideoUrl && (
+                      <div style={{ marginBottom: 12, border: '2px solid rgba(29,158,117,.35)', borderRadius: 10, overflow: 'hidden' }}>
+                        <div style={{ padding: '10px 12px', background: 'rgba(29,158,117,.1)', fontSize: 12, fontWeight: 700, color: ACCH }}>
+                          📁 Already have a HeyGen video? Upload it here
+                        </div>
+                        <div style={{ padding: '12px' }}>
+                          <div style={{ fontSize: 11, color: TXT2, marginBottom: 10, lineHeight: 1.5 }}>
+                            Made a video on <strong>app.heygen.com</strong> using your 650 monthly credits? Download the MP4 and upload it below. ContentForge will combine it with your Pexels scenes. No API credits needed.
+                          </div>
+                          <input ref={avatarUploadRef} type="file" accept="video/mp4,video/*" style={{ display: 'none' }}
+                            onChange={function(e) { if (e.target.files[0]) uploadAvatarFile(e.target.files[0]); }} />
+                          <button onClick={function() { avatarUploadRef.current && avatarUploadRef.current.click(); }}
+                            disabled={uploadingAvatar}
+                            style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: uploadingAvatar ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 13, fontWeight: 700, cursor: uploadingAvatar ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10, boxShadow: uploadingAvatar ? 'none' : '0 2px 12px rgba(29,158,117,.4)' }}>
+                            {uploadingAvatar
+                              ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />{uploadProgress || 'Uploading…'}</>
+                              : <>📁 Upload MP4 from my computer</>}
+                          </button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input value={manualHeygenUrl} onChange={function(e) { setManualUrl(e.target.value.trim()); }}
+                              placeholder="Or paste HeyGen video URL…"
+                              style={{ flex: 1, background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '8px 10px', fontSize: 11, color: TXT, fontFamily: 'inherit', outline: 'none' }} />
+                            <button onClick={attachManualHeyGenUrl} disabled={!manualHeygenUrl.trim()}
+                              style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: manualHeygenUrl.trim() ? ACC : 'rgba(29,158,117,.25)', color: 'white', fontSize: 11, fontWeight: 600, cursor: manualHeygenUrl.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                              Attach
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {heygenVideoUrl && (
+                      <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(29,158,117,.1)', border: '2px solid rgba(29,158,117,.3)', borderRadius: 10, fontSize: 12, color: ACCH, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>✅ Avatar video attached — scroll up to Combine &amp; Download</span>
+                        <button onClick={function() { setHeygenUrl(''); }}
+                          style={{ padding: '3px 10px', borderRadius: 5, border: '1px solid rgba(29,158,117,.3)', background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Remove
+                        </button>
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                       <button onClick={loadHeyGenConfig}
                         style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: ACCH, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
