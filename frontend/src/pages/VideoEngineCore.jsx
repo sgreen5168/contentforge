@@ -2559,7 +2559,10 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   </div>
                   <span style={{ fontSize: 11, color: TXT3, flexShrink: 0 }}>{wfJob.progress || 0}%</span>
                 </div>
-                <div style={{ fontSize: 12, color: wfJob.status === 'failed' ? '#F09595' : TXT2 }}>{wfJob.step}</div>
+                <div style={{ fontSize: 12, color: wfJob.status === 'failed' ? '#F09595' : ACCH, lineHeight: 1.4 }}>{wfJob.step}</div>
+                <div style={{ fontSize: 10, color: TXT3, marginTop: 4 }}>
+                  {wfJob.status === 'processing' ? 'Running… keep this tab open' : wfJob.status === 'completed' ? 'Complete ✅' : 'Failed ❌'}
+                </div>
                 {wfJob.avatarName && (
                   <div style={{ fontSize: 10, color: TXT3, marginTop: 4 }}>🎭 Avatar: {wfJob.avatarName}</div>
                 )}
@@ -2570,29 +2573,56 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
             </div>
           )}
 
-          {/* Completed video */}
+          {/* Completed video — with in-browser preview */}
           {wfJob && wfJob.status === 'completed' && wfJob.result && (
-            <div style={{ ...card(), marginBottom: 12, border: '1px solid rgba(29,158,117,.35)', background: 'rgba(29,158,117,.06)' }}>
-              <div style={hdr()}>
-                <span>✅ Video ready</span>
-                <span style={{ fontSize: 10, color: ACCH }}>{wfJob.result.aspectRatio} · {wfJob.result.clipsCount} scenes{wfJob.result.hasAvatar ? ' · avatar' : ''}{wfJob.result.hasAffiliate ? ' · CTA' : ''}</span>
+            <div style={{ ...card(), marginBottom: 12, border: '2px solid rgba(29,158,117,.4)', background: 'rgba(29,158,117,.04)' }}>
+              <div style={{ padding: '10px 14px', background: 'rgba(29,158,117,.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: TXT }}>✅ Your video is ready</span>
+                <span style={{ fontSize: 10, color: ACCH }}>{wfJob.result.aspectRatio} · {wfJob.result.clipsCount} scenes</span>
               </div>
-              <div style={body()}>
-                {wfJob.result.script?.hook && (
-                  <div style={{ fontSize: 12, color: TXT2, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5, padding: '6px 8px', background: 'rgba(22,61,106,.3)', borderRadius: 6 }}>
+              <div style={{ padding: '12px 14px' }}>
+
+                {/* Script hook */}
+                {wfJob.result.script && wfJob.result.script.hook && (
+                  <div style={{ fontSize: 11, color: TXT2, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5, padding: '7px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 7, borderLeft: '3px solid ' + ACC }}>
                     "{wfJob.result.script.hook}"
                   </div>
                 )}
+
+                {/* In-browser video preview */}
+                {(function() {
+                  var raw = wfJob.result.previewUrl || wfJob.result.finalVideoUrl || ('/api/video/download-workflow/' + wfJob.id);
+                  var url = raw.startsWith('/') ? API + raw : raw;
+                  return (
+                    <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', background: '#000', position: 'relative' }}>
+                      <video controls preload="metadata"
+                        style={{ width: '100%', display: 'block', maxHeight: 500, borderRadius: 10 }}
+                        src={url}>
+                        Your browser does not support video preview — use the download button below.
+                      </video>
+                      <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(29,158,117,.85)', color: 'white', fontSize: 9, fontWeight: 600, padding: '3px 8px', borderRadius: 4 }}>
+                        ▶ Preview
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Download button */}
                 <button onClick={function() { downloadWorkflow(wfJob); }}
-                  style={{ width: '100%', padding: 13, borderRadius: 10, border: 'none', background: ACC, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 14px rgba(29,158,117,.4)' }}>
-                  ⬇ Download Your Video
+                  style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: ACC, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, boxShadow: '0 2px 14px rgba(29,158,117,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  ⬇ Download Video to Computer
                 </button>
-                <div style={{ textAlign: 'center' }}>
-                  <a href={wfJob.result.finalVideoUrl && wfJob.result.finalVideoUrl.startsWith('/') ? API + wfJob.result.finalVideoUrl : wfJob.result.finalVideoUrl}
+                <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                  <a href={API + '/api/video/download-workflow/' + wfJob.id}
                     target="_blank" rel="noreferrer"
                     style={{ fontSize: 10, color: TXT3, textDecoration: 'underline' }}>
-                    Or open in new tab
+                    Or open in new browser tab
                   </a>
+                </div>
+
+                {/* Info tip */}
+                <div style={{ fontSize: 10, color: TXT3, padding: '6px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, lineHeight: 1.5 }}>
+                  💡 To add an avatar presenter: make the video on <strong style={{ color: TXT2 }}>app.heygen.com</strong> using your 650 monthly credits, download the MP4, then use ContentForge's Result tab → HeyGen panel → Upload MP4 to combine with scenes.
                 </div>
               </div>
             </div>
