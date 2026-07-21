@@ -172,6 +172,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [wfLayout, setWfLayout]       = useState('presenter');
   const [wfVoice, setWfVoice]         = useState('nova');
   const [wfDuration, setWfDuration]   = useState('30s');
+  const [wfSkipAvatar, setWfSkipAv]   = useState(true);  // default: scene-only (fast)
   const [wfJobId, setWfJobId]         = useState('');
   const [wfJob, setWfJob]             = useState(null);
   const [wfRunning, setWfRunning]     = useState(false);
@@ -824,6 +825,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           affiliateText: wfAffText.trim(), niche: wfNiche,
           aspectRatio: wfRatio, avatarLayout: wfLayout,
           voice: wfVoice, duration: wfDuration,
+          skipAvatar: wfSkipAvatar,
         }),
       });
       const data = await res.json();
@@ -2495,19 +2497,36 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <div>
-                  <span style={lbl}>Avatar layout</span>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <span style={lbl}>Avatar mode</span>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                    {[['presenter','🧍 Presenter (large)'],['corner','⬛ Corner box']].map(function(opt) {
-                      var active = wfLayout === opt[0];
+                    {[
+                      { skip: true,  label: '🎬 Scene video only', sub: 'Fast — 2-3 min, no HeyGen needed' },
+                      { skip: false, label: '🎭 Include avatar',    sub: 'Slower — needs HeyGen API credits' },
+                    ].map(function(opt) {
+                      var active = wfSkipAvatar === opt.skip;
                       return (
-                        <button key={opt[0]} onClick={function() { setWfLayout(opt[0]); }}
-                          style={{ padding: '7px 6px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid ' + ACC : '1px solid ' + BORD, background: active ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)', color: active ? ACCH : TXT2, textAlign: 'center', fontWeight: active ? 600 : 400 }}>
-                          {opt[1]}
+                        <button key={String(opt.skip)} onClick={function() { setWfSkipAv(opt.skip); }}
+                          style={{ padding: '9px 8px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: active ? '2px solid ' + ACC : '1px solid ' + BORD, background: active ? 'rgba(29,158,117,.12)' : 'rgba(22,61,106,.3)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: active ? ACCH : TXT, marginBottom: 2 }}>{opt.label}</div>
+                          <div style={{ fontSize: 9, color: TXT3, lineHeight: 1.3 }}>{opt.sub}</div>
                         </button>
                       );
                     })}
                   </div>
+                  {!wfSkipAvatar && (
+                    <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      {[['presenter','🧍 Presenter'],['corner','⬛ Corner']].map(function(opt) {
+                        var active = wfLayout === opt[0];
+                        return (
+                          <button key={opt[0]} onClick={function() { setWfLayout(opt[0]); }}
+                            style={{ padding: '5px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid '+ACC : '1px solid '+BORD, background: active ? 'rgba(29,158,117,.1)' : 'transparent', color: active ? ACCH : TXT2, textAlign: 'center' }}>
+                            {opt[1]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <span style={lbl}>Voiceover voice</span>
@@ -2544,7 +2563,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 style={{ width: '100%', padding: 14, borderRadius: 10, border: 'none', background: (wfRunning || !wfTopic.trim()) ? 'rgba(29,158,117,.35)' : ACC, color: 'white', fontSize: 14, fontWeight: 700, cursor: (wfRunning || !wfTopic.trim()) ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 {wfRunning
                   ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> Building your video…</>
-                  : <>⚡ Build Full Video — Script + Avatar + Scenes + Download</>}
+                  : wfSkipAvatar ? <>⚡ Build Scene Video — Script + Voiceover + Clips + Download</> : <>⚡ Build Full Video — Script + Avatar + Scenes + Download</>}
               </button>
             </div>
           </div>
