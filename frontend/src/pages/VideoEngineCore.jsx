@@ -172,7 +172,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [wfLayout, setWfLayout]       = useState('presenter');
   const [wfVoice, setWfVoice]         = useState('nova');
   const [wfDuration, setWfDuration]   = useState('30s');
-  const [wfSkipAvatar, setWfSkipAv]   = useState(true);  // default: scene-only (fast)
+  const [wfSkipAvatar, setWfSkipAv]   = useState(true);
+  const [wfMusic, setWfMusic]         = useState('uplifting');
+  const [wfAddMusic, setWfAddMusic]   = useState(true);  // default: scene-only (fast)
   const [wfJobId, setWfJobId]         = useState('');
   const [wfJob, setWfJob]             = useState(null);
   const [wfRunning, setWfRunning]     = useState(false);
@@ -826,6 +828,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           aspectRatio: wfRatio, avatarLayout: wfLayout,
           voice: wfVoice, duration: wfDuration,
           skipAvatar: wfSkipAvatar,
+          music: wfMusic,
+          addMusic: wfAddMusic,
         }),
       });
       const data = await res.json();
@@ -2529,6 +2533,34 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                   )}
                 </div>
                 <div>
+                  <span style={lbl}>Background music</span>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                    <button onClick={function() { setWfAddMusic(function(v) { return !v; }); }}
+                      style={{ padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: '1px solid ' + (wfAddMusic ? ACC : BORD), background: wfAddMusic ? 'rgba(29,158,117,.12)' : 'transparent', color: wfAddMusic ? ACCH : TXT3 }}>
+                      {wfAddMusic ? '🎵 Music ON' : '🔇 Music OFF'}
+                    </button>
+                  </div>
+                  {wfAddMusic && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {[
+                        { id:'uplifting', label:'🌟 Uplifting',    desc:'Positive, motivational' },
+                        { id:'calm',      label:'😌 Calm',         desc:'Soft, focused' },
+                        { id:'energetic', label:'⚡ Energetic',    desc:'Fast-paced, punchy' },
+                        { id:'corporate', label:'💼 Corporate',    desc:'Professional, clean' },
+                      ].map(function(m) {
+                        var active = wfMusic === m.id;
+                        return (
+                          <button key={m.id} onClick={function() { setWfMusic(m.id); }}
+                            style={{ padding: '5px 10px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid '+ACC : '1px solid '+BORD, background: active ? 'rgba(29,158,117,.1)' : 'rgba(22,61,106,.3)', color: active ? ACCH : TXT2, textAlign: 'left' }}>
+                            <div style={{ fontWeight: active ? 600 : 400 }}>{m.label}</div>
+                            <div style={{ fontSize: 8, color: TXT3, marginTop: 1 }}>{m.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div>
                   <span style={lbl}>Voiceover voice</span>
                   <select value={wfVoice} onChange={function(e) { setWfVoice(e.target.value); }}
                     style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: '1px solid ' + BORD, borderRadius: 6, padding: '6px 8px', fontSize: 11, color: TXT, fontFamily: 'inherit' }}>
@@ -2638,6 +2670,15 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     Or open in new browser tab
                   </a>
                 </div>
+
+                {/* Regenerate button */}
+                <button onClick={function() {
+                  setWfJob(null); setWfJobId(''); setWfError('');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                  style={{ width: '100%', padding: '9px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8 }}>
+                  🔄 Regenerate with different scenes
+                </button>
 
                 {/* Info tip */}
                 <div style={{ fontSize: 10, color: TXT3, padding: '6px 10px', background: 'rgba(22,61,106,.3)', borderRadius: 6, lineHeight: 1.5 }}>
