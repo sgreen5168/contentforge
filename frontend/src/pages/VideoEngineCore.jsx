@@ -401,8 +401,21 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   }
 
   async function assembleAndDownload() {
-    const clips = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
-    if (clips.length === 0) { setCombineError('No matched clips — select scenes above first.'); return; }
+    // Build clips from sceneMatches (live state) rather than phraseClips (may be stale)
+    const phrases = Array.isArray(selectedPhrases) ? selectedPhrases : Object.keys(selectedPhrases);
+    const liveClips = phrases.map(function(phrase, i) {
+      const m = sceneMatches[phrase];
+      return { scene: i+1, phrase, status: (m && m.matched && m.videoUrl) ? 'success' : 'failed', videoUrl: m ? m.videoUrl : null, pexelsQuery: sceneKeywords[phrase] || '' };
+    }).filter(function(c) { return c.status === 'success' && c.videoUrl; });
+
+    // Also accept phraseClips as fallback
+    const phraseClipsGood = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
+    const clips = liveClips.length > 0 ? liveClips : phraseClipsGood;
+
+    if (clips.length === 0 && !heygenVideoUrl) {
+      setCombineError('No matched clips — click ✨ Auto-match all scenes above, wait for matches to appear, then try again.');
+      return;
+    }
     if (!job || !job.result) return;
     setAssembling(true); setCombineError('');
     try {
@@ -410,7 +423,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const res = await fetch(API + '/api/video/assemble', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clipUrls: clips.map(c => c.videoUrl),
+          clipUrls: clips.length > 0 ? clips.map(c => c.videoUrl) : ['AVATAR_ONLY'],
           clips: clips.map(c => ({ pexelsId: c.pexelsId, pexelsQuery: c.pexelsQuery })),
           audioUrl, jobId,
           aspectRatio, cropStyle,
@@ -704,8 +717,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   async function publishToYouTube() {
     if (!ytTitle.trim()) { setPublishError('A title is required before publishing.'); return; }
-    const clips = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
-    if (clips.length === 0) { setPublishError('No matched clips — select scenes first.'); return; }
+    const phrases2 = Array.isArray(selectedPhrases) ? selectedPhrases : Object.keys(selectedPhrases);
+    const liveClips2 = phrases2.map(function(phrase, i) {
+      const m = sceneMatches[phrase];
+      return { scene: i+1, phrase, status: (m && m.matched && m.videoUrl) ? 'success' : 'failed', videoUrl: m ? m.videoUrl : null };
+    }).filter(function(c) { return c.status === 'success' && c.videoUrl; });
+    const phraseClipsGood2 = (phraseClips || []).filter(c => c && c.status === 'success' && c.videoUrl);
+    const clips = liveClips2.length > 0 ? liveClips2 : phraseClipsGood2;
+    if (clips.length === 0 && !heygenVideoUrl) { setPublishError('No matched clips — select scenes first.'); return; }
     if (!job || !job.result) return;
     setPublishing(true); setPublishError(''); setPublishResult(null);
     try {
@@ -713,7 +732,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const res = await fetch(API + '/api/video/publish-youtube', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          clipUrls: clips.map(c => c.videoUrl),
+          clipUrls: clips.length > 0 ? clips.map(c => c.videoUrl) : ['AVATAR_ONLY'],
           clips: clips.map(c => ({ pexelsId: c.pexelsId, pexelsQuery: c.pexelsQuery })),
           audioUrl, jobId,
           aspectRatio, cropStyle,
