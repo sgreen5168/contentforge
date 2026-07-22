@@ -173,6 +173,22 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [wfVoice, setWfVoice]         = useState('nova');
   const [wfDuration, setWfDuration]   = useState('30s');
   const [wfSkipAvatar, setWfSkipAv]   = useState(true);
+  // ── Video Builder state ────────────────────────────────────────────────────
+  const VB_API = (typeof import_meta_env !== 'undefined' && import_meta_env.VITE_VB_API_URL)
+    || 'https://video-builder-production.up.railway.app';
+  const [vbTopic, setVbTopic]       = useState('');
+  const [vbVoice, setVbVoice]       = useState('nova');
+  const [vbDuration, setVbDur]      = useState('30s');
+  const [vbMusic, setVbMusic]       = useState('uplifting');
+  const [vbRatio, setVbRatio]       = useState('9:16');
+  const [vbJobId, setVbJobId]       = useState('');
+  const [vbJob, setVbJob]           = useState(null);
+  const [vbRunning, setVbRunning]   = useState(false);
+  const [vbError, setVbError]       = useState('');
+  const [vbStatus, setVbStatus]     = useState(null);
+  const [vbPollRef]                 = useState({ current: null });
+  const [vbPubStatus, setVbPub]     = useState('');
+  const [vbYtPrivacy, setVbYtPriv]  = useState('public');
   const [wfMusic, setWfMusic]         = useState('uplifting');
   const [wfAddMusic, setWfAddMusic]   = useState(true);  // default: scene-only (fast)
   const [wfJobId, setWfJobId]         = useState('');
@@ -814,6 +830,69 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   const progress = (job && job.progress) || 0;
 
+  // ── Video Builder functions ──────────────────────────────────────────────
+  async function vbCheckStatus() {
+    try {
+      const r = await fetch(VB_API + '/status');
+      const d = await r.json();
+      setVbStatus(d);
+    } catch { setVbStatus(null); }
+  }
+
+  async function vbCreate() {
+    if (!vbTopic.trim()) { setVbError('Enter a topic first.'); return; }
+    setVbRunning(true); setVbError(''); setVbJob(null); setVbJobId(''); setVbPub('');
+    try {
+      const r = await fetch(VB_API + '/video/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: vbTopic.trim(), voice: vbVoice, duration: vbDuration, music: vbMusic, ratio: vbRatio }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed to start');
+      setVbJobId(d.id);
+      vbPollRef.current = setInterval(async function() {
+        try {
+          const pr = await fetch(VB_API + '/video/' + d.id);
+          const pd = await pr.json();
+          setVbJob(pd);
+          if (pd.status === 'completed' || pd.status === 'failed') {
+            clearInterval(vbPollRef.current);
+            setVbRunning(false);
+          }
+        } catch {}
+      }, 5000);
+    } catch(e) { setVbError(e.message); setVbRunning(false); }
+  }
+
+  function vbDownload() {
+    if (!vbJobId) return;
+    const url = VB_API + '/video/' + vbJobId + '/file';
+    fetch(url).then(function(r) { return r.blob(); }).then(function(blob) {
+      const bu = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = bu;
+      a.download = 'video-' + vbJobId + '.mp4';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(bu);
+    }).catch(function() { window.open(url, '_blank'); });
+  }
+
+  async function vbPublishYouTube() {
+    if (!vbJobId) return;
+    setVbPub('Publishing to YouTube…');
+    try {
+      const r = await fetch(VB_API + '/video/' + vbJobId + '/publish-youtube', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privacy: vbYtPrivacy }),
+      });
+      const d = await r.json();
+      if (r.ok && d.youtubeUrl) {
+        setVbPub('✅ Published! ' + d.youtubeUrl);
+      } else {
+        setVbPub('❌ ' + (d.error || 'Publish failed'));
+      }
+    } catch(e) { setVbPub('❌ ' + e.message); }
+  }
+
   // ── Workflow functions ───────────────────────────────────────────────────
   async function startWorkflow() {
     if (!wfTopic.trim()) { setWfError('Enter a topic first.'); return; }
@@ -889,7 +968,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {[['generate','Generate'],['result','Result'],['history','History'],['workflow','⚡ Auto Workflow']].map(function(t) {
+        {[['generate','Generate'],['result','Result'],['history','History'],['workflow','⚡ Auto Workflow'],['vbuilder','🎬 Video Builder']].map(function(t) {
           var id = t[0]; var label = t[1];
           return (
             <button key={id} onClick={function() { setTab(id); }}
@@ -2425,6 +2504,173 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       )}
 
       <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } } @keyframes cf-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }' }} />
+
+      {/* 🎬 VIDEO BUILDER TAB */}
+      {tab === 'vbuilder' && (function() {
+        // Check status on first open
+        if (!vbStatus && tab === 'vbuilder') { vbCheckStatus(); }
+        return (
+        <div style={{ maxWidth: 680 }}>
+
+          {/* Header */}
+          <div style={{ ...card(), marginBottom: 12, border: '1px solid rgba(99,179,237,.3)', background: 'rgba(99,179,237,.04)' }}>
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: TXT, marginBottom: 5 }}>🎬 Video Builder</div>
+              <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.6, marginBottom: 8 }}>
+                Type a topic — ContentForge writes the script, records the voiceover, finds matching video clips, and delivers one complete MP4 you can preview and download. No manual steps.
+              </div>
+              {vbStatus ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {[['Script (Claude)', vbStatus.anthropic],['Voiceover (OpenAI)', vbStatus.openai],['Clips (Pexels)', vbStatus.pexels],['YouTube', vbStatus.youtube]].map(function(s) {
+                    return <span key={s[0]} style={{ padding: '2px 8px', borderRadius: 20, fontSize: 9, fontWeight: 600, background: s[1] ? 'rgba(29,158,117,.12)' : 'rgba(226,75,74,.1)', color: s[1] ? ACCH : '#F09595', border: '1px solid '+(s[1]?'rgba(29,158,117,.2)':'rgba(226,75,74,.2)') }}>{s[1]?'✅':'⚠'} {s[0]}</span>;
+                  })}
+                </div>
+              ) : <div style={{ fontSize: 10, color: TXT3 }}>Checking connections…</div>}
+            </div>
+          </div>
+
+          {/* Input form */}
+          {!vbRunning && !(vbJob && vbJob.status === 'completed') && (
+            <div style={card()}>
+              <div style={{ padding: '14px 16px' }}>
+
+                <span style={lbl}>What is this video about? *</span>
+                <textarea value={vbTopic} onChange={function(e){setVbTopic(e.target.value);}} rows={2}
+                  placeholder="e.g. Three ways to earn extra money from home this week with no experience needed"
+                  style={{ width:'100%',background:'rgba(22,61,106,.5)',border:'1px solid '+BORD,borderRadius:8,padding:'8px 10px',fontSize:12,color:TXT,fontFamily:'inherit',outline:'none',resize:'vertical',boxSizing:'border-box',marginBottom:12 }} />
+
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:12 }}>
+                  <div>
+                    <span style={lbl}>Length</span>
+                    <select value={vbDuration} onChange={function(e){setVbDur(e.target.value);}} style={{ width:'100%',background:'rgba(22,61,106,.5)',border:'1px solid '+BORD,borderRadius:6,padding:'7px 8px',fontSize:11,color:TXT,fontFamily:'inherit' }}>
+                      <option value="30s">30 seconds</option>
+                      <option value="45s">45 seconds</option>
+                      <option value="60s">60 seconds</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span style={lbl}>Format</span>
+                    <select value={vbRatio} onChange={function(e){setVbRatio(e.target.value);}} style={{ width:'100%',background:'rgba(22,61,106,.5)',border:'1px solid '+BORD,borderRadius:6,padding:'7px 8px',fontSize:11,color:TXT,fontFamily:'inherit' }}>
+                      <option value="9:16">9:16 Vertical</option>
+                      <option value="16:9">16:9 Horizontal</option>
+                      <option value="1:1">1:1 Square</option>
+                      <option value="4:5">4:5 Portrait</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span style={lbl}>Voice</span>
+                    <select value={vbVoice} onChange={function(e){setVbVoice(e.target.value);}} style={{ width:'100%',background:'rgba(22,61,106,.5)',border:'1px solid '+BORD,borderRadius:6,padding:'7px 8px',fontSize:11,color:TXT,fontFamily:'inherit' }}>
+                      {[['nova','Nova (warm ♀)'],['shimmer','Shimmer (clear ♀)'],['alloy','Alloy (neutral ♀)'],['onyx','Onyx (deep ♂)'],['echo','Echo (confident ♂)'],['fable','Fable (expressive ♂)']].map(function(v){return <option key={v[0]} value={v[0]}>{v[1]}</option>;})}
+                    </select>
+                  </div>
+                </div>
+
+                <span style={lbl}>Background music</span>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
+                  {[['none','🔇 None'],['uplifting','🌟 Uplifting'],['calm','😌 Calm'],['energetic','⚡ Energetic'],['corporate','💼 Corporate']].map(function(m){
+                    var active = vbMusic===m[0];
+                    return <button key={m[0]} onClick={function(){setVbMusic(m[0]);}} style={{ padding:'5px 12px',borderRadius:7,cursor:'pointer',fontFamily:'inherit',fontSize:10,border:active?'2px solid '+ACC:'1px solid '+BORD,background:active?'rgba(29,158,117,.1)':'rgba(22,61,106,.3)',color:active?ACCH:TXT2,fontWeight:active?600:400 }}>{m[1]}</button>;
+                  })}
+                </div>
+
+                {vbError && <div style={{ marginBottom:10,padding:'7px 10px',background:'rgba(226,75,74,.1)',border:'1px solid rgba(226,75,74,.2)',borderRadius:6,fontSize:11,color:'#F09595' }}>{vbError}</div>}
+
+                <button onClick={vbCreate} disabled={!vbTopic.trim()}
+                  style={{ width:'100%',padding:14,borderRadius:10,border:'none',background:vbTopic.trim()?'#3B82F6':'rgba(59,130,246,.3)',color:'white',fontSize:14,fontWeight:700,cursor:vbTopic.trim()?'pointer':'default',fontFamily:'inherit',boxShadow:vbTopic.trim()?'0 2px 12px rgba(59,130,246,.4)':'none' }}>
+                  ▶ Create Video
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Progress */}
+          {vbRunning && vbJob && (
+            <div style={{ ...card(), marginBottom:12 }}>
+              <div style={{ padding:'14px 16px' }}>
+                <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:10 }}>
+                  <div style={{ flex:1,height:8,borderRadius:4,background:'rgba(22,61,106,.5)',overflow:'hidden' }}>
+                    <div style={{ height:'100%',borderRadius:4,background:'#3B82F6',width:(vbJob.progress||0)+'%',transition:'width 0.5s ease' }} />
+                  </div>
+                  <span style={{ fontSize:11,color:TXT3,flexShrink:0 }}>{vbJob.progress||0}%</span>
+                </div>
+                <div style={{ fontSize:12,color:TXT2,marginBottom:6 }}>{vbJob.step}</div>
+                <div style={{ fontSize:10,color:TXT3 }}>Keep this tab open — usually takes 2–4 minutes</div>
+              </div>
+            </div>
+          )}
+
+          {/* Completed */}
+          {vbJob && vbJob.status==='completed' && vbJob.result && (
+            <div style={{ ...card(), marginBottom:12, border:'2px solid rgba(59,130,246,.4)', background:'rgba(59,130,246,.03)' }}>
+              <div style={{ padding:'10px 16px',background:'rgba(59,130,246,.1)',display:'flex',alignItems:'center',justifyContent:'space-between' }}>
+                <span style={{ fontSize:13,fontWeight:700,color:TXT }}>✅ Your video is ready</span>
+                <span style={{ fontSize:10,color:'#93C5FD' }}>{vbJob.result.ratio} · {vbJob.result.clipsCount} clips · {vbJob.result.duration}s{vbJob.result.hasAudio?' · 🔊 audio':' · ⚠ no audio'}</span>
+              </div>
+              <div style={{ padding:'14px 16px' }}>
+
+                {/* Script hook */}
+                {vbJob.result.hook && (
+                  <div style={{ fontSize:11,color:TXT2,fontStyle:'italic',marginBottom:12,padding:'7px 10px',background:'rgba(22,61,106,.3)',borderRadius:7,borderLeft:'3px solid #3B82F6',lineHeight:1.5 }}>
+                    "{vbJob.result.hook}"
+                  </div>
+                )}
+
+                {/* Preview player */}
+                <div style={{ marginBottom:12,borderRadius:10,overflow:'hidden',background:'#000' }}>
+                  <video controls preload="metadata" style={{ width:'100%',display:'block',maxHeight:480,borderRadius:10 }}
+                    src={VB_API+'/video/'+vbJobId+'/file'}>
+                    Your browser does not support video preview.
+                  </video>
+                </div>
+
+                {/* Action buttons */}
+                <button onClick={vbDownload}
+                  style={{ width:'100%',padding:12,borderRadius:9,border:'none',background:'#3B82F6',color:'white',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',marginBottom:8,boxShadow:'0 2px 12px rgba(59,130,246,.4)' }}>
+                  ⬇ Download MP4 to Computer
+                </button>
+
+                {/* YouTube publish */}
+                <div style={{ padding:'10px 12px',background:'rgba(22,61,106,.3)',borderRadius:8,marginBottom:8 }}>
+                  <div style={{ fontSize:11,fontWeight:600,color:TXT,marginBottom:6 }}>▶ Publish to YouTube</div>
+                  <div style={{ display:'flex',gap:6,marginBottom:8 }}>
+                    {[['public','Public'],['unlisted','Unlisted'],['private','Private']].map(function(p){
+                      return <button key={p[0]} onClick={function(){setVbYtPriv(p[0]);}} style={{ padding:'4px 10px',borderRadius:6,cursor:'pointer',fontFamily:'inherit',fontSize:10,border:vbYtPrivacy===p[0]?'2px solid '+ACC:'1px solid '+BORD,background:vbYtPrivacy===p[0]?'rgba(29,158,117,.1)':'transparent',color:vbYtPrivacy===p[0]?ACCH:TXT2 }}>{p[1]}</button>;
+                    })}
+                  </div>
+                  {vbStatus && !vbStatus.youtube && (
+                    <div style={{ fontSize:10,color:'#FAC775',marginBottom:6 }}>⚠ YOUTUBE_REFRESH_TOKEN not set in Railway — add it to enable publishing</div>
+                  )}
+                  <button onClick={vbPublishYouTube} disabled={vbStatus && !vbStatus.youtube}
+                    style={{ width:'100%',padding:'9px',borderRadius:7,border:'none',background:vbStatus&&vbStatus.youtube?'#FF0000':'rgba(255,0,0,.3)',color:'white',fontSize:12,fontWeight:600,cursor:vbStatus&&vbStatus.youtube?'pointer':'default',fontFamily:'inherit' }}>
+                    ▶ Publish to YouTube as Short
+                  </button>
+                  {vbPubStatus && <div style={{ marginTop:6,fontSize:11,color:vbPubStatus.startsWith('✅')?ACCH:'#F09595',wordBreak:'break-all' }}>{vbPubStatus}</div>}
+                </div>
+
+                {/* Regenerate */}
+                <button onClick={function(){ setVbJob(null); setVbJobId(''); setVbPub(''); setVbRunning(false); window.scrollTo({top:0,behavior:'smooth'}); }}
+                  style={{ width:'100%',padding:'9px',borderRadius:8,border:'1px solid '+BORD,background:'transparent',color:TXT2,fontSize:12,cursor:'pointer',fontFamily:'inherit' }}>
+                  🔄 Regenerate with same settings
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Failed */}
+          {vbJob && vbJob.status==='failed' && (
+            <div style={{ ...card(), marginBottom:12, border:'1px solid rgba(226,75,74,.3)' }}>
+              <div style={{ padding:'12px 16px' }}>
+                <div style={{ fontSize:12,color:'#F09595',marginBottom:8 }}>{vbJob.step}</div>
+                <button onClick={function(){ setVbJob(null); setVbJobId(''); setVbRunning(false); }}
+                  style={{ padding:'7px 14px',borderRadius:7,border:'1px solid rgba(226,75,74,.3)',background:'transparent',color:'#F09595',fontSize:11,cursor:'pointer',fontFamily:'inherit' }}>
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        );
+      })()}
 
       {/* ⚡ AUTO WORKFLOW TAB */}
       {tab === 'workflow' && (
