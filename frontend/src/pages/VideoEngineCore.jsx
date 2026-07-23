@@ -175,7 +175,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [wfSkipAvatar, setWfSkipAv]   = useState(true);
   // ── Video Builder state ────────────────────────────────────────────────────
   const VB_API = (typeof import_meta_env !== 'undefined' && import_meta_env.VITE_VB_API_URL)
-    || 'https://video-builder-production.up.railway.app';
+    || 'https://contentforge-production-c8d9.up.railway.app';
   const [vbTopic, setVbTopic]       = useState('');
   const [vbVoice, setVbVoice]       = useState('nova');
   const [vbDuration, setVbDur]      = useState('30s');
