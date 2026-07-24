@@ -20,6 +20,9 @@ export default function ScriptWriter() {
   const [error, setError]     = useState('');
   const [copied, setCopied]   = useState('');
   const [editIdx, setEditIdx] = useState(null);
+  const [readingIdx, setReadingIdx] = useState(null);
+  const [readerPaused, setRdrPaused] = useState(false);
+  const [readerRate, setRdrRate]     = useState(1.1);
   const [editText, setEditText] = useState('');
   const [variations, setVars] = useState(false);
   const countRef = useRef(0);
