@@ -35,24 +35,31 @@ export default function ScriptWriter() {
         let lastErr = null;
         let script = null;
         for (let attempt = 1; attempt <= 2; attempt++) {
-          const res = await fetch(`${API}/api/video/script`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              inputMode: mode,
-              topic: mode === 'topic' ? input : undefined,
-              url: mode === 'url' ? input : undefined,
-              affiliateUrl: mode === 'affiliate' ? input : undefined,
-              style,
-              persona: persona.toLowerCase().replace(' ','-'),
-              duration: length === 'short' ? '30s' : length === 'medium' ? '60s' : '5m',
-              platforms: [platform.toLowerCase()],
-              videoType: style === 'VSL' ? 'ai-vsl' : style === 'Reel Ad' ? 'reel-ads' : 'ugc-persona',
-            }),
-          });
-          const data = await res.json();
+          let res, data;
+          try {
+            res = await fetch(`${API}/api/video/script`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                inputMode: mode,
+                topic: mode === 'topic' ? input : undefined,
+                url: mode === 'url' ? input : undefined,
+                affiliateUrl: mode === 'affiliate' ? input : undefined,
+                style,
+                persona: persona.toLowerCase().replace(' ','-'),
+                duration: length === 'short' ? '30s' : length === 'medium' ? '60s' : '5m',
+                platforms: [platform.toLowerCase()],
+                videoType: style === 'VSL' ? 'ai-vsl' : style === 'Reel Ad' ? 'reel-ads' : 'ugc-persona',
+              }),
+            });
+            data = await res.json();
+          } catch(fetchErr) {
+            lastErr = 'Could not reach server — check your internet connection';
+            if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+            throw new Error(lastErr);
+          }
           if (!res.ok) {
-            lastErr = data.error || 'Script generation failed';
+            lastErr = data.error || 'Script generation failed (HTTP ' + res.status + ')';
             const isOverload = res.status === 503 || (lastErr && lastErr.includes('busy'));
             if (isOverload && attempt < 2) {
               await new Promise(r => setTimeout(r, 5000));
@@ -61,6 +68,11 @@ export default function ScriptWriter() {
             throw new Error(lastErr);
           }
           script = data.script;
+          if (!script || !script.fullScript) {
+            lastErr = 'Server returned an empty script — try again';
+            if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+            throw new Error(lastErr);
+          }
           break;
         }
         if (!script) throw new Error(lastErr || 'Script generation failed');
@@ -289,7 +301,7 @@ export default function ScriptWriter() {
             </div>
           )}
 
-          {scripts.map((s, idx) => (
+          {scripts.filter(function(s) { return s && s.fullScript; }).map((s, idx) => (
             <div key={s.id} style={{ background: BG2, border: '1px solid ' + BORD, borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
               <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(29,158,117,.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -444,7 +456,7 @@ export default function ScriptWriter() {
           ))}
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }' }} />
     </div>
   );
 }
