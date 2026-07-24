@@ -173,6 +173,12 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [wfVoice, setWfVoice]         = useState('nova');
   const [wfDuration, setWfDuration]   = useState('30s');
   const [wfSkipAvatar, setWfSkipAv]   = useState(true);
+  // ── Script text reader state ──────────────────────────────────────────────
+  const [readerSpeaking, setReaderSpeaking] = useState(false);
+  const [readerPaused, setReaderPaused]     = useState(false);
+  const [readerVoice, setReaderVoice]       = useState('');
+  const [readerRate, setReaderRate]         = useState(1.0);
+  const [readerRef]                         = useState({ current: null });
   // ── Video Builder state ────────────────────────────────────────────────────
   const VB_API = (typeof import_meta_env !== 'undefined' && import_meta_env.VITE_VB_API_URL)
     || 'https://stellar-achievement-production-ea9d.up.railway.app';
@@ -830,6 +836,45 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   const progress = (job && job.progress) || 0;
 
+  // ── Script text reader functions ─────────────────────────────────────────
+  function readerSpeak(text) {
+    if (!text || !window.speechSynthesis) return;
+    // Stop any current speech
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate  = readerRate;
+    utt.pitch = 1.0;
+    // Use selected voice if available
+    if (readerVoice) {
+      const voices = window.speechSynthesis.getVoices();
+      const v = voices.find(function(v) { return v.name === readerVoice; });
+      if (v) utt.voice = v;
+    }
+    utt.onstart  = function() { setReaderSpeaking(true);  setReaderPaused(false); };
+    utt.onend    = function() { setReaderSpeaking(false); setReaderPaused(false); };
+    utt.onpause  = function() { setReaderPaused(true); };
+    utt.onresume = function() { setReaderPaused(false); };
+    utt.onerror  = function() { setReaderSpeaking(false); setReaderPaused(false); };
+    readerRef.current = utt;
+    window.speechSynthesis.speak(utt);
+  }
+
+  function readerPause() {
+    if (window.speechSynthesis.speaking) window.speechSynthesis.pause();
+    setReaderPaused(true);
+  }
+
+  function readerResume() {
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+    setReaderPaused(false);
+  }
+
+  function readerStop() {
+    window.speechSynthesis.cancel();
+    setReaderSpeaking(false);
+    setReaderPaused(false);
+  }
+
   // ── Video Builder functions ──────────────────────────────────────────────
   async function vbCheckStatus() {
     try {
@@ -1439,6 +1484,69 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                     <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.7, maxHeight: 100, overflow: 'auto', padding: '8px 10px', background: 'rgba(22,61,106,.4)', borderRadius: 6 }}>
                       {job.result.script.fullScript}
                     </div>
+
+                    {/* ── Script Text Reader ────────────────────────────────── */}
+                    <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(22,61,106,.3)', borderRadius: 8, border: '1px solid ' + BORD }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        🔊 Script Reader
+                        {!window.speechSynthesis && <span style={{ fontSize: 9, color: '#F09595' }}>Not supported in this browser</span>}
+                      </div>
+
+                      {/* Speed control */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, color: TXT3, flexShrink: 0 }}>Speed:</span>
+                        {[['0.75','Slow'],['1.0','Normal'],['1.25','Fast'],['1.5','Faster']].map(function(r) {
+                          var active = String(readerRate) === r[0];
+                          return (
+                            <button key={r[0]} onClick={function() { setReaderRate(parseFloat(r[0])); }}
+                              style={{ padding: '3px 8px', borderRadius: 5, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: active ? '2px solid '+ACC : '1px solid '+BORD, background: active ? 'rgba(29,158,117,.12)' : 'transparent', color: active ? ACCH : TXT3, fontWeight: active ? 600 : 400 }}>
+                              {r[1]}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Playback controls */}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {!readerSpeaking ? (
+                          <button onClick={function() { readerSpeak(job.result.script.fullScript); }}
+                            disabled={!window.speechSynthesis}
+                            style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: window.speechSynthesis ? ACC : 'rgba(29,158,117,.3)', color: 'white', fontSize: 12, fontWeight: 700, cursor: window.speechSynthesis ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                            ▶ Read Script Aloud
+                          </button>
+                        ) : (
+                          <>
+                            {!readerPaused ? (
+                              <button onClick={readerPause}
+                                style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: '#F5A623', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                ⏸ Pause
+                              </button>
+                            ) : (
+                              <button onClick={readerResume}
+                                style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                ▶ Resume
+                              </button>
+                            )}
+                            <button onClick={readerStop}
+                              style={{ padding: '8px 14px', borderRadius: 7, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              ■ Stop
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {readerSpeaking && (
+                        <div style={{ marginTop: 6, fontSize: 10, color: ACCH, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCH, display: 'inline-block', animation: 'cf-pulse 1s ease infinite' }} />
+                          {readerPaused ? 'Paused' : 'Reading script aloud…'}
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: 6, fontSize: 9, color: TXT3, lineHeight: 1.4 }}>
+                        Uses your browser's built-in text-to-speech. For the full AI voiceover in the video, click Generate below.
+                      </div>
+                    </div>
+
                     {job.result.script.hashtags && job.result.script.hashtags.length > 0 && (
                       <div style={{ marginTop: 8, fontSize: 12, color: ACCH }}>{job.result.script.hashtags.join(' ')}</div>
                     )}
