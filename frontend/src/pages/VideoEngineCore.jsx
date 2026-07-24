@@ -181,7 +181,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [readerRef]                         = useState({ current: null });
   // ── Video Builder state ────────────────────────────────────────────────────
   const VB_API = (typeof import_meta_env !== 'undefined' && import_meta_env.VITE_VB_API_URL)
-    || 'https://stellar-achievement-production-ea9d.up.railway.app';
+    || 'https://contentforge-production-c8d9.up.railway.app';
   const [vbTopic, setVbTopic]       = useState('');
   const [vbVoice, setVbVoice]       = useState('nova');
   const [vbDuration, setVbDur]      = useState('30s');
@@ -878,7 +878,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   // ── Video Builder functions ──────────────────────────────────────────────
   async function vbCheckStatus() {
     try {
-      const r = await fetch(VB_API + '/vb/status');
+      const r = await fetch(VB_API + '/status');
       const d = await r.json();
       setVbStatus(d);
     } catch { setVbStatus(null); }
@@ -888,7 +888,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     if (!vbTopic.trim()) { setVbError('Enter a topic first.'); return; }
     setVbRunning(true); setVbError(''); setVbJob(null); setVbJobId(''); setVbPub('');
     try {
-      const r = await fetch(VB_API + '/vb/video/create', {
+      const r = await fetch(VB_API + '/video/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: vbTopic.trim(), voice: vbVoice, duration: vbDuration, music: vbMusic, ratio: vbRatio }),
       });
@@ -897,7 +897,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       setVbJobId(d.id);
       vbPollRef.current = setInterval(async function() {
         try {
-          const pr = await fetch(VB_API + '/vb/video/' + d.id);
+          const pr = await fetch(VB_API + '/video/' + d.id);
           const pd = await pr.json();
           setVbJob(pd);
           if (pd.status === 'completed' || pd.status === 'failed') {
@@ -911,7 +911,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
   function vbDownload() {
     if (!vbJobId) return;
-    const url = VB_API + '/vb/video/' + vbJobId + '/file';
+    const url = VB_API + '/video/' + vbJobId + '/file';
     fetch(url).then(function(r) { return r.blob(); }).then(function(blob) {
       const bu = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = bu;
@@ -925,7 +925,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     if (!vbJobId) return;
     setVbPub('Publishing to YouTube…');
     try {
-      const r = await fetch(VB_API + '/vb/video/' + vbJobId + '/publish-youtube', {
+      const r = await fetch(VB_API + '/video/' + vbJobId + '/publish-youtube', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ privacy: vbYtPrivacy }),
       });
@@ -2726,7 +2726,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
                 {/* Preview player */}
                 <div style={{ marginBottom:12,borderRadius:10,overflow:'hidden',background:'#000' }}>
                   <video controls preload="metadata" style={{ width:'100%',display:'block',maxHeight:480,borderRadius:10 }}
-                    src={VB_API+'/vb/video/'+vbJobId+'/file'}>
+                    src={VB_API+'/video/'+vbJobId+'/file'}>
                     Your browser does not support video preview.
                   </video>
                 </div>
