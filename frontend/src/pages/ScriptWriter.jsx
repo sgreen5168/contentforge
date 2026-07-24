@@ -77,6 +77,55 @@ export default function ScriptWriter() {
     setTimeout(() => setCopied(''), 2000);
   }
 
+  // Text reader — uses browser's built-in SpeechSynthesis
+  function readScript(idx, text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    if (readingIdx === idx) { setReadingIdx(null); return; } // toggle off
+
+    // Clean the text for natural reading
+    // Remove hashtags, URLs, and markdown symbols
+    const cleaned = text
+      .replace(/#\w+/g, '')           // remove hashtags
+      .replace(/https?:\/\/\S+/g, '') // remove URLs
+      .replace(/[*_~`]/g, '')          // remove markdown
+      .replace(/\s+/g, ' ')           // collapse whitespace
+      .trim();
+
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    utt.rate  = readerRate;
+    utt.pitch = 1.05;  // slightly higher pitch sounds more natural
+
+    // Pick best available voice — prefer natural-sounding English voices
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      /Samantha|Karen|Daniel|Google US|Microsoft Aria|Microsoft Jenny|Ava|Nova/i.test(v.name)
+    ) || voices.find(v => v.lang === 'en-US' && !v.name.includes('Google')) || voices[0];
+    if (preferred) utt.voice = preferred;
+
+    utt.onend   = function() { setReadingIdx(null); setRdrPaused(false); };
+    utt.onerror = function() { setReadingIdx(null); setRdrPaused(false); };
+    setReadingIdx(idx);
+    setRdrPaused(false);
+    window.speechSynthesis.speak(utt);
+  }
+
+  function pauseReader() {
+    window.speechSynthesis.pause();
+    setRdrPaused(true);
+  }
+
+  function resumeReader() {
+    window.speechSynthesis.resume();
+    setRdrPaused(false);
+  }
+
+  function stopReader() {
+    window.speechSynthesis.cancel();
+    setReadingIdx(null);
+    setRdrPaused(false);
+  }
+
   function startEdit(idx, text) { setEditIdx(idx); setEditText(text); }
   function saveEdit(idx) {
     setScripts(prev => prev.map((s, i) => i === idx ? { ...s, fullScript: editText } : s));
@@ -291,6 +340,56 @@ export default function ScriptWriter() {
                   ) : (
                     <div style={{ fontSize: 13, color: TXT2, lineHeight: 1.8, padding: '10px 12px', background: 'rgba(22,61,106,.4)', borderRadius: 8, whiteSpace: 'pre-wrap', maxHeight: 300, overflow: 'auto' }}>
                       {s.fullScript}
+                    </div>
+                  )}
+                </div>
+
+                {/* 🔊 Script Reader */}
+                <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(22,61,106,.3)', borderRadius: 8, border: '1px solid rgba(29,158,117,.15)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>🔊 Read Aloud</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[['0.8','Slow'],['1.0','Normal'],['1.1','Natural'],['1.3','Fast']].map(function(r) {
+                        var active = readerRate === parseFloat(r[0]);
+                        return (
+                          <button key={r[0]} onClick={function() { setRdrRate(parseFloat(r[0])); }}
+                            style={{ padding: '2px 7px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: active ? '1px solid '+ACC : '1px solid '+BORD, background: active ? 'rgba(29,158,117,.15)' : 'transparent', color: active ? ACCH : TXT3, fontWeight: active ? 700 : 400 }}>
+                            {r[1]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {readingIdx !== idx ? (
+                      <button onClick={function() { readScript(idx, s.fullScript); }}
+                        style={{ flex: 1, padding: '7px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                        ▶ Read Script Aloud
+                      </button>
+                    ) : (
+                      <>
+                        {!readerPaused ? (
+                          <button onClick={pauseReader}
+                            style={{ flex: 1, padding: '7px', borderRadius: 7, border: 'none', background: '#F5A623', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            ⏸ Pause
+                          </button>
+                        ) : (
+                          <button onClick={resumeReader}
+                            style={{ flex: 1, padding: '7px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            ▶ Resume
+                          </button>
+                        )}
+                        <button onClick={stopReader}
+                          style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          ■ Stop
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {readingIdx === idx && (
+                    <div style={{ marginTop: 6, fontSize: 10, color: ACCH, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCH, display: 'inline-block', animation: 'pulse 1s ease infinite' }} />
+                      {readerPaused ? 'Paused' : 'Reading aloud…'}
                     </div>
                   )}
                 </div>
