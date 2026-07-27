@@ -140,11 +140,35 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
   }
 
   function downloadImage(url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `contentforge-image-${Date.now()}.png`;
-    a.target = '_blank';
-    a.click();
+    if (!url) return;
+    const filename = `contentforge-image-${Date.now()}.png`;
+    if (url.startsWith('data:')) {
+      // Base64 data URL — download directly
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // External URL — fetch as blob first to force download
+      fetch(url)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+          const burl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = burl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(burl);
+        })
+        .catch(function() {
+          // Last resort — open in new tab
+          window.open(url, '_blank');
+        });
+    }
   }
 
   function copyImageUrl(url) {
