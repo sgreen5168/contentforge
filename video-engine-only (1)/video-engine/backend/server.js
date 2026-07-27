@@ -4226,8 +4226,31 @@ app.post('/api/image/generate', async (req, res) => {
       const seed = Math.floor(Math.random() * 999999);
       const w = Math.min(width, 1024);
       const h = Math.min(height, 1024);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${w}&height=${h}&seed=${seed}&nologo=true&enhance=true`;
-      results.push({ url, seed });
+      // Build Pollinations URL
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=${w}&height=${h}&seed=${seed}&nologo=true&enhance=true&model=flux`;
+
+      // Fetch the image server-side so it's ready and we can serve it directly
+      // This avoids CORS issues on download and ensures the image is generated
+      try {
+        console.log(`🎨 Generating image ${i+1}/${count}...`);
+        const imgRes = await fetch(pollinationsUrl, {
+          headers: { 'User-Agent': 'ContentForge/2.0' },
+          timeout: 30000,
+        });
+        if (!imgRes.ok) throw new Error('Pollinations HTTP ' + imgRes.status);
+        const imgBuf = await imgRes.buffer();
+        if (!imgBuf || imgBuf.length < 1000) throw new Error('Image too small');
+        // Return as base64 data URL so frontend can display and download without CORS
+        const b64 = imgBuf.toString('base64');
+        const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+        const dataUrl = `data:${mimeType};base64,${b64}`;
+        results.push({ url: dataUrl, seed, width: w, height: h });
+        console.log(`✅ Image ${i+1} generated: ${Math.round(imgBuf.length/1024)}KB`);
+      } catch(imgErr) {
+        console.warn(`⚠ Image ${i+1} failed: ${imgErr.message} — using direct URL fallback`);
+        // Fallback to direct URL — browser will load it
+        results.push({ url: pollinationsUrl, seed, width: w, height: h });
+      }
     }
 
     console.log(`✅ Generated ${results.length} images via Pollinations.ai`);
