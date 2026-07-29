@@ -76,9 +76,57 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
   const [editPrompt, setEditP]  = useState('');
   const [count, setCount]       = useState(2);
   const canvasRef               = useRef(null);
+  const [igTab, setIgTab]       = useState('images');   // 'images' | 'videobg'
+  const [vbgPrompt, setVbgPrompt] = useState('');
+  const [vbgStyle, setVbgStyle]   = useState('cinematic');
+  const [vbgRatio, setVbgRatio]   = useState('9:16');
+  const [vbgImages, setVbgImages] = useState([]);
+  const [vbgSelected, setVbgSel] = useState(null);
+  const [vbgGenerating, setVbgGen] = useState(false);
+  const [vbgError, setVbgErr]    = useState('');
 
   const currentSizes = PLATFORMS_SIZES[platform] || PLATFORMS_SIZES.universal;
   const selectedSize = currentSizes.find(s => s.id === size) || currentSizes[0];
+
+  async function generateVideoBg() {
+    if (!vbgPrompt.trim()) return;
+    setVbgGen(true); setVbgErr(''); setVbgImages([]);
+    const VBG_STYLES = {
+      cinematic:   'cinematic background, film grain, bokeh, shallow depth of field, movie quality, no people, no text',
+      abstract:    'abstract motion background, fluid shapes, smooth gradients, loopable, artistic, no text, no people',
+      nature:      'nature background, serene landscape, gentle movement, leaves, water, sky, no people, no text',
+      urban:       'urban city background, bokeh lights, street scene, modern, night or day, no people, no text',
+      minimal:     'minimal clean background, solid colors, subtle texture, professional, elegant, no people, no text',
+      gradient:    'smooth gradient background, color wash, soft light, modern, loopable, no people, no text',
+      business:    'professional business background, office setting, modern workspace, clean, no people, no text',
+      particles:   'particle effect background, floating elements, bokeh dots, magical, atmospheric, no text, no people',
+    };
+    const RATIOS = {
+      '9:16': { w: 720,  h: 1280 },
+      '16:9': { w: 1280, h: 720  },
+      '1:1':  { w: 1080, h: 1080 },
+    };
+    const { w, h } = RATIOS[vbgRatio] || RATIOS['9:16'];
+    const enhancedPrompt = [
+      vbgPrompt,
+      VBG_STYLES[vbgStyle] || VBG_STYLES.cinematic,
+      'suitable for video background, loopable, seamless',
+      'no text, no watermarks, no logos, no people',
+    ].join(', ');
+    try {
+      const res = await fetch(`${API}/api/image/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: enhancedPrompt, width: w, height: h, n: 4, style: vbgStyle }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      const imgs = data.images || [];
+      setVbgImages(imgs);
+      if (imgs[0]) setVbgSel(imgs[0]);
+    } catch(e) { setVbgErr(e.message); }
+    finally { setVbgGen(false); }
+  }
 
   async function generate(editMode = false) {
     const finalPrompt = editMode ? editPrompt : buildPrompt();
@@ -241,11 +289,26 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
 
   return (
     <div style={{ padding:24, maxWidth:1100, fontFamily:'inherit' }}>
-      <div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:22, fontWeight:500, color:'#E8F4F0', display:'flex', alignItems:'center', gap:10 }}>
-          🖼 AI Image Generator
-          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:'rgba(29,158,117,.2)', color:'#5DCAA5' }}>DALL-E 3</span>
+      <div style={{ marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ fontSize:22, fontWeight:500, color:'#E8F4F0' }}>
+            {igTab === 'images' ? '🖼 AI Image Generator' : '🎬 Video Background Generator'}
+          </div>
+          <span style={{ fontSize:11, padding:'2px 8px', borderRadius:10, background:'rgba(29,158,117,.2)', color:'#5DCAA5' }}>Pollinations AI</span>
         </div>
+        <div style={{ display:'flex', gap:6 }}>
+          {[['images','🖼 Images'],['videobg','🎬 Video BG']].map(function(t) {
+            var active = igTab === t[0];
+            return (
+              <button key={t[0]} onClick={function() { setIgTab(t[0]); }}
+                style={{ padding:'6px 14px', borderRadius:7, cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight: active?700:400, border: active?'2px solid #1D9E75':'1px solid rgba(255,255,255,.1)', background: active?'rgba(29,158,117,.12)':'rgba(255,255,255,.04)', color: active?'#1D9E75':'rgba(255,255,255,.5)' }}>
+                {t[1]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {igTab === 'images' && (<div style={{ marginBottom:20 }}>
         <div style={{ fontSize:13, color:'#7BAAA0', marginTop:4 }}>Generate platform-ready images for your posts, landing pages and content</div>
       </div>
 
@@ -461,6 +524,130 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } select option { background: #102D4F; }`}</style>
+    </div>)}
+
+      {/* ── VIDEO BACKGROUND GENERATOR ──────────────────────────────────── */}
+      {igTab === 'videobg' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
+
+          {/* Left — controls */}
+          <div>
+            <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'white', marginBottom: 4 }}>🎬 Video Background</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', marginBottom: 14, lineHeight: 1.5 }}>Generate still images optimised as video backgrounds — cinematic, seamless, no distracting elements. Use in ContentForge's combine feature as your scene backdrop.</div>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Describe the background</div>
+              <textarea value={vbgPrompt} onChange={function(e) { setVbgPrompt(e.target.value); }} rows={3}
+                placeholder="e.g. warm home kitchen morning light, cozy living room evening, modern office desk, sunset city skyline..."
+                style={{ width: '100%', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, padding: '8px 10px', fontSize: 12, color: 'white', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: 12 }} />
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Style</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 12 }}>
+                {[
+                  ['cinematic','🎬 Cinematic'],['abstract','✨ Abstract'],
+                  ['nature','🌿 Nature'],['urban','🏙 Urban'],
+                  ['minimal','◻ Minimal'],['gradient','🌈 Gradient'],
+                  ['business','💼 Business'],['particles','🫧 Particles'],
+                ].map(function(s) {
+                  var active = vbgStyle === s[0];
+                  return (
+                    <button key={s[0]} onClick={function() { setVbgStyle(s[0]); }}
+                      style={{ padding: '6px 4px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid #1D9E75' : '1px solid rgba(255,255,255,.1)', background: active ? 'rgba(29,158,117,.15)' : 'rgba(255,255,255,.04)', color: active ? '#1D9E75' : 'rgba(255,255,255,.6)', textAlign: 'center' }}>
+                      {s[1]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Aspect ratio</div>
+              <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
+                {[['9:16','9:16 Vertical'],['16:9','16:9 Wide'],['1:1','1:1 Square']].map(function(r) {
+                  var active = vbgRatio === r[0];
+                  return (
+                    <button key={r[0]} onClick={function() { setVbgRatio(r[0]); }}
+                      style={{ flex: 1, padding: '5px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontSize: 10, border: active ? '2px solid #1D9E75' : '1px solid rgba(255,255,255,.1)', background: active ? 'rgba(29,158,117,.15)' : 'rgba(255,255,255,.04)', color: active ? '#1D9E75' : 'rgba(255,255,255,.6)', textAlign: 'center' }}>
+                      {r[1]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {vbgError && <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>{vbgError}</div>}
+
+              <button onClick={generateVideoBg} disabled={vbgGenerating || !vbgPrompt.trim()}
+                style={{ width: '100%', padding: 12, borderRadius: 10, border: 'none', background: vbgPrompt.trim() && !vbgGenerating ? '#1D9E75' : 'rgba(29,158,117,.3)', color: 'white', fontSize: 13, fontWeight: 700, cursor: vbgPrompt.trim() && !vbgGenerating ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                {vbgGenerating ? '⏳ Generating…' : '🎬 Generate Backgrounds'}
+              </button>
+
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 6, fontSize: 10, color: 'rgba(255,255,255,.4)', lineHeight: 1.5 }}>
+                💡 Quick prompts: "cozy home office morning", "kitchen warm lighting", "living room evening bokeh", "outdoor garden sunlight", "modern desk minimal"
+              </div>
+            </div>
+          </div>
+
+          {/* Right — results */}
+          <div>
+            {vbgGenerating && (
+              <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
+                <div style={{ width: 36, height: 36, border: '3px solid rgba(29,158,117,.2)', borderTopColor: '#1D9E75', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+                <div style={{ fontSize: 13, color: '#1D9E75' }}>Generating video backgrounds…</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 4 }}>Creating 4 variations</div>
+              </div>
+            )}
+
+            {!vbgGenerating && vbgImages.length === 0 && (
+              <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: 50, textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🎬</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'white', marginBottom: 6 }}>Generate a video background</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', lineHeight: 1.6 }}>Describe a scene and choose a style. Use the generated image as a background in your avatar videos or scene clips.</div>
+              </div>
+            )}
+
+            {vbgImages.length > 0 && (
+              <div>
+                {/* Main preview */}
+                {vbgSelected && (
+                  <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
+                    <img src={vbgSelected.url} alt="Video background preview"
+                      style={{ width: '100%', display: 'block', maxHeight: 480, objectFit: 'contain', background: '#000' }} />
+                    <div style={{ padding: '12px 14px', display: 'flex', gap: 8 }}>
+                      <button onClick={function() { downloadImage(vbgSelected.url); }}
+                        style={{ flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: '#1D9E75', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ⬇ Download Background
+                      </button>
+                      <button onClick={function() { navigator.clipboard.writeText(vbgSelected.url).catch(function(){}); }}
+                        style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.6)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Copy URL
+                      </button>
+                    </div>
+                    <div style={{ padding: '0 14px 12px', fontSize: 10, color: 'rgba(255,255,255,.4)', lineHeight: 1.5 }}>
+                      💡 Upload this image into HeyGen as a custom background, or use it in ContentForge's Photo → video clip converter to create a moving background scene.
+                    </div>
+                  </div>
+                )}
+
+                {/* Thumbnail grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                  {vbgImages.map(function(img, i) {
+                    var active = vbgSelected && vbgSelected.url === img.url;
+                    return (
+                      <div key={i} onClick={function() { setVbgSel(img); }}
+                        style={{ borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: active ? '2px solid #1D9E75' : '2px solid transparent', opacity: active ? 1 : 0.7, transition: 'all .2s' }}>
+                        <img src={img.url} alt={'Background '+(i+1)} style={{ width: '100%', display: 'block', aspectRatio: '1', objectFit: 'cover' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button onClick={generateVideoBg}
+                  style={{ width: '100%', marginTop: 10, padding: '9px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.6)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ↻ Regenerate variations
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
