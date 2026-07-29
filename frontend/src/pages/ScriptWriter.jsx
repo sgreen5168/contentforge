@@ -94,7 +94,7 @@ export default function ScriptWriter() {
   }
 
   // Text reader — uses browser's built-in SpeechSynthesis
-  function readScript(idx, text) {
+  async function readScript(idx, text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     if (readingIdx === idx) { setReadingIdx(null); return; } // toggle off
