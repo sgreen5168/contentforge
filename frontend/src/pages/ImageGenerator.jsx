@@ -308,9 +308,8 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
           })}
         </div>
       </div>
-      {igTab === 'images' && (<div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:13, color:'#7BAAA0', marginTop:4 }}>Generate platform-ready images for your posts, landing pages and content</div>
-      </div>
+      {igTab === 'images' && (<>
+        <div style={{ fontSize:13, color:'#7BAAA0', marginTop:4, marginBottom:20 }}>Generate platform-ready images for your posts, landing pages and content</div>
 
       <div style={{ display:'grid', gridTemplateColumns:'320px 1fr', gap:16 }}>
 
@@ -524,7 +523,8 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } select option { background: #102D4F; }`}</style>
-    </div>)}
+    </div>
+      </>)}
 
       {/* ── VIDEO BACKGROUND GENERATOR ──────────────────────────────────── */}
       {igTab === 'videobg' && (
