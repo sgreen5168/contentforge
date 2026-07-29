@@ -523,7 +523,6 @@ export default function ImageGenerator({ onImageSelect, compact = false }) {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } select option { background: #102D4F; }`}</style>
-    </div>
       </>)}
 
       {/* ── VIDEO BACKGROUND GENERATOR ──────────────────────────────────── */}
