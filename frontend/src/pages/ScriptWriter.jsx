@@ -22,12 +22,12 @@ export default function ScriptWriter() {
   const [editIdx, setEditIdx] = useState(null);
   const [readingIdx, setReadingIdx] = useState(null);
   const [readerPaused, setRdrPaused] = useState(false);
-  const [readerRate, setRdrRate]     = useState(1.1);
+  const [readerRate, setRdrRate]     = useState(1.15);
   const [editText, setEditText] = useState('');
   const [variations, setVars] = useState(false);
   const countRef = useRef(0);
 
-  async function generate(count) {
+  async function generate(count, variations, editedScript) {
     if (!input.trim()) return;
     setLoading(true); setError('');
     if (!variations) setScripts([]);
@@ -53,6 +53,7 @@ export default function ScriptWriter() {
                 duration: length === 'short' ? '30s' : length === 'medium' ? '60s' : '5m',
                 platforms: [platform.toLowerCase()],
                 videoType: style === 'VSL' ? 'ai-vsl' : style === 'Reel Ad' ? 'reel-ads' : 'ugc-persona',
+                editedScript: editedScript || undefined,
               }),
             });
             data = await res.json();
@@ -109,13 +110,25 @@ export default function ScriptWriter() {
 
     const utt = new SpeechSynthesisUtterance(cleaned);
     utt.rate  = readerRate;
-    utt.pitch = 1.05;  // slightly higher pitch sounds more natural
+    utt.pitch = 1.0;
 
-    // Pick best available voice — prefer natural-sounding English voices
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v =>
-      /Samantha|Karen|Daniel|Google US|Microsoft Aria|Microsoft Jenny|Ava|Nova/i.test(v.name)
-    ) || voices.find(v => v.lang === 'en-US' && !v.name.includes('Google')) || voices[0];
+    // Wait for voices to load (some browsers load them async)
+    let voices = window.speechSynthesis.getVoices();
+    if (!voices.length) {
+      await new Promise(function(resolve) {
+        window.speechSynthesis.onvoiceschanged = function() {
+          voices = window.speechSynthesis.getVoices();
+          resolve();
+        };
+        setTimeout(resolve, 1000); // fallback timeout
+      });
+    }
+    // Prefer natural English voices
+    const preferred = voices.find(function(v) {
+      return /Samantha|Karen|Daniel|Google US English|Microsoft Aria|Microsoft Jenny|Ava/i.test(v.name);
+    }) || voices.find(function(v) {
+      return v.lang === 'en-US';
+    }) || voices[0];
     if (preferred) utt.voice = preferred;
 
     utt.onend   = function() { setReadingIdx(null); setRdrPaused(false); };
@@ -364,7 +377,7 @@ export default function ScriptWriter() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>🔊 Read Aloud</span>
                     <div style={{ display: 'flex', gap: 4 }}>
-                      {[['0.8','Slow'],['1.0','Normal'],['1.1','Natural'],['1.3','Fast']].map(function(r) {
+                      {[['0.9','Slow'],['1.1','Normal'],['1.15','Natural'],['1.3','Fast']].map(function(r) {
                         var active = readerRate === parseFloat(r[0]);
                         return (
                           <button key={r[0]} onClick={function() { setRdrRate(parseFloat(r[0])); }}
@@ -452,6 +465,10 @@ export default function ScriptWriter() {
                   <button onClick={() => { navigator.clipboard.writeText(s.hook).catch(()=>{}); setCopied(s.id+'hook'); setTimeout(()=>setCopied(''),2000); }}
                     style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid ' + BORD, background: 'transparent', color: TXT2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
                     {copied === s.id+'hook' ? '✓' : 'Copy hook'}
+                  </button>
+                  <button onClick={() => generate(1, true, s.fullScript)}
+                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(29,158,117,.3)', background: 'rgba(29,158,117,.06)', color: '#1D9E75', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    ↻ Rewrite
                   </button>
                 </div>
               </div>
