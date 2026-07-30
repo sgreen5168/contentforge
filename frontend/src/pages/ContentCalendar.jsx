@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // Daily scheduled posts across home business, remote work, entrepreneurship,
 // cooking, baking, live commerce topics — Facebook-compliant, casual-professional tone
 
-const API = import.meta.env.VITE_API_URL || 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://stellar-achievement-production-ea9d.up.railway.app';
 
 // ── Color tokens ──────────────────────────────────────────────────────────────
 const BG   = '#0B1829';
@@ -103,37 +103,40 @@ export default function ContentCalendar() {
     setGen(true); setPostErr(''); setPost(null);
     const cat = getCat(plan.cat);
     try {
-      const res = await fetch(`${API}/api/video/script`, {
+      const res = await fetch(`${API}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inputMode: 'topic',
-          topic: plan.topic,
+          topic: `Facebook post about: ${plan.topic}. Hook: ${plan.hook}. Category: ${cat.label}. Write 150-250 words. Second/third person only — no I/me/my. Casual-professional tone. End with a question. Include 3-5 hashtags. Facebook-compliant — no income guarantees.`,
           style: 'Casual',
-          persona: 'ugc-creator',
-          duration: '30s',
           platforms: ['facebook'],
-          videoType: 'ugc-persona',
-          customInstructions: `Write a Facebook post (not a video script) about: "${plan.topic}". 
-Category: ${cat.label}.
-Rules:
-- Never use "I", "me", "my" — write in second person (you/your) or third person
-- Tone: casual and conversational with occasional professionalism
-- Start with the hook: "${plan.hook}"
-- 3-5 short punchy paragraphs
-- End with a question or CTA to drive comments
-- Include 3-5 relevant hashtags at the end
-- Facebook-compliant — no income guarantees, no misleading claims
-- Between 150-300 words total
-Return only the post text, no labels, no markdown.`,
+          affiliate: false,
         }),
       });
+
+      // Check for HTML error page (wrong URL or server down)
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        throw new Error('Server returned an error page — check API connection');
+      }
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-      const scriptText = data.script?.fullScript || data.script?.hook || '';
-      if (!scriptText) throw new Error('No post content returned');
-      setPost({ ...plan, content: scriptText, generatedAt: new Date().toISOString() });
-    } catch(e) { setPostErr(e.message); }
+      if (!res.ok) throw new Error(data.error || 'Generation failed HTTP ' + res.status);
+
+      // Extract post text from response
+      const postText = data.posts?.facebook?.text
+        || data.post?.text
+        || data.text
+        || data.content
+        || '';
+
+      if (!postText) throw new Error('No post content in response — try again');
+      setPost({ ...plan, content: postText, generatedAt: new Date().toISOString() });
+    } catch(e) {
+      const msg = e.message || 'Unknown error';
+      setPostErr(msg.includes('JSON') ? 'Server connection issue — make sure you are logged in and try again' : msg);
+    }
     finally { setGen(false); }
   }
 
