@@ -83,6 +83,9 @@ export default function ContentCalendar() {
   const [postError, setPostErr]   = useState('');
   const [scheduled, setScheduled] = useState([]);
   const [copied, setCopied]       = useState('');
+  const [readingId, setReadingId] = useState(null);
+  const [readerPaused, setRdrPaused] = useState(false);
+  const [readerRate, setRdrRate]  = useState(1.1);
   const [currentMonth]            = useState(new Date());
 
   useEffect(() => {
@@ -155,6 +158,53 @@ export default function ContentCalendar() {
     setCopied(id);
     setTimeout(() => setCopied(''), 2000);
   }
+
+  // ── Post reader functions ────────────────────────────────────────────────────
+  async function readPost(id, text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    if (readingId === id) { setReadingId(null); return; }
+
+    // Clean text for natural reading — remove hashtags and symbols
+    const cleaned = text
+      .replace(/#\w+/g, '')
+      .replace(/[*_~`]/g, '')
+      .replace(/📘|🏠|💻|🚀|📱|🍳|🧁|💡|💰|✅|📅|📋|↻|✍️/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    utt.rate  = readerRate;
+    utt.pitch = 1.0;
+
+    // Wait for voices to load
+    let voices = window.speechSynthesis.getVoices();
+    if (!voices.length) {
+      await new Promise(function(resolve) {
+        window.speechSynthesis.onvoiceschanged = function() {
+          voices = window.speechSynthesis.getVoices();
+          resolve();
+        };
+        setTimeout(resolve, 1000);
+      });
+      voices = window.speechSynthesis.getVoices();
+    }
+    // Pick best natural English voice
+    const preferred = voices.find(function(v) {
+      return /Samantha|Karen|Daniel|Google US English|Microsoft Aria|Microsoft Jenny|Ava/i.test(v.name);
+    }) || voices.find(function(v) { return v.lang === 'en-US'; }) || voices[0];
+    if (preferred) utt.voice = preferred;
+
+    utt.onend   = function() { setReadingId(null); setRdrPaused(false); };
+    utt.onerror = function() { setReadingId(null); setRdrPaused(false); };
+    setReadingId(id);
+    setRdrPaused(false);
+    window.speechSynthesis.speak(utt);
+  }
+
+  function pauseReader()  { window.speechSynthesis.pause();  setRdrPaused(true);  }
+  function resumeReader() { window.speechSynthesis.resume(); setRdrPaused(false); }
+  function stopReader()   { window.speechSynthesis.cancel(); setReadingId(null); setRdrPaused(false); }
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const card = (extra = {}) => ({ background: BG2, border: `1px solid ${BORD}`, borderRadius: 12, ...extra });
@@ -285,13 +335,63 @@ export default function ContentCalendar() {
                               <div style={{ padding: '10px', background: 'rgba(24,119,242,.06)', border: '1px solid rgba(24,119,242,.2)', borderRadius: 8, marginBottom: 8 }}>
                                 <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto' }}>{generatedPost.content}</div>
                               </div>
+                              {/* Reader controls */}
+                              <div style={{ marginBottom: 8, padding: '8px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 7, border: `1px solid ${BORD}` }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: TXT3 }}>🔊 Read Aloud</span>
+                                  <div style={{ display: 'flex', gap: 3 }}>
+                                    {[['0.9','Slow'],['1.1','Natural'],['1.3','Fast']].map(function(r) {
+                                      var active = readerRate === parseFloat(r[0]);
+                                      return (
+                                        <button key={r[0]} onClick={function() { setRdrRate(parseFloat(r[0])); }}
+                                          style={{ padding: '2px 7px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: active ? `1px solid ${ACC}` : `1px solid ${BORD}`, background: active ? `${ACC}22` : 'transparent', color: active ? ACCH : TXT3 }}>
+                                          {r[1]}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                  {readingId !== plan.day ? (
+                                    <button onClick={function() { readPost(plan.day, generatedPost.content); }}
+                                      style={{ flex: 1, padding: '6px', borderRadius: 6, border: 'none', background: ACC, color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                      ▶ Read Post Aloud
+                                    </button>
+                                  ) : (
+                                    <>
+                                      {!readerPaused ? (
+                                        <button onClick={pauseReader}
+                                          style={{ flex: 1, padding: '6px', borderRadius: 6, border: 'none', background: '#F5A623', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                          ⏸ Pause
+                                        </button>
+                                      ) : (
+                                        <button onClick={resumeReader}
+                                          style={{ flex: 1, padding: '6px', borderRadius: 6, border: 'none', background: ACC, color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                          ▶ Resume
+                                        </button>
+                                      )}
+                                      <button onClick={stopReader}
+                                        style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        ■ Stop
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                                {readingId === plan.day && (
+                                  <div style={{ marginTop: 5, fontSize: 9, color: ACCH, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: ACCH, display: 'inline-block', animation: 'pulse 1s ease infinite' }} />
+                                    {readerPaused ? 'Paused' : 'Reading post aloud…'}
+                                  </div>
+                                )}
+                              </div>
+
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button onClick={() => copyPost(generatedPost.content, plan.day)}
                                   style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   {copied === plan.day ? '✓ Copied!' : '📋 Copy Post'}
                                 </button>
                                 <button onClick={() => schedulePost(generatedPost, new Date().toLocaleDateString())}
-                                  style={{ flex: 1, padding: '8px', borderRadius: 7, border: `1px solid ${FB}`, background: 'transparent', color: FB === '#1877F2' ? '#4FA3FF' : FB, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  style={{ flex: 1, padding: '8px', borderRadius: 7, border: `1px solid ${FB}`, background: 'transparent', color: '#4FA3FF', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   📅 Save to Schedule
                                 </button>
                               </div>
@@ -353,11 +453,28 @@ export default function ContentCalendar() {
                         <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.7, padding: '8px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 6, maxHeight: 120, overflow: 'auto', whiteSpace: 'pre-wrap', marginBottom: 8 }}>
                           {post.content}
                         </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <button onClick={() => copyPost(post.content, post.id)}
                             style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                             {copied === post.id ? '✓ Copied!' : '📋 Copy'}
                           </button>
+                          {readingId !== post.id ? (
+                            <button onClick={function() { readPost(post.id, post.content); }}
+                              style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${ACC}`, background: 'transparent', color: ACCH, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              🔊 Read Aloud
+                            </button>
+                          ) : (
+                            <>
+                              <button onClick={readerPaused ? resumeReader : pauseReader}
+                                style={{ padding: '6px 10px', borderRadius: 6, border: 'none', background: '#F5A623', color: 'white', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                {readerPaused ? '▶' : '⏸'}
+                              </button>
+                              <button onClick={stopReader}
+                                style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                ■ Stop
+                              </button>
+                            </>
+                          )}
                           <button onClick={() => removeScheduled(post.id)}
                             style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                             🗑 Remove
@@ -373,7 +490,7 @@ export default function ContentCalendar() {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+      <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }' }} />
     </div>
   );
 }
