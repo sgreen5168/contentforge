@@ -26,7 +26,12 @@ const CATEGORIES = [
   { id:'cooking',        icon:'🍳', label:'Cooking',                  color:'#F59E0B' },
   { id:'baking',         icon:'🧁', label:'Baking',                   color:'#EC4899' },
   { id:'mindset',        icon:'💡', label:'Success Mindset',          color:'#10B981' },
-  { id:'side-hustle',    icon:'💰', label:'Side Hustles',             color:'#6366F1' },
+  { id:'side-hustle',    icon:'💰', label:'Side Hustles',              color:'#6366F1' },
+  { id:'cooking-biz',    icon:'🍽', label:'Cooking as a Business',     color:'#F97316' },
+  { id:'meal-prep',      icon:'🥗', label:'Meal Prep & Food Planning',  color:'#22C55E' },
+  { id:'wfh-cooking',    icon:'🏡', label:'Work From Home + Cooking',   color:'#A78BFA' },
+  { id:'home-catering',  icon:'🎂', label:'Home Catering & Events',     color:'#FB7185' },
+  { id:'food-selling',   icon:'🛒', label:'Selling Food From Home',     color:'#FBBF24' },
 ];
 
 // ── 30-day post plan ─────────────────────────────────────────────────────────
@@ -34,35 +39,51 @@ const POST_PLAN = [
   { day:1,  cat:'home-income',   time:'9:00 AM',  topic:'3 things people are doing from home right now that actually pay', hook:'No office. No commute. Just results.' },
   { day:2,  cat:'entrepreneur',  time:'7:00 PM',  topic:'What separates people who succeed from those who give up', hook:'The difference is smaller than you think.' },
   { day:3,  cat:'cooking',       time:'11:00 AM', topic:'This 15-minute dinner is cheaper than takeout and way better', hook:'Stop ordering food you could make in minutes.' },
-  { day:4,  cat:'remote-work',   time:'8:00 AM',  topic:'How to stay productive working from home when distractions hit', hook:'Your couch is not the enemy. Here\'s what is.' },
+  { day:4,  cat:'remote-work',   time:'8:00 AM',  topic:'How to stay productive working from home when distractions hit', hook:"Your couch is not the enemy. Here\'s what is." },
   { day:5,  cat:'baking',        time:'2:00 PM',  topic:'Beginner bread recipe that actually works every time', hook:'If you can stir, you can bake this bread.' },
   { day:6,  cat:'live-commerce', time:'6:00 PM',  topic:'How people are making money going live on Facebook and TikTok', hook:'Live selling is the fastest-growing income stream right now.' },
   { day:7,  cat:'side-hustle',   time:'10:00 AM', topic:'5 side hustles that require zero startup money', hook:'Starting costs: $0. Potential: real.' },
   { day:8,  cat:'mindset',       time:'7:00 AM',  topic:'Why most people quit before things get good', hook:'The breakthrough usually comes right after the hardest day.' },
   { day:9,  cat:'home-income',   time:'9:00 AM',  topic:'Selling digital products from home — what\'s working in 2026', hook:'Create once. Sell forever. No inventory needed.' },
-  { day:10, cat:'cooking',       time:'5:00 PM',  topic:'Budget meal prep that feeds a family of 4 for under $30', hook:'Meal prep isn\'t just for fitness people.' },
+  { day:10, cat:'cooking',       time:'5:00 PM',  topic:'Budget meal prep that feeds a family of 4 for under $30', hook:"Meal prep isn\'t just for fitness people." },
   { day:11, cat:'remote-work',   time:'8:00 AM',  topic:'Best remote jobs hiring right now with no experience required', hook:'Companies are still hiring people to work from home.' },
-  { day:12, cat:'entrepreneur',  time:'7:00 PM',  topic:'The truth about starting a business nobody tells you', hook:'It\'s messier than the highlight reels show. Here\'s the real picture.' },
+  { day:12, cat:'entrepreneur',  time:'7:00 PM',  topic:'The truth about starting a business nobody tells you', hook:"It\'s messier than the highlight reels show. Here\'s the real picture." },
   { day:13, cat:'baking',        time:'1:00 PM',  topic:'Simple cookie recipes that sell at markets and online', hook:'People are paying real money for homemade cookies.' },
-  { day:14, cat:'live-commerce', time:'6:00 PM',  topic:'How to set up your first Facebook Live selling event', hook:'You don\'t need a studio. Just a phone and a product.' },
-  { day:15, cat:'side-hustle',   time:'10:00 AM', topic:'Reselling thrifted items — where to find and what to flip', hook:'Other people\'s discards are becoming real income for smart resellers.' },
+  { day:14, cat:'live-commerce', time:'6:00 PM',  topic:'How to set up your first Facebook Live selling event', hook:"You don\'t need a studio. Just a phone and a product." },
+  { day:15, cat:'side-hustle',   time:'10:00 AM', topic:'Reselling thrifted items — where to find and what to flip', hook:"Other people\'s discards are becoming real income for smart resellers." },
   { day:16, cat:'mindset',       time:'7:00 AM',  topic:'Consistency beats motivation every single time', hook:'Motivation fades. Habits stick.' },
   { day:17, cat:'home-income',   time:'9:00 AM',  topic:'Freelancing from home — the skills companies are paying most for', hook:'Businesses are outsourcing these tasks to home workers right now.' },
-  { day:18, cat:'cooking',       time:'5:00 PM',  topic:'One-pan recipes that take 20 minutes and taste like effort', hook:'Cooking doesn\'t have to be a production.' },
+  { day:18, cat:'cooking',       time:'5:00 PM',  topic:'One-pan recipes that take 20 minutes and taste like effort', hook:"Cooking doesn\'t have to be a production." },
   { day:19, cat:'remote-work',   time:'8:00 AM',  topic:'How to negotiate remote work if your job isn\'t remote yet', hook:'More companies are open to this than they let on.' },
   { day:20, cat:'entrepreneur',  time:'7:00 PM',  topic:'Starting a home-based service business with what you already know', hook:'Skills you take for granted are worth money to other people.' },
   { day:21, cat:'baking',        time:'2:00 PM',  topic:'How some home bakers turned weekend baking into a real business', hook:'What started as a hobby is now paying real bills.' },
   { day:22, cat:'live-commerce', time:'6:00 PM',  topic:'Products that sell best on Facebook Live in 2026', hook:'Not every product is live-sell friendly. These ones are.' },
-  { day:23, cat:'side-hustle',   time:'10:00 AM', topic:'Making money with skills you already have — a practical list', hook:'Most people are sitting on income they haven\'t tapped yet.' },
+  { day:23, cat:'side-hustle',   time:'10:00 AM', topic:'Making money with skills you already have — a practical list', hook:"Most people are sitting on income they haven\'t tapped yet." },
   { day:24, cat:'mindset',       time:'7:00 AM',  topic:'How to handle self-doubt when building something from scratch', hook:'Doubt is normal. Letting it stop you is optional.' },
   { day:25, cat:'home-income',   time:'9:00 AM',  topic:'Affiliate marketing explained simply — and how to start today', hook:'Recommending products you already use can become passive income.' },
   { day:26, cat:'cooking',       time:'5:00 PM',  topic:'Comfort food recipes that bring people together around the table', hook:'Some meals are more than food. Here are a few of those recipes.' },
-  { day:27, cat:'remote-work',   time:'8:00 AM',  topic:'Setting up a productive home workspace on any budget', hook:'A good setup doesn\'t require expensive gear.' },
+  { day:27, cat:'remote-work',   time:'8:00 AM',  topic:'Setting up a productive home workspace on any budget', hook:"A good setup doesn\'t require expensive gear." },
   { day:28, cat:'entrepreneur',  time:'7:00 PM',  topic:'Building an audience before you have a product to sell', hook:'The audience comes first. The product comes second.' },
-  { day:29, cat:'baking',        time:'1:00 PM',  topic:'Sourdough starter guide — the basics that actually work', hook:'Sourdough is having a moment. Here\'s how to join it.' },
-  { day:30, cat:'live-commerce', time:'6:00 PM',  topic:'Growing a loyal customer base through live video', hook:'People don\'t just buy products. They buy from people they trust.' },
-];
+  { day:29, cat:'baking',        time:'1:00 PM',  topic:'Sourdough starter guide — the basics that actually work', hook:"Sourdough is having a moment. Here\'s how to join it." },
+  { day:30, cat:'live-commerce',  time:'6:00 PM',  topic:'Growing a loyal customer base through live video', hook:"People don't just buy products. They buy from people they trust." },
 
+  // ── Cooking Business + WFH posts ─────────────────────────────────────────
+  { day:31, cat:'cooking-biz',   time:'10:00 AM', topic:'How home cooks are turning their kitchen into a real income stream', hook:'The kitchen table is becoming the new boardroom.' },
+  { day:32, cat:'wfh-cooking',   time:'12:00 PM', topic:'The work-from-home schedule that leaves time to cook real meals every day', hook:"Working from home means actually eating well — here's how." },
+  { day:33, cat:'meal-prep',     time:'11:00 AM', topic:'Weekend meal prep that saves money and stress all week long', hook:'Two hours on Sunday. Zero cooking stress Monday through Friday.' },
+  { day:34, cat:'food-selling',  time:'9:00 AM',  topic:'How to legally sell homemade food from your kitchen in most states', hook:"Cottage food laws are changing. Here's what that means for home cooks." },
+  { day:35, cat:'cooking-biz',   time:'7:00 PM',  topic:'Starting a home meal prep delivery service — what you actually need', hook:'People will pay for home-cooked food delivered to their door.' },
+  { day:36, cat:'wfh-cooking',   time:'12:00 PM', topic:'Lunch breaks that actually nourish — quick cook recipes for remote workers', hook:"Your lunch break is 30 minutes. Here's what to make." },
+  { day:37, cat:'home-catering', time:'2:00 PM',  topic:'How home cooks are building catering side businesses for local events', hook:'Birthday parties. Baby showers. Office lunches. All opportunities.' },
+  { day:38, cat:'meal-prep',     time:'11:00 AM', topic:'Freezer meal prep — cook once, eat for a month strategy', hook:'The most underrated time and money saving skill for busy households.' },
+  { day:39, cat:'cooking-biz',   time:'9:00 AM',  topic:'Selling meal kits from home — a growing opportunity most people overlook', hook:'Meal kit services make billions. Home cooks can get a piece of that.' },
+  { day:40, cat:'wfh-cooking',   time:'6:00 PM',  topic:'Why working from home actually makes you a better cook', hook:"The commute time became kitchen time. Here's what that looks like." },
+  { day:41, cat:'food-selling',  time:'10:00 AM', topic:'Baked goods, sauces, and spice blends — what sells best at local markets', hook:'Farmers markets. Online shops. Neighbors. More outlets than most people realize.' },
+  { day:42, cat:'home-catering', time:'3:00 PM',  topic:'Building a home catering portfolio with no prior professional experience', hook:'Every dinner party is practice. Every family gathering is a portfolio piece.' },
+  { day:43, cat:'meal-prep',     time:'11:00 AM', topic:'Budget-friendly meal prep feeding a family of 4 for under $50 a week', hook:"Grocery bills don't have to spiral. Here's how to take back control." },
+  { day:44, cat:'cooking-biz',   time:'7:00 PM',  topic:'Teaching cooking skills online — how home cooks are monetizing their knowledge', hook:"There are people who will pay to learn what's second nature to you." },
+  { day:45, cat:'wfh-cooking',   time:'12:00 PM', topic:'The flexible work-from-home lifestyle that puts home cooking back at the center', hook:"Remote work didn't just change where people work. It changed how they eat." },
+];
 const BEST_TIMES = {
   'home-income':  ['7:00 AM', '9:00 AM', '8:00 PM'],
   'remote-work':  ['7:00 AM', '8:00 AM', '6:00 PM'],
@@ -71,7 +92,12 @@ const BEST_TIMES = {
   'cooking':      ['11:00 AM','5:00 PM', '6:00 PM'],
   'baking':       ['10:00 AM','1:00 PM', '2:00 PM'],
   'mindset':      ['6:00 AM', '7:00 AM', '8:00 PM'],
-  'side-hustle':  ['8:00 AM', '10:00 AM','7:00 PM'],
+  'side-hustle':  ['8:00 AM', '10:00 AM', '7:00 PM'],
+  'cooking-biz':  ['9:00 AM', '7:00 PM',  '8:00 PM'],
+  'meal-prep':    ['10:00 AM','11:00 AM', '6:00 PM'],
+  'wfh-cooking':  ['11:00 AM','12:00 PM', '6:00 PM'],
+  'home-catering':['10:00 AM','2:00 PM',  '7:00 PM'],
+  'food-selling': ['9:00 AM', '10:00 AM', '3:00 PM'],
 };
 
 export default function ContentCalendar() {
@@ -234,6 +260,11 @@ export default function ContentCalendar() {
       'baking':        'rustic baking scene, flour dusted surface, fresh baked goods, warm oven light, cozy kitchen atmosphere',
       'mindset':       'motivational workspace, open notebook with handwriting, sunrise light through window, calm and focused, no people',
       'side-hustle':   'entrepreneur planning concept, sticky notes, laptop, calendar, coffee, flat lay, overhead view, no people',
+      'cooking-biz':   'professional home kitchen setup, beautiful plated food, recipe notebook, cooking as business concept, warm light, no people',
+      'meal-prep':     'colorful meal prep containers, fresh vegetables, organized refrigerator, healthy food planning, overhead shot, no people',
+      'wfh-cooking':   'cozy home office next to kitchen, laptop beside fresh cooking ingredients, work from home lifestyle, warm tones, no people',
+      'home-catering': 'elegant home catering spread, beautifully arranged food platters, party setup, decorative serving dishes, no people',
+      'food-selling':  'homemade food products arranged for sale, jars of sauces, baked goods packaged professionally, farmers market style, no people',
     };
     const baseVisual = VISUAL_MAP[plan.cat] || 'professional lifestyle photography, warm tones, no people';
     const prompt = `${baseVisual}, ${plan.topic.toLowerCase().replace(/[^a-z0-9 ]/g,'').slice(0,60)}, high quality, Facebook post image, 4K, no text, no watermarks`;
@@ -359,8 +390,8 @@ export default function ContentCalendar() {
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Posts planned', value: '30', icon: '📅' },
-              { label: 'Topics covered', value: '8', icon: '🎯' },
+              { label: 'Posts planned', value: '45', icon: '📅' },
+              { label: 'Topics covered', value: '13', icon: '🎯' },
               { label: 'Avg per week', value: '7', icon: '📊' },
               { label: 'Best time range', value: '7AM–7PM', icon: '⏰' },
             ].map(s => (
