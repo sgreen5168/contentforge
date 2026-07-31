@@ -83,6 +83,16 @@ const POST_PLAN = [
   { day:43, cat:'meal-prep',     time:'11:00 AM', topic:'Budget-friendly meal prep feeding a family of 4 for under $50 a week', hook:"Grocery bills don't have to spiral. Here's how to take back control." },
   { day:44, cat:'cooking-biz',   time:'7:00 PM',  topic:'Teaching cooking skills online — how home cooks are monetizing their knowledge', hook:"There are people who will pay to learn what's second nature to you." },
   { day:45, cat:'wfh-cooking',   time:'12:00 PM', topic:'The flexible work-from-home lifestyle that puts home cooking back at the center', hook:"Remote work didn't just change where people work. It changed how they eat." },
+  { day:46, cat:'baking',        time:'9:00 AM',  topic:'How to start a home bakery business from scratch with no commercial kitchen', hook:"Starting a home bakery sounds like a dream. Here's the reality — and it's better than you think." },
+  { day:47, cat:'baking',        time:'7:00 PM',  topic:'What licenses and permits are actually needed to sell baked goods from home', hook:'Licensing a home bakery is simpler than most people assume.' },
+  { day:48, cat:'food-selling',  time:'10:00 AM', topic:'How to price homemade baked goods so the business actually makes money', hook:'Home bakers are selling out every weekend. Here is how they price their products.' },
+  { day:49, cat:'cooking-biz',   time:'9:00 AM',  topic:'Finding your home bakery niche — custom cakes, bread, cookies, or specialty items', hook:'The home bakery niche is wide open for someone who knows their audience.' },
+  { day:50, cat:'baking',        time:'11:00 AM', topic:'How to market a home bakery on Facebook and Instagram with zero ad budget', hook:'Social media turned unknown home bakers into full-time business owners.' },
+  { day:51, cat:'food-selling',  time:'2:00 PM',  topic:'Setting up local pickup and delivery for a home bakery without a website', hook:'Local pickup orders changed everything for home bakers.' },
+  { day:52, cat:'home-catering', time:'10:00 AM', topic:'How home bakers are landing event and wedding cake orders from their kitchen', hook:'Wedding cakes. Corporate events. Holiday orders. Home bakers are landing all of it.' },
+  { day:53, cat:'baking',        time:'7:00 PM',  topic:'Real income milestones home bakery owners hit in their first year', hook:"The first $1,000 from a home bakery feels impossible until it happens." },
+  { day:54, cat:'wfh-cooking',   time:'12:00 PM', topic:'Running a home bakery business alongside a full-time remote job', hook:'Baking around a remote work schedule is more doable than it looks.' },
+  { day:55, cat:'cooking-biz',   time:'9:00 AM',  topic:'Building a loyal customer base for a home bakery through community and consistency', hook:'Repeat customers are the foundation of every successful home bakery.' },
 ];
 const BEST_TIMES = {
   'home-income':  ['7:00 AM', '9:00 AM', '8:00 PM'],
@@ -390,7 +400,7 @@ export default function ContentCalendar() {
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Posts planned', value: '45', icon: '📅' },
+              { label: 'Posts planned', value: '55', icon: '📅' },
               { label: 'Topics covered', value: '13', icon: '🎯' },
               { label: 'Avg per week', value: '7', icon: '📊' },
               { label: 'Best time range', value: '7AM–7PM', icon: '⏰' },
