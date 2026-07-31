@@ -90,6 +90,9 @@ export default function ContentCalendar() {
   const [generatedScript, setGenScriptResult] = useState(null);
   const [scriptError, setScriptErr] = useState('');
   const [scriptReading, setScriptReading] = useState(false);
+  const [imgPrompts, setImgPrompts]     = useState({});   // day → prompt string
+  const [imgUrls, setImgUrls]           = useState({});   // day → image url
+  const [imgLoading, setImgLoading]     = useState({});   // day → bool
   const [scriptPaused, setScriptPaused] = useState(false);
   const [scriptRate, setScriptRate] = useState(1.1);
   const [readerPaused, setRdrPaused] = useState(false);
@@ -215,6 +218,44 @@ export default function ContentCalendar() {
   function stopReader()   { window.speechSynthesis.cancel(); setReadingId(null); setRdrPaused(false); }
 
   // ── Video script generator ────────────────────────────────────────────────
+  // Generate a Pollinations image + prompt for a post topic
+  async function generateImagePrompt(plan) {
+    const cat = getCat(plan.cat);
+    const day = plan.day;
+    setImgLoading(prev => ({ ...prev, [day]: true }));
+
+    // Build a visual image prompt from the topic
+    const VISUAL_MAP = {
+      'home-income':   'cozy home office setup, warm morning light, laptop and coffee, productive atmosphere, no people, cinematic',
+      'remote-work':   'modern home workspace, clean desk, dual monitors, natural window light, plants, professional, no people',
+      'entrepreneur':  'entrepreneurship concept, notebook with ideas, coffee cup, vision board, inspiring workspace, warm tones, no people',
+      'live-commerce': 'smartphone on tripod for live streaming, ring light, products displayed, home studio setup, no people',
+      'cooking':       'beautiful food photography, fresh ingredients on wooden cutting board, warm kitchen light, overhead shot',
+      'baking':        'rustic baking scene, flour dusted surface, fresh baked goods, warm oven light, cozy kitchen atmosphere',
+      'mindset':       'motivational workspace, open notebook with handwriting, sunrise light through window, calm and focused, no people',
+      'side-hustle':   'entrepreneur planning concept, sticky notes, laptop, calendar, coffee, flat lay, overhead view, no people',
+    };
+    const baseVisual = VISUAL_MAP[plan.cat] || 'professional lifestyle photography, warm tones, no people';
+    const prompt = `${baseVisual}, ${plan.topic.toLowerCase().replace(/[^a-z0-9 ]/g,'').slice(0,60)}, high quality, Facebook post image, 4K, no text, no watermarks`;
+
+    setImgPrompts(prev => ({ ...prev, [day]: prompt }));
+
+    // Fetch image from our backend
+    try {
+      const res = await fetch(`${API}/api/image/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, width: 1080, height: 1080, n: 1, style: 'lifestyle' }),
+      });
+      const data = await res.json();
+      const url = data.images?.[0]?.url;
+      if (url) setImgUrls(prev => ({ ...prev, [day]: url }));
+    } catch(e) {
+      console.warn('Image generation failed:', e.message);
+    }
+    setImgLoading(prev => ({ ...prev, [day]: false }));
+  }
+
   async function generateVideoScript(plan) {
     setGenScript(true); setScriptErr(''); setGenScriptResult(null);
     const cat = getCat(plan.cat);
@@ -382,8 +423,63 @@ export default function ContentCalendar() {
                               ))}
                             </div>
                           </div>
-                          <div style={{ padding: '8px 10px', background: 'rgba(24,119,242,.08)', border: '1px solid rgba(24,119,242,.2)', borderRadius: 8, fontSize: 10, color: 'rgba(24,119,242,.8)', lineHeight: 1.5 }}>
+                          <div style={{ padding: '8px 10px', background: 'rgba(24,119,242,.08)', border: '1px solid rgba(24,119,242,.2)', borderRadius: 8, fontSize: 10, color: 'rgba(24,119,242,.8)', lineHeight: 1.5, marginBottom: 10 }}>
                             📘 <strong>Facebook tip:</strong> Posts with questions get 3x more comments. End this post with a question related to {cat.label.toLowerCase()}.
+                          </div>
+
+                          {/* Photo image prompt */}
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,.03)', border: `1px solid ${BORD}`, borderRadius: 8 }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>📸 Photo Prompt</div>
+                            {imgUrls[plan.day] ? (
+                              <div>
+                                <img src={imgUrls[plan.day]} alt="Post visual"
+                                  style={{ width: '100%', borderRadius: 7, marginBottom: 6, display: 'block', aspectRatio: '1', objectFit: 'cover' }} />
+                                <div style={{ fontSize: 9, color: TXT3, lineHeight: 1.5, marginBottom: 6, fontStyle: 'italic' }}>
+                                  Prompt: {imgPrompts[plan.day]}
+                                </div>
+                                <div style={{ display: 'flex', gap: 5 }}>
+                                  <button onClick={function() {
+                                    const url = imgUrls[plan.day];
+                                    if (!url) return;
+                                    if (url.startsWith('data:')) {
+                                      const a = document.createElement('a'); a.href = url;
+                                      a.download = 'post-image-day-' + plan.day + '.jpg';
+                                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                    } else {
+                                      fetch(url).then(function(r){return r.blob();}).then(function(b){
+                                        const bu = URL.createObjectURL(b);
+                                        const a = document.createElement('a'); a.href = bu;
+                                        a.download = 'post-image-day-' + plan.day + '.jpg';
+                                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                        URL.revokeObjectURL(bu);
+                                      }).catch(function(){ window.open(url,'_blank'); });
+                                    }
+                                  }}
+                                    style={{ flex: 1, padding: '5px', borderRadius: 6, border: 'none', background: ACC, color: 'white', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    ⬇ Download
+                                  </button>
+                                  <button onClick={function() { generateImagePrompt(plan); }}
+                                    style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    ↻ New
+                                  </button>
+                                </div>
+                              </div>
+                            ) : imgLoading[plan.day] ? (
+                              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                <div style={{ width: 24, height: 24, border: '2px solid rgba(29,158,117,.2)', borderTopColor: ACC, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 6px' }} />
+                                <div style={{ fontSize: 10, color: TXT3 }}>Generating image…</div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ fontSize: 10, color: TXT3, lineHeight: 1.5, marginBottom: 8 }}>
+                                  Generate a photo that visually captures this post topic — ready to use on Facebook.
+                                </div>
+                                <button onClick={function() { generateImagePrompt(plan); }}
+                                  style={{ width: '100%', padding: '7px', borderRadius: 7, border: 'none', background: `${cat.color}cc`, color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  📸 Generate Post Image
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         {/* Right — actions */}
