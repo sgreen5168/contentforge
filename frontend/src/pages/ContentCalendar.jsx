@@ -84,6 +84,14 @@ export default function ContentCalendar() {
   const [scheduled, setScheduled] = useState([]);
   const [copied, setCopied]       = useState('');
   const [readingId, setReadingId] = useState(null);
+  const [scriptView, setScriptView] = useState(null);   // null | 'write' | 'result'
+  const [scriptPlan, setScriptPlan] = useState(null);
+  const [generatingScript, setGenScript] = useState(false);
+  const [generatedScript, setGenScriptResult] = useState(null);
+  const [scriptError, setScriptErr] = useState('');
+  const [scriptReading, setScriptReading] = useState(false);
+  const [scriptPaused, setScriptPaused] = useState(false);
+  const [scriptRate, setScriptRate] = useState(1.1);
   const [readerPaused, setRdrPaused] = useState(false);
   const [readerRate, setRdrRate]  = useState(1.1);
   const [currentMonth]            = useState(new Date());
@@ -206,6 +214,62 @@ export default function ContentCalendar() {
   function resumeReader() { window.speechSynthesis.resume(); setRdrPaused(false); }
   function stopReader()   { window.speechSynthesis.cancel(); setReadingId(null); setRdrPaused(false); }
 
+  // ── Video script generator ────────────────────────────────────────────────
+  async function generateVideoScript(plan) {
+    setGenScript(true); setScriptErr(''); setGenScriptResult(null);
+    const cat = getCat(plan.cat);
+    try {
+      const res = await fetch(`${API}/api/video/script`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inputMode: 'topic',
+          topic: plan.topic,
+          style: 'Casual',
+          persona: 'ugc-persona',
+          duration: '30s',
+          platforms: ['facebook'],
+          videoType: 'ugc-persona',
+        }),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) throw new Error('Server connection issue — try again');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Script generation failed');
+      const script = data.script;
+      if (!script || !script.fullScript) throw new Error('No script content returned');
+      setGenScriptResult(script);
+      setScriptView('result');
+    } catch(e) { setScriptErr(e.message); }
+    finally { setGenScript(false); }
+  }
+
+  async function readScript(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    if (scriptReading) { setScriptReading(false); return; }
+    const cleaned = text.replace(/#\w+/g,'').replace(/[*_~`]/g,'').replace(/\s+/g,' ').trim();
+    const utt = new SpeechSynthesisUtterance(cleaned);
+    utt.rate = scriptRate;
+    utt.pitch = 1.0;
+    let voices = window.speechSynthesis.getVoices();
+    if (!voices.length) {
+      await new Promise(function(r) { window.speechSynthesis.onvoiceschanged = function() { voices = window.speechSynthesis.getVoices(); r(); }; setTimeout(r, 1000); });
+      voices = window.speechSynthesis.getVoices();
+    }
+    const preferred = voices.find(function(v) { return /Samantha|Karen|Daniel|Google US English|Microsoft Aria|Ava/i.test(v.name); })
+      || voices.find(function(v) { return v.lang === 'en-US'; }) || voices[0];
+    if (preferred) utt.voice = preferred;
+    utt.onend = function() { setScriptReading(false); setScriptPaused(false); };
+    utt.onerror = function() { setScriptReading(false); setScriptPaused(false); };
+    setScriptReading(true); setScriptPaused(false);
+    window.speechSynthesis.speak(utt);
+  }
+
+  function pauseScript()  { window.speechSynthesis.pause();  setScriptPaused(true);  }
+  function resumeScript() { window.speechSynthesis.resume(); setScriptPaused(false); }
+  function stopScript()   { window.speechSynthesis.cancel(); setScriptReading(false); setScriptPaused(false); }
+
   // ── Styles ────────────────────────────────────────────────────────────────
   const card = (extra = {}) => ({ background: BG2, border: `1px solid ${BORD}`, borderRadius: 12, ...extra });
   const btn  = (active, color = ACC) => ({
@@ -228,7 +292,7 @@ export default function ContentCalendar() {
           <div style={{ fontSize: 12, color: TXT3, marginTop: 4 }}>30-day content plan · AI-generated posts · Facebook-compliant</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {[['calendar','📅 30-Day Plan'],['scheduled','✅ Scheduled'],].map(function(v) {
+          {[['calendar','📅 30-Day Plan'],['scheduled','✅ Scheduled'],['videoscript','🎬 Video Scripts'],].map(function(v) {
             return (
               <button key={v[0]} onClick={() => setView(v[0])} style={btn(view === v[0], FB)}>
                 {v[1]}
@@ -485,6 +549,155 @@ export default function ContentCalendar() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── VIDEO SCRIPT GENERATOR VIEW ─────────────────────────────────── */}
+      {view === 'videoscript' && (
+        <div>
+          <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(29,158,117,.06)', border: '1px solid rgba(29,158,117,.15)', borderRadius: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TXT, marginBottom: 4 }}>🎬 30-Second Video Script Generator</div>
+            <div style={{ fontSize: 11, color: TXT3, lineHeight: 1.6 }}>Pick any topic from your 30-day plan and generate a ready-to-record 30-second video script. Includes hook, body, and CTA. Read it aloud to preview before recording.</div>
+          </div>
+
+          {/* Topic picker */}
+          {scriptView !== 'result' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 4 }}>Choose a topic to script</div>
+              {(filterCat === 'all' ? POST_PLAN : POST_PLAN.filter(function(p) { return p.cat === filterCat; })).map(function(plan) {
+                const cat = getCat(plan.cat);
+                const isSelected = scriptPlan && scriptPlan.day === plan.day;
+                return (
+                  <div key={plan.day} onClick={function() { setScriptPlan(plan); setGenScriptResult(null); setScriptView('write'); setScriptErr(''); }}
+                    style={{ padding: '10px 14px', borderRadius: 9, cursor: 'pointer', border: isSelected ? `2px solid ${cat.color}` : `1px solid ${BORD}`, background: isSelected ? `${cat.color}11` : BG2, display: 'flex', alignItems: 'center', gap: 10, transition: 'all .15s' }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{cat.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: isSelected ? cat.color : TXT }}>{plan.topic}</div>
+                      <div style={{ fontSize: 10, color: TXT3 }}>Day {plan.day} · {cat.label} · {plan.time}</div>
+                    </div>
+                    {isSelected && <span style={{ fontSize: 16, color: cat.color }}>✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Generate button */}
+          {scriptPlan && scriptView !== 'result' && (
+            <div style={{ ...card({ padding: '14px 16px' }), marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TXT, marginBottom: 4 }}>Selected: {getCat(scriptPlan.cat).icon} {scriptPlan.topic}</div>
+              <div style={{ fontSize: 11, color: TXT3, marginBottom: 12 }}>Hook: "{scriptPlan.hook}"</div>
+              {scriptError && <div style={{ marginBottom: 10, padding: '7px 10px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>{scriptError}</div>}
+              <button onClick={function() { generateVideoScript(scriptPlan); }} disabled={generatingScript}
+                style={{ width: '100%', padding: '12px', borderRadius: 9, border: 'none', background: generatingScript ? 'rgba(29,158,117,.3)' : ACC, color: 'white', fontSize: 13, fontWeight: 700, cursor: generatingScript ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {generatingScript
+                  ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin .8s linear infinite' }} /> Writing 30-second script…</>
+                  : '🎬 Generate 30-Second Video Script'}
+              </button>
+            </div>
+          )}
+
+          {/* Script result */}
+          {scriptView === 'result' && generatedScript && (
+            <div style={card({ padding: '16px', border: `2px solid ${ACC}` })}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: ACCH }}>✅ 30-Second Script Ready</div>
+                <button onClick={function() { stopScript(); setScriptView('write'); setGenScriptResult(null); }}
+                  style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ← Back
+                </button>
+              </div>
+
+              {/* Hook */}
+              {generatedScript.hook && (
+                <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(29,158,117,.08)', border: `1px solid ${ACC}40`, borderRadius: 8, borderLeft: `3px solid ${ACC}` }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: ACCH, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 4 }}>Hook (first 3 seconds)</div>
+                  <div style={{ fontSize: 13, color: TXT, fontWeight: 600, lineHeight: 1.6 }}>{generatedScript.hook}</div>
+                </div>
+              )}
+
+              {/* Full script */}
+              <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(255,255,255,.03)', borderRadius: 8, border: `1px solid ${BORD}` }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>Full 30-Second Script</div>
+                <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{generatedScript.fullScript}</div>
+              </div>
+
+              {/* Hashtags */}
+              {generatedScript.hashtags && generatedScript.hashtags.length > 0 && (
+                <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {generatedScript.hashtags.map(function(tag) {
+                    return <span key={tag} style={{ padding: '3px 10px', borderRadius: 20, background: 'rgba(29,158,117,.1)', color: ACCH, fontSize: 10, fontWeight: 600 }}>{tag.startsWith('#') ? tag : '#'+tag}</span>;
+                  })}
+                </div>
+              )}
+
+              {/* Read Aloud */}
+              <div style={{ marginBottom: 12, padding: '10px 12px', background: 'rgba(255,255,255,.03)', borderRadius: 8, border: `1px solid ${BORD}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>🔊 Read Script Aloud</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[['0.9','Slow'],['1.1','Natural'],['1.3','Fast']].map(function(r) {
+                      var active = scriptRate === parseFloat(r[0]);
+                      return (
+                        <button key={r[0]} onClick={function() { setScriptRate(parseFloat(r[0])); }}
+                          style={{ padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: active ? `1px solid ${ACC}` : `1px solid ${BORD}`, background: active ? `${ACC}22` : 'transparent', color: active ? ACCH : TXT3 }}>
+                          {r[1]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {!scriptReading ? (
+                    <button onClick={function() { readScript(generatedScript.fullScript); }}
+                      style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ▶ Read Script Aloud
+                    </button>
+                  ) : (
+                    <>
+                      {!scriptPaused ? (
+                        <button onClick={pauseScript}
+                          style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: '#F5A623', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          ⏸ Pause
+                        </button>
+                      ) : (
+                        <button onClick={resumeScript}
+                          style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', background: ACC, color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          ▶ Resume
+                        </button>
+                      )}
+                      <button onClick={stopScript}
+                        style={{ padding: '8px 14px', borderRadius: 7, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ■ Stop
+                      </button>
+                    </>
+                  )}
+                </div>
+                {scriptReading && (
+                  <div style={{ marginTop: 6, fontSize: 10, color: ACCH, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACCH, display: 'inline-block', animation: 'pulse 1s ease infinite' }} />
+                    {scriptPaused ? 'Paused' : 'Reading script — takes ~30 seconds at Natural speed'}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={function() { navigator.clipboard.writeText(generatedScript.fullScript).catch(function(){}); setCopied('script'); setTimeout(function() { setCopied(''); }, 2000); }}
+                  style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: ACC, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {copied === 'script' ? '✓ Copied!' : '📋 Copy Full Script'}
+                </button>
+                <button onClick={function() { generateVideoScript(scriptPlan); }}
+                  style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ↻ Rewrite
+                </button>
+              </div>
+
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(29,158,117,.05)', borderRadius: 7, fontSize: 10, color: TXT3, lineHeight: 1.6 }}>
+                💡 <strong style={{ color: TXT2 }}>Next step:</strong> Copy this script → go to <strong style={{ color: TXT2 }}>🎬 Video Builder</strong> → paste the topic → click Create Video to generate a full video with voiceover and scenes.
+              </div>
             </div>
           )}
         </div>
