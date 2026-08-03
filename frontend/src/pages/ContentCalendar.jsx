@@ -32,6 +32,8 @@ const CATEGORIES = [
   { id:'wfh-cooking',    icon:'🏡', label:'Work From Home + Cooking',   color:'#A78BFA' },
   { id:'home-catering',  icon:'🎂', label:'Home Catering & Events',     color:'#FB7185' },
   { id:'food-selling',   icon:'🛒', label:'Selling Food From Home',     color:'#FBBF24' },
+  { id:'niche',          icon:'🎯', label:'Finding Your Niche',          color:'#14B8A6' },
+  { id:'community',      icon:'🤝', label:'Facebook Community & Reach',  color:'#1877F2' },
 ];
 
 // ── 30-day post plan ─────────────────────────────────────────────────────────
@@ -93,6 +95,23 @@ const POST_PLAN = [
   { day:53, cat:'baking',        time:'7:00 PM',  topic:'Real income milestones home bakery owners hit in their first year', hook:"The first $1,000 from a home bakery feels impossible until it happens." },
   { day:54, cat:'wfh-cooking',   time:'12:00 PM', topic:'Running a home bakery business alongside a full-time remote job', hook:'Baking around a remote work schedule is more doable than it looks.' },
   { day:55, cat:'cooking-biz',   time:'9:00 AM',  topic:'Building a loyal customer base for a home bakery through community and consistency', hook:'Repeat customers are the foundation of every successful home bakery.' },
+
+  // ── Niche Discovery + Facebook Tagging posts ─────────────────────────────
+  { day:56,  cat:'niche',     time:'9:00 AM',  topic:'What is a niche and why finding yours is the first step to working from home successfully', hook:"Most people try to appeal to everyone. That is exactly why they reach no one." },
+  { day:57,  cat:'niche',     time:'7:00 PM',  topic:'How to discover your niche when you have no idea what it is yet', hook:"The thing most people overlook is already sitting inside what they do every day." },
+  { day:58,  cat:'niche',     time:'10:00 AM', topic:'Why a narrow niche actually makes more money than a broad one', hook:"Trying to serve everyone is the fastest way to earn nothing from anyone." },
+  { day:59,  cat:'community', time:'9:00 AM',  topic:'How being tagged in a Facebook post can open unexpected work-from-home doors', hook:"One tag. One post. One person who saw it. That is how some people found their first client." },
+  { day:60,  cat:'community', time:'7:00 PM',  topic:'Why Facebook tags and shares are the most underused tool for people seeking home income opportunities', hook:"The algorithm rewards posts people tag others in. Here is why that matters for income seekers." },
+  { day:61,  cat:'niche',     time:'8:00 AM',  topic:'Signs that you have already found your niche without realising it', hook:"There are clues hiding in the questions people already ask you." },
+  { day:62,  cat:'community', time:'6:00 PM',  topic:'How to craft a Facebook post that makes people think — tag a friend who needs this', hook:"The posts that spread fastest are the ones people cannot help but share with someone specific." },
+  { day:63,  cat:'niche',     time:'9:00 AM',  topic:'From hobby to niche — how everyday skills become home business opportunities', hook:"What feels ordinary to one person looks like a solution to someone else." },
+  { day:64,  cat:'community', time:'7:00 PM',  topic:'Using Facebook groups to find your people and your niche at the same time', hook:"The group where the conversation never slows down is telling you something important." },
+  { day:65, cat:'niche',     time:'10:00 AM', topic:'Five questions to ask yourself right now to figure out your work-from-home niche', hook:"Most people skip this step. It is also the most important one." },
+  { day:66, cat:'community', time:'9:00 AM',  topic:'Why the right Facebook tag at the right moment can change someone working direction', hook:"Someone in your network is looking for exactly what you know. They just do not know you have it." },
+  { day:67, cat:'niche',     time:'7:00 PM',  topic:'How to test your niche before committing to it as a home business', hook:"Validation does not require a website, a logo, or a business plan. Start smaller." },
+  { day:68, cat:'community', time:'8:00 AM',  topic:'The ripple effect of one honest post about working from home — how visibility builds opportunity', hook:"Sharing what is actually working creates a trail that curious people follow." },
+  { day:69, cat:'niche',     time:'6:00 PM',  topic:'Niche vs broad — a real example of what changes when you stop trying to please everyone', hook:"One person narrowed their focus and went from invisible to fully booked in 60 days." },
+  { day:70, cat:'community', time:'9:00 AM',  topic:'How to write a curiosity post about work-from-home topics that people actually stop scrolling for', hook:"Most posts explain. The ones that perform best make people curious enough to ask." },
 ];
 const BEST_TIMES = {
   'home-income':  ['7:00 AM', '9:00 AM', '8:00 PM'],
@@ -108,6 +127,8 @@ const BEST_TIMES = {
   'wfh-cooking':  ['11:00 AM','12:00 PM', '6:00 PM'],
   'home-catering':['10:00 AM','2:00 PM',  '7:00 PM'],
   'food-selling': ['9:00 AM', '10:00 AM', '3:00 PM'],
+  'niche':        ['8:00 AM', '9:00 AM',  '7:00 PM'],
+  'community':    ['7:00 AM', '9:00 AM',  '6:00 PM'],
 };
 
 export default function ContentCalendar() {
@@ -275,6 +296,8 @@ export default function ContentCalendar() {
       'wfh-cooking':   'cozy home office next to kitchen, laptop beside fresh cooking ingredients, work from home lifestyle, warm tones, no people',
       'home-catering': 'elegant home catering spread, beautifully arranged food platters, party setup, decorative serving dishes, no people',
       'food-selling':  'homemade food products arranged for sale, jars of sauces, baked goods packaged professionally, farmers market style, no people',
+      'niche':         'person writing in notebook surrounded by sticky notes with ideas, brainstorming concept, discovery and planning, warm light, no people',
+      'community':     'smartphone showing Facebook feed with tags and comments, social connection concept, community engagement, modern lifestyle, no people',
     };
     const baseVisual = VISUAL_MAP[plan.cat] || 'professional lifestyle photography, warm tones, no people';
     const prompt = `${baseVisual}, ${plan.topic.toLowerCase().replace(/[^a-z0-9 ]/g,'').slice(0,60)}, high quality, Facebook post image, 4K, no text, no watermarks`;
@@ -400,8 +423,8 @@ export default function ContentCalendar() {
           {/* Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Posts planned', value: '55', icon: '📅' },
-              { label: 'Topics covered', value: '13', icon: '🎯' },
+              { label: 'Posts planned', value: '70', icon: '📅' },
+              { label: 'Topics covered', value: '15', icon: '🎯' },
               { label: 'Avg per week', value: '7', icon: '📊' },
               { label: 'Best time range', value: '7AM–7PM', icon: '⏰' },
             ].map(s => (
