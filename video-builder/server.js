@@ -323,12 +323,12 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
       // Three inputs: video, voiceover, music
       // Mix voice at 100% + music at 10%, use -shortest to match audio length
       cmd = `"${ff}" -y -i "${concatPath}" -i "${audioFile}" -stream_loop -1 -i "${musicPath}" `+
-            `-filter_complex "[1:a]volume=1.0[v];[2:a]volume=0.10[m];[v][m]amix=inputs=2:duration=first[aout]" `+
-            `-map 0:v -map "[aout]" -c:v libx264 -preset ultrafast -crf 24 -r 24 -c:a aac -b:a 128k -shortest "${finalPath}"`;
+            `-filter_complex "[1:a]volume=2.5,loudnorm=I=-14:TP=-1:LRA=11[v];[2:a]volume=0.08[m];[v][m]amix=inputs=2:duration=first:normalize=0[aout]" `+
+            `-map 0:v -map "[aout]" -c:v libx264 -preset ultrafast -crf 24 -r 24 -c:a aac -b:a 192k -shortest "${finalPath}"`;
     } else {
       // Two inputs: video + voiceover only
       cmd = `"${ff}" -y -i "${concatPath}" -i "${audioFile}" `+
-            `-map 0:v -map 1:a -c:v libx264 -preset ultrafast -crf 24 -r 24 -c:a aac -b:a 128k -shortest "${finalPath}"`;
+            `-map 0:v -map 1:a -filter:a "volume=2.5,loudnorm=I=-14:TP=-1:LRA=11" -c:v libx264 -preset ultrafast -crf 24 -r 24 -c:a aac -b:a 192k -shortest "${finalPath}"`;
     }
     console.log('['+id+'] Final encode (music:', !!musicPath, ')');
     await execAsync(cmd);
