@@ -194,6 +194,19 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [vbStatus, setVbStatus]     = useState(null);
   const [vbPollRef]                 = useState({ current: null });
   const [vbPubStatus, setVbPub]     = useState('');
+  // ── YouTube Studio state ────────────────────────────────────────────────────
+  const [ytFile, setYtFile]           = useState(null);
+  const [ytFileUrl, setYtFileUrl]     = useState('');
+  const [ytAnalyzing, setYtAnalyzing] = useState(false);
+  const [ytMeta, setYtMeta]           = useState(null);  // { title, shortDesc, longDesc, tags }
+  const [ytMetaErr, setYtMetaErr]     = useState('');
+  const [ytUploading, setYtUploading] = useState(false);
+  const [ytUploadResult, setYtUpRes]  = useState(null);
+  const [ytUploadErr, setYtUpErr]     = useState('');
+  const [ytEditMeta, setYtEditMeta]   = useState(null); // editable copy
+  const [ytPrivacyMode, setYtPrivMode]= useState('public');
+  const [ytDescMode, setYtDescMode]   = useState('short'); // 'short' | 'long'
+  const ytFileRef                     = React.useRef(null);
   const [vbYtPrivacy, setVbYtPriv]  = useState('public');
   const [wfMusic, setWfMusic]         = useState('uplifting');
   const [wfAddMusic, setWfAddMusic]   = useState(true);  // default: scene-only (fast)
@@ -875,6 +888,104 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     setReaderPaused(false);
   }
 
+  // ── YouTube Studio functions ─────────────────────────────────────────────────
+
+  function ytHandleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) { setYtMetaErr('Please select a video file (MP4, MOV, AVI etc)'); return; }
+    setYtFile(file);
+    setYtFileUrl(URL.createObjectURL(file));
+    setYtMeta(null); setYtEditMeta(null); setYtMetaErr(''); setYtUpRes(null); setYtUpErr('');
+  }
+
+  async function ytGenerateMeta() {
+    if (!ytFile) return;
+    setYtAnalyzing(true); setYtMetaErr('');
+    try {
+      // Use Claude to generate YouTube metadata from filename + any script context
+      const filename = ytFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      const scriptCtx = job?.result?.script?.fullScript || job?.result?.script?.hook || '';
+      const prompt = `You are a YouTube SEO expert. Generate optimized YouTube metadata for a video.
+
+Video filename: "${filename}"
+${scriptCtx ? 'Video script context: ' + scriptCtx.slice(0, 500) : ''}
+Video duration: ~${ytFile.size > 50000000 ? 'long-form' : 'short (under 60 seconds)'}
+
+Generate ONLY valid JSON with these exact fields:
+{
+  "title": "Compelling YouTube title under 70 characters — curiosity-driven, keyword-rich",
+  "shortDescription": "2-3 sentence YouTube Shorts description with main keyword and call to action, under 200 characters",
+  "longDescription": "Full YouTube description 150-300 words — hook, value proposition, 3-5 bullet points of what viewers learn, call to action, relevant hashtags at end",
+  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],
+  "category": "People & Blogs",
+  "isShort": true
+}
+
+Rules:
+- Title must be compelling and searchable — no clickbait, no all-caps
+- Include keywords naturally related to home business, side income, cooking, or entrepreneurship as relevant
+- Tags should be specific and searchable — mix of broad and niche terms
+- Return ONLY the JSON, no explanation`;
+
+      const res = await fetch(API + '/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inputMode: 'topic', topic: prompt, style: 'Casual', platforms: ['youtube'], affiliate: false }),
+      });
+      const data = await res.json();
+      const rawText = data.posts?.youtube?.text || data.posts?.facebook?.text || data.text || '';
+
+      // Parse JSON from response
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse metadata — try again');
+      const meta = JSON.parse(jsonMatch[0]);
+      if (!meta.title) throw new Error('Missing title in generated metadata');
+
+      setYtMeta(meta);
+      setYtEditMeta({ ...meta });
+    } catch(e) {
+      // Fallback: generate basic metadata from filename
+      const filename = ytFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      const fallback = {
+        title: filename.slice(0, 70),
+        shortDescription: 'Watch this video for practical tips on building income from home. Follow for more content like this.',
+        longDescription: `In this video you will discover practical strategies for creating income opportunities from home.\n\nWhat you will learn:\n• Real strategies that work in today\'s economy\n• How to get started without experience\n• Tips for staying consistent\n\nFollow for weekly content on home business, side hustles, and financial freedom.\n\n#homebusiness #sidehustle #workfromhome #earnfromhome #entrepreneur`,
+        tags: ['home business','work from home','side hustle','earn from home','entrepreneur','passive income','financial freedom','make money online','home income','remote work'],
+        category: 'People & Blogs',
+        isShort: true,
+      };
+      setYtMeta(fallback);
+      setYtEditMeta({ ...fallback });
+      setYtMetaErr('AI generation failed — basic metadata created. Edit before uploading.');
+    }
+    setYtAnalyzing(false);
+  }
+
+  async function ytUploadToYouTube() {
+    if (!ytFile || !ytEditMeta?.title) return;
+    setYtUploading(true); setYtUpErr(''); setYtUpRes(null);
+    try {
+      const formData = new FormData();
+      formData.append('video', ytFile);
+      formData.append('title', ytEditMeta.title);
+      formData.append('description', ytDescMode === 'short' ? ytEditMeta.shortDescription : ytEditMeta.longDescription);
+      formData.append('tags', JSON.stringify(ytEditMeta.tags || []));
+      formData.append('privacy', ytPrivacyMode);
+      formData.append('category', ytEditMeta.category || 'People & Blogs');
+      formData.append('isShort', ytEditMeta.isShort ? 'true' : 'false');
+
+      const res = await fetch(API + '/api/youtube/upload-from-file', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed HTTP ' + res.status);
+      setYtUpRes(data);
+    } catch(e) { setYtUpErr(e.message); }
+    finally { setYtUploading(false); }
+  }
+
   // ── Video Builder functions ──────────────────────────────────────────────
   async function vbCheckStatus() {
     try {
@@ -1013,7 +1124,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {[['generate','Generate'],['result','Result'],['history','History'],['workflow','⚡ Auto Workflow'],['vbuilder','🎬 Video Builder']].map(function(t) {
+        {[['generate','Generate'],['result','Result'],['history','History'],['workflow','⚡ Auto Workflow'],['vbuilder','🎬 Video Builder'],['ytstudio','📺 YouTube Studio']].map(function(t) {
           var id = t[0]; var label = t[1];
           return (
             <button key={id} onClick={function() { setTab(id); }}
@@ -2608,6 +2719,208 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── YOUTUBE STUDIO TAB ──────────────────────────────────────────── */}
+      {tab === 'ytstudio' && (
+        <div style={{ maxWidth: 720 }}>
+
+          {/* Header */}
+          <div style={{ ...card(), marginBottom: 12, background: 'rgba(255,0,0,.04)', border: '1px solid rgba(255,0,0,.2)' }}>
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: TXT, marginBottom: 4 }}>📺 YouTube Studio</div>
+              <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
+                Upload any video from your computer → AI reads the file and writes an optimised title, description, and tags → publish directly to your YouTube channel.
+              </div>
+            </div>
+          </div>
+
+          {/* Step 1 — Upload */}
+          <div style={{ ...card(), marginBottom: 12 }}>
+            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORD}` }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: TXT }}>① Upload Your Video</span>
+            </div>
+            <div style={{ padding: '14px 16px' }}>
+              {!ytFile ? (
+                <div onClick={function() { ytFileRef.current?.click(); }}
+                  style={{ border: '2px dashed rgba(255,255,255,.15)', borderRadius: 10, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all .2s' }}
+                  onMouseOver={function(e) { e.currentTarget.style.borderColor = 'rgba(255,0,0,.4)'; e.currentTarget.style.background = 'rgba(255,0,0,.03)'; }}
+                  onMouseOut={function(e) { e.currentTarget.style.borderColor = 'rgba(255,255,255,.15)'; e.currentTarget.style.background = 'transparent'; }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🎬</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: TXT, marginBottom: 4 }}>Click to select a video file</div>
+                  <div style={{ fontSize: 11, color: TXT3 }}>MP4, MOV, AVI, MKV — any video format</div>
+                </div>
+              ) : (
+                <div>
+                  {/* Preview */}
+                  <div style={{ borderRadius: 10, overflow: 'hidden', background: '#000', marginBottom: 10 }}>
+                    <video controls src={ytFileUrl} style={{ width: '100%', display: 'block', maxHeight: 320 }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, color: TXT2 }}>
+                      <strong style={{ color: TXT }}>{ytFile.name}</strong>
+                      <span style={{ color: TXT3 }}> · {(ytFile.size/1024/1024).toFixed(1)} MB</span>
+                    </div>
+                    <button onClick={function() { setYtFile(null); setYtFileUrl(''); setYtMeta(null); setYtEditMeta(null); setYtUpRes(null); }}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ✕ Remove
+                    </button>
+                  </div>
+                  {!ytMeta && (
+                    <button onClick={ytGenerateMeta} disabled={ytAnalyzing}
+                      style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: ytAnalyzing ? 'rgba(255,0,0,.3)' : '#FF0000', color: 'white', fontSize: 13, fontWeight: 700, cursor: ytAnalyzing ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      {ytAnalyzing
+                        ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> Analysing video &amp; generating metadata…</>
+                        : '✨ Generate Title, Description &amp; Tags with AI'}
+                    </button>
+                  )}
+                </div>
+              )}
+              <input ref={ytFileRef} type="file" accept="video/*" onChange={ytHandleFile} style={{ display: 'none' }} />
+              {ytMetaErr && <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(245,166,35,.1)', border: '1px solid rgba(245,166,35,.2)', borderRadius: 6, fontSize: 10, color: '#FAC775' }}>{ytMetaErr}</div>}
+            </div>
+          </div>
+
+          {/* Step 2 — Review & Edit Metadata */}
+          {ytEditMeta && (
+            <div style={{ ...card(), marginBottom: 12 }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TXT }}>② Review &amp; Edit Metadata</span>
+                <button onClick={ytGenerateMeta} disabled={ytAnalyzing}
+                  style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ↻ Regenerate
+                </button>
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+
+                {/* Title */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5 }}>Title</label>
+                    <span style={{ fontSize: 9, color: (ytEditMeta.title||'').length > 100 ? '#F09595' : TXT3 }}>{(ytEditMeta.title||'').length}/100</span>
+                  </div>
+                  <input value={ytEditMeta.title || ''} onChange={function(e) { setYtEditMeta(function(p) { return {...p, title: e.target.value}; }); }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: `1px solid ${BORD}`, borderRadius: 7, padding: '8px 10px', fontSize: 13, color: TXT, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', fontWeight: 600 }} />
+                </div>
+
+                {/* Description toggle */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5 }}>Description</label>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[['short','Short'],['long','Long']].map(function(m) {
+                        var active = ytDescMode === m[0];
+                        return (
+                          <button key={m[0]} onClick={function() { setYtDescMode(m[0]); }}
+                            style={{ padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit', fontSize: 9, border: active ? '1px solid #FF0000' : `1px solid ${BORD}`, background: active ? 'rgba(255,0,0,.12)' : 'transparent', color: active ? '#FF6B6B' : TXT3 }}>
+                            {m[1]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <textarea
+                    value={ytDescMode === 'short' ? (ytEditMeta.shortDescription || '') : (ytEditMeta.longDescription || '')}
+                    onChange={function(e) {
+                      var field = ytDescMode === 'short' ? 'shortDescription' : 'longDescription';
+                      setYtEditMeta(function(p) { return {...p, [field]: e.target.value}; });
+                    }}
+                    rows={ytDescMode === 'short' ? 3 : 8}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: `1px solid ${BORD}`, borderRadius: 7, padding: '8px 10px', fontSize: 11, color: TXT2, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
+                  <div style={{ fontSize: 9, color: TXT3, marginTop: 3 }}>
+                    {ytDescMode === 'short' ? 'Short description — used for YouTube Shorts under 60 seconds' : 'Long description — used for regular YouTube videos and search SEO'}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 6 }}>Tags</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
+                    {(ytEditMeta.tags || []).map(function(tag, ti) {
+                      return (
+                        <span key={ti} style={{ padding: '3px 8px', borderRadius: 10, background: 'rgba(255,0,0,.1)', border: '1px solid rgba(255,0,0,.2)', fontSize: 10, color: '#FF6B6B', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {tag}
+                          <span onClick={function() { setYtEditMeta(function(p) { return {...p, tags: p.tags.filter(function(_,i){return i!==ti;})}; }); }}
+                            style={{ cursor: 'pointer', opacity: .6, fontSize: 11 }}>✕</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <input placeholder="Add a tag and press Enter"
+                    onKeyDown={function(e) {
+                      if (e.key === 'Enter' && e.target.value.trim()) {
+                        setYtEditMeta(function(p) { return {...p, tags: [...(p.tags||[]), e.target.value.trim()]}; });
+                        e.target.value = '';
+                      }
+                    }}
+                    style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: `1px solid ${BORD}`, borderRadius: 7, padding: '7px 10px', fontSize: 11, color: TXT, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+
+                {/* Privacy */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 6 }}>Privacy</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[['public','🌍 Public'],['unlisted','🔗 Unlisted'],['private','🔒 Private']].map(function(p) {
+                      var active = ytPrivacyMode === p[0];
+                      return (
+                        <button key={p[0]} onClick={function() { setYtPrivMode(p[0]); }}
+                          style={{ flex: 1, padding: '7px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: active ? 700 : 400, border: active ? '2px solid #FF0000' : `1px solid ${BORD}`, background: active ? 'rgba(255,0,0,.1)' : 'rgba(22,61,106,.3)', color: active ? '#FF6B6B' : TXT3 }}>
+                          {p[1]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Upload to YouTube */}
+          {ytEditMeta && !ytUploadResult && (
+            <div style={{ ...card(), marginBottom: 12 }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${BORD}` }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: TXT }}>③ Publish to YouTube</span>
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+                {ytUploadErr && (
+                  <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(226,75,74,.1)', border: '1px solid rgba(226,75,74,.2)', borderRadius: 6, fontSize: 11, color: '#F09595' }}>
+                    ❌ {ytUploadErr}
+                  </div>
+                )}
+                <button onClick={ytUploadToYouTube} disabled={ytUploading || !ytEditMeta?.title}
+                  style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: ytUploading ? 'rgba(255,0,0,.3)' : '#FF0000', color: 'white', fontSize: 14, fontWeight: 700, cursor: ytUploading ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, boxShadow: ytUploading ? 'none' : '0 2px 14px rgba(255,0,0,.3)' }}>
+                  {ytUploading
+                    ? <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> Uploading to YouTube…</>
+                    : '▶ Publish to YouTube'}
+                </button>
+                <div style={{ fontSize: 10, color: TXT3, textAlign: 'center', lineHeight: 1.5 }}>
+                  Video uploads directly to your connected YouTube channel. Large files may take a few minutes.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success */}
+          {ytUploadResult && (
+            <div style={{ ...card(), marginBottom: 12, border: '2px solid rgba(29,158,117,.4)', background: 'rgba(29,158,117,.04)' }}>
+              <div style={{ padding: '14px 16px', textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: TXT, marginBottom: 6 }}>Published to YouTube!</div>
+                {ytUploadResult.youtubeUrl && (
+                  <a href={ytUploadResult.youtubeUrl} target="_blank" rel="noreferrer"
+                    style={{ display: 'inline-block', padding: '8px 20px', borderRadius: 8, background: '#FF0000', color: 'white', fontSize: 12, fontWeight: 600, textDecoration: 'none', marginBottom: 10 }}>
+                    ▶ View on YouTube
+                  </a>
+                )}
+                <div style={{ fontSize: 10, color: TXT3 }}>Video ID: {ytUploadResult.videoId}</div>
+                <button onClick={function() { setYtFile(null); setYtFileUrl(''); setYtMeta(null); setYtEditMeta(null); setYtUpRes(null); setYtUpErr(''); }}
+                  style={{ marginTop: 10, padding: '7px 16px', borderRadius: 7, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Upload another video
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
