@@ -942,6 +942,19 @@ Rules:
       const meta = JSON.parse(jsonMatch[0]);
       if (!meta.title) throw new Error('Missing title in generated metadata');
 
+      // Auto-insert best affiliate link into YouTube description
+      try {
+        const affR = await fetch(API + '/api/affiliate/match', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: filename, count: 1 }),
+        });
+        const affD = await affR.json();
+        const bestLink = affD.links?.[0];
+        if (bestLink) {
+          meta.longDescription = (meta.longDescription || '') + '\n\n🔗 Recommended: ' + bestLink.name + '\n' + bestLink.url + '\n\n#ad #affiliate';
+          meta.shortDescription = (meta.shortDescription || '') + ' 🔗 Link in description. #ad';
+        }
+      } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
       setYtEditMeta({ ...meta });
     } catch(e) {
