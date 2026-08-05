@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar.jsx';
 import Composer from './pages/Composer.jsx';
 import VideoEngine from './pages/VideoEngine.jsx';
 import ContentCalendar from './pages/ContentCalendar.jsx';
+import AffiliateLibrary from './pages/AffiliateLibrary.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import BulkGenerator from './pages/BulkGenerator.jsx';
@@ -796,6 +797,7 @@ export default function App() {
           {page === 'brand'      && <Brand />}
           {page === 'compliance' && <Compliance />}
           {page === 'calendar'   && <ContentCalendar />}
+          {page === 'affiliate'  && <AffiliateLibrary />}
           {page === 'scriptwriter' && <ScriptWriter />}
         </main>
       </div>
