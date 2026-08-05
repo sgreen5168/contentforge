@@ -203,7 +203,18 @@ export default function ContentCalendar() {
         || '';
 
       if (!postText) throw new Error('No post content in response — try again');
-      setPost({ ...plan, content: postText, generatedAt: new Date().toISOString() });
+      // Auto-insert best matching affiliate link
+      let finalPostText = postText;
+      try {
+        const affRes = await fetch(API + '/api/affiliate/insert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postText, topic: plan.topic, category: plan.cat }),
+        });
+        const affData = await affRes.json();
+        if (affData.inserted && affData.text) finalPostText = affData.text;
+      } catch(e) { console.warn('Affiliate insert skipped:', e.message); }
+      setPost({ ...plan, content: finalPostText, generatedAt: new Date().toISOString() });
     } catch(e) {
       const msg = e.message || 'Unknown error';
       setPostErr(msg.includes('JSON') ? 'Server connection issue — make sure you are logged in and try again' : msg);
