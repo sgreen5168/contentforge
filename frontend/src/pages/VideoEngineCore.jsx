@@ -903,44 +903,56 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
     if (!ytFile) return;
     setYtAnalyzing(true); setYtMetaErr('');
     try {
-      // Use Claude to generate YouTube metadata from filename + any script context
-      const filename = ytFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      const filename = ytFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').trim();
       const scriptCtx = job?.result?.script?.fullScript || job?.result?.script?.hook || '';
-      const prompt = `You are a YouTube SEO expert. Generate optimized YouTube metadata for a video.
+      const isShort = ytFile.size < 50000000;
 
-Video filename: "${filename}"
-${scriptCtx ? 'Video script context: ' + scriptCtx.slice(0, 500) : ''}
-Video duration: ~${ytFile.size > 50000000 ? 'long-form' : 'short (under 60 seconds)'}
-
-Generate ONLY valid JSON with these exact fields:
-{
-  "title": "Compelling YouTube title under 70 characters — curiosity-driven, keyword-rich",
-  "shortDescription": "2-3 sentence YouTube Shorts description with main keyword and call to action, under 200 characters",
-  "longDescription": "Full YouTube description 150-300 words — hook, value proposition, 3-5 bullet points of what viewers learn, call to action, relevant hashtags at end",
-  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],
-  "category": "People & Blogs",
-  "isShort": true
-}
-
-Rules:
-- Title must be compelling and searchable — no clickbait, no all-caps
-- Include keywords naturally related to home business, side income, cooking, or entrepreneurship as relevant
-- Tags should be specific and searchable — mix of broad and niche terms
-- Return ONLY the JSON, no explanation`;
-
-      const res = await fetch(API + '/api/generate', {
+      // Call Claude directly via the video script endpoint with JSON instruction
+      const res = await fetch(API + '/api/video/script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputMode: 'topic', topic: prompt, style: 'Casual', platforms: ['youtube'], affiliate: false }),
+        body: JSON.stringify({
+          inputMode: 'topic',
+          topic: filename,
+          style: 'Casual',
+          persona: 'ugc-creator',
+          duration: isShort ? '30s' : '60s',
+          platforms: ['youtube'],
+          videoType: 'ugc-persona',
+          editedScript: `Generate YouTube metadata for a video titled: "${filename}".${scriptCtx ? ' Script context: ' + scriptCtx.slice(0, 300) : ''} Return ONLY a JSON object with fields: title (under 70 chars, compelling), shortDescription (under 200 chars), longDescription (150-250 words with hashtags), tags (array of 10 strings), category ("People & Blogs"), isShort (${isShort}). No explanation, no markdown, just JSON.`,
+        }),
       });
       const data = await res.json();
-      const rawText = data.posts?.youtube?.text || data.posts?.facebook?.text || data.text || '';
 
-      // Parse JSON from response
+      // Try multiple response paths
+      const rawText = data.script?.fullScript || data.script?.hook || data.posts?.youtube?.text || data.posts?.facebook?.text || '';
+
+      // Extract JSON
+      let meta = null;
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Could not parse metadata — try again');
-      const meta = JSON.parse(jsonMatch[0]);
-      if (!meta.title) throw new Error('Missing title in generated metadata');
+      if (jsonMatch) {
+        try { meta = JSON.parse(jsonMatch[0]); } catch {}
+      }
+
+      // If still no meta, build it from the script text intelligently  
+      if (!meta || !meta.title) {
+        // Use the script content to build metadata
+        const hook = data.script?.hook || filename;
+        const fullScript = data.script?.fullScript || '';
+        const hashtags = (data.script?.hashtags || []).join(' ');
+        meta = {
+          title: hook.slice(0, 70),
+          shortDescription: hook + ' Follow for more tips like this. 🔗 Link in bio. #shorts',
+          longDescription: fullScript.slice(0, 500) + '\n\n' + hashtags + '\n\n#homebusiness #sidehustle #workfromhome #entrepreneur',
+          tags: ['home business', 'work from home', 'side hustle', filename.toLowerCase(), 'entrepreneur', 'earn from home', 'passive income', 'catering business', 'home income', 'business tips'],
+          category: 'People & Blogs',
+          isShort,
+        };
+      }
+
+      if (!meta.title || meta.title.trim() === '') {
+        meta.title = filename.slice(0, 70);
+      }
 
       // Auto-insert best affiliate link into YouTube description
       try {
@@ -1000,6 +1012,35 @@ Rules:
   }
 
   // ── Video Builder functions ──────────────────────────────────────────────
+  // ── VB History persistence ───────────────────────────────────────────────
+  function vbSaveToHistory(job) {
+    if (!job || !job.id) return;
+    setVbHistory(function(prev) {
+      // Update if exists, otherwise prepend
+      const exists = prev.find(function(j) { return j.id === job.id; });
+      const updated = exists
+        ? prev.map(function(j) { return j.id === job.id ? job : j; })
+        : [job, ...prev].slice(0, 50); // keep last 50
+      try { localStorage.setItem('cf_vb_history', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }
+
+  function vbDeleteFromHistory(id) {
+    setVbHistory(function(prev) {
+      const updated = prev.filter(function(j) { return j.id !== id; });
+      try { localStorage.setItem('cf_vb_history', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    // Also clear current job if it's the one being deleted
+    if (vbJobId === id) { setVbJobId(''); setVbJob(null); setVbRunning(false); }
+  }
+
+  function vbClearHistory() {
+    setVbHistory([]);
+    try { localStorage.removeItem('cf_vb_history'); } catch {}
+  }
+
   async function vbCheckStatus() {
     try {
       const r = await fetch(VB_API + '/status');
@@ -3099,6 +3140,57 @@ Rules:
                   style={{ padding:'7px 14px',borderRadius:7,border:'1px solid rgba(226,75,74,.3)',background:'transparent',color:'#F09595',fontSize:11,cursor:'pointer',fontFamily:'inherit' }}>
                   Try again
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Saved Video History ───────────────────────────────────── */}
+          {vbHistory && vbHistory.length > 0 && (
+            <div style={{ ...card(), marginTop: 8 }}>
+              <div style={{ padding:'10px 14px', borderBottom:'1px solid '+BORD, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ fontSize:12, fontWeight:700, color:TXT }}>📼 Saved Videos ({vbHistory.length})</span>
+                <button onClick={function() { if (window.confirm('Clear all saved videos from history?')) vbClearHistory(); }}
+                  style={{ padding:'3px 9px', borderRadius:5, border:'1px solid rgba(226,75,74,.2)', background:'transparent', color:'#F09595', fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                  🗑 Clear all
+                </button>
+              </div>
+              <div style={{ padding:'8px 14px', maxHeight:400, overflowY:'auto' }}>
+                {vbHistory.map(function(hj) {
+                  var isActive = hj.id === vbJobId;
+                  var done = hj.status === 'completed';
+                  return (
+                    <div key={hj.id} style={{ padding:'10px', borderRadius:8, background:isActive?'rgba(59,130,246,.08)':'rgba(22,61,106,.3)', border:'1px solid '+(isActive?'rgba(59,130,246,.3)':BORD), marginBottom:6 }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                        <div style={{ fontSize:18, flexShrink:0 }}>{done?'✅':hj.status==='failed'?'❌':'⏳'}</div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:12, fontWeight:600, color:TXT, marginBottom:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {hj.topic || 'Video'}
+                          </div>
+                          <div style={{ fontSize:10, color:TXT3, marginBottom: done?6:0 }}>
+                            {hj.result?.aspectRatio||''}{hj.result?.clipsCount?' · '+hj.result.clipsCount+' clips':''}
+                            {hj.savedAt?' · '+new Date(hj.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}
+                          </div>
+                          {done && (
+                            <div style={{ display:'flex', gap:5 }}>
+                              <button onClick={function() { setVbJob(hj); setVbJobId(hj.id); setVbRunning(false); setVbError(''); }}
+                                style={{ padding:'4px 10px', borderRadius:6, border:'1px solid rgba(59,130,246,.3)', background:'transparent', color:'#93C5FD', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                                👁 View
+                              </button>
+                              <a href={VB_API+'/vb/video/'+hj.id+'/file'} download target="_blank" rel="noreferrer"
+                                style={{ padding:'4px 10px', borderRadius:6, border:'none', background:'#3B82F6', color:'white', fontSize:10, cursor:'pointer', fontFamily:'inherit', textDecoration:'none' }}>
+                                ⬇ Download
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={function() { vbDeleteFromHistory(hj.id); }}
+                          style={{ padding:'3px 7px', borderRadius:5, border:'1px solid rgba(226,75,74,.2)', background:'transparent', color:'#F09595', fontSize:9, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
