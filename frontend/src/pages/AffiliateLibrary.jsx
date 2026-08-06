@@ -33,13 +33,24 @@ export default function AffiliateLibrary() {
   const [testResults, setTestRes] = useState([]);
   const [testing, setTesting]   = useState(false);
   const [filterPlat, setFilterPlat] = useState('all');
+  const [apiStatus, setApiStatus]   = useState(null);
+  const [searching, setSearching]   = useState(false);
+  const [searchTopic, setSearchTopic] = useState('');
+  const [searchCategory, setSearchCat] = useState('general');
+  const [searchResults, setSearchRes] = useState(null);
 
   const [form, setForm] = useState({
     name: '', url: '', platform: 'clickbank', category: 'home-business',
     keywords: '', description: '',
   });
 
-  useEffect(() => { loadLinks(); }, []);
+  useEffect(() => {
+    loadLinks();
+    fetch(`${API}/api/affiliate/status`)
+      .then(function(r) { return r.json(); })
+      .then(function(d) { setApiStatus(d); })
+      .catch(function() {});
+  }, []);
 
   async function loadLinks() {
     setLoading(true);
@@ -49,6 +60,24 @@ export default function AffiliateLibrary() {
       setLinks(d.links || []);
     } catch(e) { console.warn('Load failed:', e.message); }
     setLoading(false);
+  }
+
+  async function liveSearch() {
+    if (!searchTopic.trim()) return;
+    setSearching(true); setSearchRes(null);
+    try {
+      const r = await fetch(`${API}/api/affiliate/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: searchTopic, category: searchCategory, platforms: ['clickbank','amazon'] }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Search failed');
+      setSearchRes(d);
+      // Reload library to show auto-saved products
+      loadLinks();
+    } catch(e) { setSearchRes({ error: e.message }); }
+    setSearching(false);
   }
 
   async function saveLink() {
@@ -139,6 +168,92 @@ export default function AffiliateLibrary() {
             );
           })}
         </div>
+      </div>
+
+      {/* API Connection Status */}
+      {apiStatus && (
+        <div style={{ ...card(), padding:'10px 16px', marginBottom:12, display:'flex', gap:12, flexWrap:'wrap', alignItems:'center' }}>
+          <span style={{ fontSize:11, fontWeight:700, color:TXT }}>API Connections:</span>
+          <span style={{ fontSize:11, padding:'3px 10px', borderRadius:10, background:apiStatus.clickbank?'rgba(245,158,11,.12)':'rgba(226,75,74,.1)', color:apiStatus.clickbank?'#FCD34D':'#F09595', border:'1px solid '+(apiStatus.clickbank?'rgba(245,158,11,.3)':'rgba(226,75,74,.2)') }}>
+            💰 ClickBank {apiStatus.clickbank?'✅ Connected':'❌ Not connected'}
+          </span>
+          <span style={{ fontSize:11, padding:'3px 10px', borderRadius:10, background:apiStatus.amazon?'rgba(255,153,0,.12)':'rgba(226,75,74,.1)', color:apiStatus.amazon?'#FF9900':'#F09595', border:'1px solid '+(apiStatus.amazon?'rgba(255,153,0,.3)':'rgba(226,75,74,.2)') }}>
+            📦 Amazon {apiStatus.amazon?'✅ Connected':'❌ Not connected'}
+          </span>
+          <span style={{ fontSize:10, color:TXT3 }}>{apiStatus.library || 0} links in library</span>
+          {(!apiStatus.clickbank || !apiStatus.amazon) && (
+            <span style={{ fontSize:10, color:'#FAC775' }}>
+              ⚠ Add missing keys to Railway Variables: {!apiStatus.clickbank?'CLICKBANK_API_KEY, CLICKBANK_CLERK_ID':''}
+              {!apiStatus.amazon?' AMAZON_ACCESS_KEY, AMAZON_SECRET_KEY, AMAZON_ASSOCIATE_TAG':''}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Live Product Search */}
+      <div style={{ ...card(), padding:16, marginBottom:16, border:'1px solid rgba(59,130,246,.2)', background:'rgba(59,130,246,.03)' }}>
+        <div style={{ fontSize:13, fontWeight:700, color:TXT, marginBottom:4 }}>🔍 Search Products by Topic</div>
+        <div style={{ fontSize:11, color:TXT3, marginBottom:12, lineHeight:1.5 }}>
+          Type a post topic — ContentForge searches ClickBank and Amazon for real matching products, pulls the affiliate links, and adds them to your library automatically.
+        </div>
+        <div style={{ display:'flex', gap:8, marginBottom:8, flexWrap:'wrap' }}>
+          <input value={searchTopic} onChange={function(e){setSearchTopic(e.target.value);}}
+            placeholder="e.g. home bakery business, work from home, meal prep..."
+            style={{ ...inp, flex:1, minWidth:200 }}
+            onKeyDown={function(e){ if(e.key==='Enter') liveSearch(); }} />
+          <select value={searchCategory} onChange={function(e){setSearchCat(e.target.value);}} style={{ ...inp, width:'auto' }}>
+            {CATEGORIES.map(function(c){ return <option key={c} value={c}>{c}</option>; })}
+          </select>
+          <button onClick={liveSearch} disabled={searching||!searchTopic.trim()}
+            style={{ padding:'8px 20px', borderRadius:8, border:'none', background:searching||!searchTopic.trim()?'rgba(59,130,246,.3)':'#3B82F6', color:'white', fontSize:12, fontWeight:700, cursor:searching||!searchTopic.trim()?'default':'pointer', fontFamily:'inherit', flexShrink:0 }}>
+            {searching ? '🔍 Searching…' : '🔍 Find Products'}
+          </button>
+        </div>
+
+        {/* Search results */}
+        {searchResults && !searchResults.error && (
+          <div>
+            <div style={{ fontSize:11, color:TXT3, marginBottom:8 }}>
+              Found {searchResults.total || 0} products for "{searchResults.keywords}" — auto-saved to library ✅
+            </div>
+            {searchResults.total === 0 && (
+              <div style={{ fontSize:11, color:'#FAC775', padding:'8px 10px', background:'rgba(245,158,11,.08)', borderRadius:6 }}>
+                No products found. Try different keywords, or check your API keys are correct in Railway Variables.
+              </div>
+            )}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              {[...(searchResults.clickbank||[]), ...(searchResults.amazon||[])].map(function(p) {
+                const plat = getPlatform(p.platform);
+                return (
+                  <div key={p.id} style={{ padding:'10px', background:'rgba(22,61,106,.4)', borderRadius:8, border:'1px solid '+BORD }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                      <span style={{ fontSize:14 }}>{plat.icon}</span>
+                      <span style={{ fontSize:9, padding:'1px 5px', borderRadius:4, background:`${plat.color}22`, color:plat.color }}>{plat.label}</span>
+                      {p.gravity && <span style={{ fontSize:9, color:TXT3 }}>Gravity: {Math.round(p.gravity)}</span>}
+                      {p.description && p.description.includes('Price:') && <span style={{ fontSize:9, color:ACCH }}>{p.description}</span>}
+                    </div>
+                    <div style={{ fontSize:11, fontWeight:600, color:TXT, marginBottom:4, lineHeight:1.4 }}>{p.name}</div>
+                    <div style={{ display:'flex', gap:5 }}>
+                      <button onClick={function(){ navigator.clipboard.writeText(p.url).catch(function(){}); }}
+                        style={{ flex:1, padding:'4px', borderRadius:5, border:'1px solid '+BORD, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                        📋 Copy Link
+                      </button>
+                      <a href={p.url} target="_blank" rel="noreferrer"
+                        style={{ flex:1, padding:'4px', borderRadius:5, border:'none', background:plat.color, color:'white', fontSize:9, cursor:'pointer', fontFamily:'inherit', textDecoration:'none', textAlign:'center' }}>
+                        View ↗
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {searchResults?.error && (
+          <div style={{ padding:'8px 10px', background:'rgba(226,75,74,.1)', borderRadius:6, fontSize:11, color:'#F09595' }}>
+            ❌ {searchResults.error}
+          </div>
+        )}
       </div>
 
       {/* Add Link Form */}
