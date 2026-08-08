@@ -35,6 +35,14 @@ export default function AffiliateLibrary() {
   const [filterPlat, setFilterPlat] = useState('all');
   const [apiStatus, setApiStatus]   = useState(null);
   const [searching, setSearching]   = useState(false);
+  const [bulkMode, setBulkMode]     = useState(false);
+  const [bulkText, setBulkText]     = useState('');
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkResult, setBulkResult] = useState('');
+  const [nrStatus, setNrStatus]     = useState(null);
+  const [nrLinks, setNrLinks]       = useState([]);
+  const [nrLoading, setNrLoading]   = useState(false);
+  const [nrTable, setNrTable]       = useState('links');
   const [searchTopic, setSearchTopic] = useState('');
   const [searchCategory, setSearchCat] = useState('general');
   const [searchResults, setSearchRes] = useState(null);
@@ -50,6 +58,7 @@ export default function AffiliateLibrary() {
       .then(function(r) { return r.json(); })
       .then(function(d) { setApiStatus(d); })
       .catch(function() {});
+    checkNichroute();
   }, []);
 
   async function loadLinks() {
@@ -60,6 +69,93 @@ export default function AffiliateLibrary() {
       setLinks(d.links || []);
     } catch(e) { console.warn('Load failed:', e.message); }
     setLoading(false);
+  }
+
+  // ── Nichroute functions ──────────────────────────────────────────────────
+  async function checkNichroute() {
+    try {
+      const r = await fetch(`${API}/api/nichroute/status`);
+      const d = await r.json();
+      setNrStatus(d);
+      if (d.connected) loadNichrouteLinks();
+    } catch(e) { setNrStatus({ connected: false }); }
+  }
+
+  async function loadNichrouteLinks() {
+    setNrLoading(true);
+    try {
+      const r = await fetch(`${API}/api/nichroute/links`);
+      const d = await r.json();
+      if (d.found) {
+        setNrLinks(d.sample || []);
+        setNrTable(d.table);
+        loadLinks(); // refresh library too
+      }
+    } catch(e) { console.warn('Nichroute load failed:', e.message); }
+    setNrLoading(false);
+  }
+
+  async function searchNichroute(topic) {
+    try {
+      const r = await fetch(`${API}/api/nichroute/match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, table: nrTable }),
+      });
+      const d = await r.json();
+      if (d.links?.length > 0) {
+        loadLinks(); // refresh to show newly saved links
+        return d.links;
+      }
+    } catch(e) { console.warn('Nichroute search failed:', e.message); }
+    return [];
+  }
+
+  async function bulkImport() {
+    if (!bulkText.trim()) return;
+    setBulkSaving(true); setBulkResult('');
+    // Extract all URLs from pasted text
+    const urlPattern = new RegExp('https?://[^\\s<>"]+hop\.clickbank\.net[^\\s<>"]*', 'gi')gi;
+    const urls = [...new Set(bulkText.match(urlPattern) || [])];
+    if (urls.length === 0) {
+      setBulkResult('❌ No ClickBank hoplinks found — make sure URLs contain hop.clickbank.net');
+      setBulkSaving(false); return;
+    }
+    let saved = 0;
+    for (const url of urls) {
+      // Auto-detect category from any surrounding text near the URL
+      const urlIndex = bulkText.indexOf(url);
+      const context = bulkText.slice(Math.max(0, urlIndex-100), urlIndex+100).toLowerCase();
+      let category = 'home-income';
+      const bakingKw = ['bak','cook','recipe','food','meal','kitchen'];
+      const healthKw = ['fitness','weight','health','diet','keto'];
+      const mindsetKw = ['mindset','manifest','success','habit'];
+      const ecommKw = ['shopify','ecomm','amazon','etsy'];
+      if (bakingKw.some(function(k){return context.includes(k);})) category = 'baking';
+      else if (healthKw.some(function(k){return context.includes(k);})) category = 'health';
+      else if (mindsetKw.some(function(k){return context.includes(k);})) category = 'mindset';
+      else if (ecommKw.some(function(k){return context.includes(k);})) category = 'side-hustle';
+      try {
+        const r = await fetch(`${API}/api/affiliate/links`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'ClickBank Product ' + (saved + 1),
+            url,
+            platform: 'clickbank',
+            category,
+            keywords: category,
+            description: 'Imported from ClickBank — edit name and keywords',
+          }),
+        });
+        if (r.ok) saved++;
+      } catch(e) { console.warn('Save failed:', e.message); }
+    }
+    setBulkResult(`✅ Saved ${saved} of ${urls.length} links — edit names and keywords in the library below`);
+    setBulkSaving(false);
+    setBulkMode(false);
+    setBulkText('');
+    loadLinks();
   }
 
   async function liveSearch() {
@@ -76,6 +172,11 @@ export default function AffiliateLibrary() {
       setSearchRes(d);
       // Reload library to show auto-saved products
       loadLinks();
+      // Also search Nichroute database
+      const nrMatches = await searchNichroute(searchTopic);
+      if (nrMatches.length > 0 && (!d.total || d.total === 0)) {
+        setSearchRes({ ...d, results: nrMatches, total: nrMatches.length, source: 'nichroute' });
+      }
     } catch(e) { setSearchRes({ error: e.message }); }
     setSearching(false);
   }
@@ -190,6 +291,50 @@ export default function AffiliateLibrary() {
         </div>
       )}
 
+      {/* Nichroute Status */}
+      {nrStatus && (
+        <div style={{ ...card(), padding:'10px 16px', marginBottom:12, border: nrStatus.connected ? '1px solid rgba(29,158,117,.2)' : `1px solid ${BORD}` }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:20 }}>🗄</span>
+              <div>
+                <div style={{ fontSize:12, fontWeight:700, color:TXT }}>
+                  Nichroute Database {nrStatus.connected ? '✅ Connected' : '❌ Not connected'}
+                </div>
+                <div style={{ fontSize:10, color:TXT3 }}>
+                  {nrStatus.connected
+                    ? `Supabase project connected · Table: "${nrTable}" · ${nrLinks.length} links found`
+                    : 'Add NICHROUTE_URL and NICHROUTE_KEY to Railway Variables'}
+                </div>
+              </div>
+            </div>
+            {nrStatus.connected && (
+              <button onClick={loadNichrouteLinks} disabled={nrLoading}
+                style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                {nrLoading ? 'Loading…' : '↻ Sync Links'}
+              </button>
+            )}
+          </div>
+          {nrLinks.length > 0 && (
+            <div style={{ marginTop:10, padding:'8px', background:'rgba(22,61,106,.3)', borderRadius:6 }}>
+              <div style={{ fontSize:10, color:TXT3, marginBottom:6 }}>Sample links from your Nichroute database:</div>
+              {nrLinks.slice(0,3).map(function(link, i) {
+                var url = link.url || link.destination || link.affiliate_url || link.link || '';
+                var title = link.title || link.name || link.product_name || ('Link '+(i+1));
+                return (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                    <span style={{ fontSize:10, color:ACCH }}>📦</span>
+                    <span style={{ fontSize:10, color:TXT2, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{title}</span>
+                    {url && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize:9, color:'#3B82F6', textDecoration:'none' }}>View ↗</a>}
+                  </div>
+                );
+              })}
+              {nrLinks.length > 3 && <div style={{ fontSize:9, color:TXT3 }}>+{nrLinks.length-3} more in database</div>}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Live Product Search */}
       <div style={{ ...card(), padding:16, marginBottom:16, border:'1px solid rgba(59,130,246,.2)', background:'rgba(59,130,246,.03)' }}>
         <div style={{ fontSize:13, fontWeight:700, color:TXT, marginBottom:4 }}>🔍 Search Products by Topic</div>
@@ -252,6 +397,48 @@ export default function AffiliateLibrary() {
         {searchResults?.error && (
           <div style={{ padding:'8px 10px', background:'rgba(226,75,74,.1)', borderRadius:6, fontSize:11, color:'#F09595' }}>
             ❌ {searchResults.error}
+          </div>
+        )}
+      </div>
+
+      {/* Bulk Importer */}
+      <div style={{ ...card(), padding:16, marginBottom:16, border:'1px solid rgba(99,102,241,.2)', background:'rgba(99,102,241,.03)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: bulkMode ? 12 : 0 }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:TXT }}>📥 Bulk Hoplink Importer</div>
+            {!bulkMode && <div style={{ fontSize:11, color:TXT3, marginTop:2 }}>Paste multiple ClickBank hoplinks at once — saves them all instantly</div>}
+          </div>
+          <button onClick={function() { setBulkMode(function(b){return !b;}); setBulkResult(''); }}
+            style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(99,102,241,.3)', background: bulkMode?'rgba(99,102,241,.15)':'transparent', color:'#818CF8', fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+            {bulkMode ? '✕ Cancel' : '+ Bulk Import'}
+          </button>
+        </div>
+        {bulkMode && (
+          <div>
+            <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.6 }}>
+              Go to <strong style={{ color:TXT }}>marketplace.clickbank.com</strong> → find products → click Promote → Generate Hoplinks → copy each URL. Paste all of them below (one per line or mixed with other text).
+            </div>
+            <textarea value={bulkText} onChange={function(e){setBulkText(e.target.value);}} rows={6}
+              placeholder={'Paste your ClickBank hoplinks here, e.g.:
+https://abc123xyz.hop.clickbank.net
+https://def456uvw.hop.clickbank.net
+
+You can paste the entire page or just the URLs — ContentForge extracts the links automatically.'}
+              style={{ width:'100%', background:'rgba(22,61,106,.5)', border:`1px solid ${BORD}`, borderRadius:8, padding:'10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', resize:'vertical', boxSizing:'border-box', lineHeight:1.6, marginBottom:8 }} />
+            {bulkResult && (
+              <div style={{ marginBottom:8, padding:'7px 10px', background: bulkResult.startsWith('✅')?'rgba(29,158,117,.1)':'rgba(226,75,74,.1)', border:`1px solid ${bulkResult.startsWith('✅')?'rgba(29,158,117,.2)':'rgba(226,75,74,.2)'}`, borderRadius:6, fontSize:11, color: bulkResult.startsWith('✅')?ACCH:'#F09595' }}>
+                {bulkResult}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={bulkImport} disabled={bulkSaving || !bulkText.trim()}
+                style={{ flex:1, padding:'9px', borderRadius:8, border:'none', background: bulkSaving||!bulkText.trim()?'rgba(99,102,241,.3)':'#6366F1', color:'white', fontSize:12, fontWeight:700, cursor: bulkSaving||!bulkText.trim()?'default':'pointer', fontFamily:'inherit' }}>
+                {bulkSaving ? '💾 Saving…' : '💾 Import All Links'}
+              </button>
+            </div>
+            <div style={{ marginTop:8, fontSize:10, color:TXT3, lineHeight:1.5 }}>
+              After importing, edit each link's name and keywords in the library below so ContentForge matches them to the right posts.
+            </div>
           </div>
         )}
       </div>
