@@ -419,11 +419,7 @@ export default function AffiliateLibrary() {
               Go to <strong style={{ color:TXT }}>marketplace.clickbank.com</strong> → find products → click Promote → Generate Hoplinks → copy each URL. Paste all of them below (one per line or mixed with other text).
             </div>
             <textarea value={bulkText} onChange={function(e){setBulkText(e.target.value);}} rows={6}
-              placeholder={'Paste your ClickBank hoplinks here, e.g.:
-https://abc123xyz.hop.clickbank.net
-https://def456uvw.hop.clickbank.net
-
-You can paste the entire page or just the URLs — ContentForge extracts the links automatically.'}
+              placeholder="Paste your ClickBank hoplinks here — one per line or mixed with text. ContentForge extracts all hop.clickbank.net URLs automatically." 
               style={{ width:'100%', background:'rgba(22,61,106,.5)', border:`1px solid ${BORD}`, borderRadius:8, padding:'10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', resize:'vertical', boxSizing:'border-box', lineHeight:1.6, marginBottom:8 }} />
             {bulkResult && (
               <div style={{ marginBottom:8, padding:'7px 10px', background: bulkResult.startsWith('✅')?'rgba(29,158,117,.1)':'rgba(226,75,74,.1)', border:`1px solid ${bulkResult.startsWith('✅')?'rgba(29,158,117,.2)':'rgba(226,75,74,.2)'}`, borderRadius:6, fontSize:11, color: bulkResult.startsWith('✅')?ACCH:'#F09595' }}>
