@@ -115,7 +115,7 @@ export default function AffiliateLibrary() {
     if (!bulkText.trim()) return;
     setBulkSaving(true); setBulkResult('');
     // Extract all URLs from pasted text
-    const urlPattern = new RegExp('https?://[^\\s<>"]+hop\.clickbank\.net[^\\s<>"]*', 'gi')gi;
+    const urlPattern = new RegExp('https?://[^\\s<>"]+hop\.clickbank\.net[^\\s<>"]*', 'gi');
     const urls = [...new Set(bulkText.match(urlPattern) || [])];
     if (urls.length === 0) {
       setBulkResult('❌ No ClickBank hoplinks found — make sure URLs contain hop.clickbank.net');
