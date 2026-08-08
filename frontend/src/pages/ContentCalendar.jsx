@@ -139,7 +139,8 @@ export default function ContentCalendar() {
   const [generatedPost, setPost]  = useState(null);
   const [postError, setPostErr]   = useState('');
   const [scheduled, setScheduled] = useState([]);
-  const [copied, setCopied]       = useState('');
+  const [copied, setCopied]         = useState('');
+  const [affMode, setAffMode]       = useState('none'); // 'none' | 'with-disclosure' | 'link-only'
   const [readingId, setReadingId] = useState(null);
   const [scriptView, setScriptView] = useState(null);   // null | 'write' | 'result'
   const [scriptPlan, setScriptPlan] = useState(null);
@@ -203,17 +204,26 @@ export default function ContentCalendar() {
         || '';
 
       if (!postText) throw new Error('No post content in response — try again');
-      // Auto-insert best matching affiliate link
+      // Auto-insert affiliate link based on user preference
       let finalPostText = postText;
-      try {
-        const affRes = await fetch(API + '/api/affiliate/insert', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postText, topic: plan.topic, category: plan.cat }),
-        });
-        const affData = await affRes.json();
-        if (affData.inserted && affData.text) finalPostText = affData.text;
-      } catch(e) { console.warn('Affiliate insert skipped:', e.message); }
+      if (affMode !== 'none') {
+        try {
+          const affRes = await fetch(API + '/api/affiliate/match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic: plan.topic, category: plan.cat, count: 1 }),
+          });
+          const affData = await affRes.json();
+          const bestLink = affData.links?.[0];
+          if (bestLink) {
+            if (affMode === 'with-disclosure') {
+              finalPostText = postText + '\n\n🔗 ' + bestLink.name + '\n' + bestLink.url + '\n\n#ad This post contains affiliate links. Purchasing through these links supports this page at no extra cost to you.';
+            } else if (affMode === 'link-only') {
+              finalPostText = postText + '\n\n🔗 ' + bestLink.name + '\n' + bestLink.url;
+            }
+          }
+        } catch(e) { console.warn('Affiliate insert skipped:', e.message); }
+      }
       setPost({ ...plan, content: finalPostText, generatedAt: new Date().toISOString() });
     } catch(e) {
       const msg = e.message || 'Unknown error';
@@ -560,6 +570,28 @@ export default function ContentCalendar() {
                         {/* Right — actions */}
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 600, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>Actions</div>
+
+                          {/* Affiliate link mode */}
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: TXT3, marginBottom: 5 }}>🔗 Affiliate Link</div>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              {[['none','🚫 None'],['with-disclosure','📋 + Disclosure'],['link-only','🔗 Link only']].map(function(m) {
+                                var active = affMode === m[0];
+                                return (
+                                  <button key={m[0]} onClick={function() { setAffMode(m[0]); }}
+                                    style={{ flex:1, padding:'4px 2px', borderRadius:5, cursor:'pointer', fontFamily:'inherit', fontSize:9, fontWeight:active?700:400, border:active?'2px solid '+ACC:'1px solid '+BORD, background:active?'rgba(29,158,117,.12)':'transparent', color:active?ACCH:TXT3, textAlign:'center' }}>
+                                    {m[1]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div style={{ fontSize:9, color:TXT3, marginTop:3, lineHeight:1.4 }}>
+                              {affMode === 'none' && 'Pure content — no link or disclosure'}
+                              {affMode === 'with-disclosure' && 'Best matching link + FTC #ad disclosure'}
+                              {affMode === 'link-only' && 'Link added — you write your own disclosure'}
+                            </div>
+                          </div>
+
                           {!generatedPost || generatedPost.day !== plan.day ? (
                             <button onClick={() => generatePost(plan)} disabled={generating}
                               style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: generating ? 'rgba(24,119,242,.3)' : FB, color: 'white', fontSize: 12, fontWeight: 700, cursor: generating ? 'default' : 'pointer', fontFamily: 'inherit', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
