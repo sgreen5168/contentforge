@@ -353,7 +353,7 @@ export default function AffiliateLibrary() {
             );
           })}
         </div>
-        <a href="https://marketplace.clickbank.com" target="_blank" rel="noreferrer"
+        <a href="https://accounts.clickbank.com/marketplace.htm" target="_blank" rel="noreferrer"
           style={{ display:'inline-block', marginTop:12, padding:'8px 20px', borderRadius:8, background:'#F59E0B', color:'white', fontSize:12, fontWeight:700, textDecoration:'none' }}>
           Open ClickBank Marketplace ↗
         </a>
