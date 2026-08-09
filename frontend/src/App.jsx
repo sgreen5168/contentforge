@@ -798,6 +798,26 @@ export default function App() {
           {page === 'compliance' && <Compliance />}
           {page === 'calendar'   && <ContentCalendar />}
           {page === 'affiliate'  && <AffiliateLibrary />}
+          {page === 'nichroute'  && (
+            <div style={{ height:'calc(100vh - 60px)', display:'flex', flexDirection:'column' }}>
+              <div style={{ padding:'8px 16px', background:'rgba(0,0,0,.2)', borderBottom:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ fontSize:12, fontWeight:600, color:'rgba(232,244,240,.7)', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:16 }}>🔗</span> NichRoute Dashboard v9.19
+                  <span style={{ fontSize:10, padding:'2px 7px', borderRadius:8, background:'rgba(29,158,117,.15)', color:'#5DCAA5' }}>Connected</span>
+                </div>
+                <a href="https://nichroute.com/dashboard.html" target="_blank" rel="noreferrer"
+                  style={{ fontSize:10, color:'rgba(232,244,240,.5)', textDecoration:'none', padding:'4px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)' }}>
+                  ↗ Open full screen
+                </a>
+              </div>
+              <iframe
+                src="https://nichroute.com/dashboard.html"
+                style={{ flex:1, border:'none', width:'100%' }}
+                title="NichRoute Dashboard"
+                allow="clipboard-read; clipboard-write"
+              />
+            </div>
+          )}
           {page === 'scriptwriter' && <ScriptWriter />}
         </main>
       </div>
