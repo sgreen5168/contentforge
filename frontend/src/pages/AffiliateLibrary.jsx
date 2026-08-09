@@ -282,10 +282,14 @@ export default function AffiliateLibrary() {
             📦 Amazon {apiStatus.amazon?'✅ Connected':'❌ Not connected'}
           </span>
           <span style={{ fontSize:10, color:TXT3 }}>{apiStatus.library || 0} links in library</span>
-          {(!apiStatus.clickbank || !apiStatus.amazon) && (
+          {!apiStatus.clickbank && (
             <span style={{ fontSize:10, color:'#FAC775' }}>
-              ⚠ Add missing keys to Railway Variables: {!apiStatus.clickbank?'CLICKBANK_API_KEY, CLICKBANK_CLERK_ID':''}
-              {!apiStatus.amazon?' AMAZON_ACCESS_KEY, AMAZON_SECRET_KEY, AMAZON_ASSOCIATE_TAG':''}
+              ⚠ Add to Railway Variables: CLICKBANK_API_KEY, CLICKBANK_CLERK_ID
+            </span>
+          )}
+          {!apiStatus.amazon && (
+            <span style={{ fontSize:10, color:TXT3 }}>
+              📦 Amazon: use SiteStripe at amazon.com to generate affiliate links → paste into Bulk Importer
             </span>
           )}
         </div>
