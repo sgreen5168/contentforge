@@ -309,10 +309,23 @@ export default function AffiliateLibrary() {
               </div>
             </div>
             {nrStatus.connected && (
-              <button onClick={loadNichrouteLinks} disabled={nrLoading}
-                style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                {nrLoading ? 'Loading…' : '↻ Sync Links'}
-              </button>
+              <div style={{ display:'flex', gap:6 }}>
+                <button onClick={loadNichrouteLinks} disabled={nrLoading}
+                  style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                  {nrLoading ? 'Syncing…' : '↻ Sync Links'}
+                </button>
+                <button onClick={async function() {
+                  try {
+                    const r = await fetch(`${API}/api/nichroute/sync`, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+                    const d = await r.json();
+                    alert('Synced ' + (d.synced||0) + ' new links from NichRoute into Affiliate Library');
+                    loadLinks();
+                  } catch(e) { alert('Sync failed: ' + e.message); }
+                }}
+                  style={{ padding:'5px 12px', borderRadius:6, border:'1px solid rgba(29,158,117,.3)', background:'rgba(29,158,117,.08)', color:ACCH, fontSize:10, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                  ⬇ Import from NichRoute
+                </button>
+              </div>
             )}
           </div>
           {nrLinks.length > 0 && (
