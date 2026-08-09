@@ -799,23 +799,38 @@ export default function App() {
           {page === 'calendar'   && <ContentCalendar />}
           {page === 'affiliate'  && <AffiliateLibrary />}
           {page === 'nichroute'  && (
-            <div style={{ height:'calc(100vh - 60px)', display:'flex', flexDirection:'column' }}>
-              <div style={{ padding:'8px 16px', background:'rgba(0,0,0,.2)', borderBottom:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'rgba(232,244,240,.7)', display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontSize:16 }}>🔗</span> NichRoute Dashboard v9.19
-                  <span style={{ fontSize:10, padding:'2px 7px', borderRadius:8, background:'rgba(29,158,117,.15)', color:'#5DCAA5' }}>Connected</span>
+            <div style={{ padding:40, maxWidth:600, margin:'0 auto', textAlign:'center', fontFamily:'inherit' }}>
+              <div style={{ fontSize:48, marginBottom:16 }}>🎯</div>
+              <div style={{ fontSize:22, fontWeight:700, color:'#E8F4F0', marginBottom:8 }}>NichRoute Dashboard v9.19</div>
+              <div style={{ fontSize:13, color:'rgba(232,244,240,.6)', marginBottom:24, lineHeight:1.7 }}>
+                NichRoute runs on its own domain at nichroute.com. Browser security prevents embedding it directly here — click below to open it in a new tab alongside ContentForge.
+              </div>
+              <a href="https://nichroute.com/dashboard.html" target="_blank" rel="noreferrer"
+                style={{ display:'inline-block', padding:'14px 32px', borderRadius:10, background:'#1D9E75', color:'white', fontSize:14, fontWeight:700, textDecoration:'none', marginBottom:16 }}>
+                ↗ Open NichRoute Dashboard
+              </a>
+              <div style={{ fontSize:11, color:'rgba(232,244,240,.4)', marginBottom:32 }}>Opens in a new tab — keep both open side by side</div>
+
+              <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:12, padding:20, textAlign:'left' }}>
+                <div style={{ fontSize:12, fontWeight:700, color:'#E8F4F0', marginBottom:12 }}>🔗 Data bridge — ContentForge ↔ NichRoute</div>
+                <div style={{ fontSize:11, color:'rgba(232,244,240,.6)', lineHeight:1.7, marginBottom:12 }}>
+                  Your affiliate links sync automatically between both platforms via the shared Supabase database. Links you save in NichRoute appear in ContentForge's Affiliate Library and get auto-inserted into your posts.
                 </div>
-                <a href="https://nichroute.com/dashboard.html" target="_blank" rel="noreferrer"
-                  style={{ fontSize:10, color:'rgba(232,244,240,.5)', textDecoration:'none', padding:'4px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)' }}>
-                  ↗ Open full screen
+                <a href="#" onClick={function(e){ e.preventDefault(); window.dispatchEvent(new CustomEvent('cf-navigate', {detail:'affiliate'})); }}
+                  style={{ fontSize:11, color:'#5DCAA5', textDecoration:'none', fontWeight:600 }}>
+                  → Go to Affiliate Library to sync links
                 </a>
               </div>
-              <iframe
-                src="https://nichroute.com/dashboard.html"
-                style={{ flex:1, border:'none', width:'100%' }}
-                title="NichRoute Dashboard"
-                allow="clipboard-read; clipboard-write"
-              />
+
+              <div style={{ marginTop:16, padding:'12px 16px', background:'rgba(245,158,11,.06)', border:'1px solid rgba(245,158,11,.15)', borderRadius:8, fontSize:11, color:'rgba(245,158,11,.8)', textAlign:'left', lineHeight:1.6 }}>
+                💡 <strong>Tip to fix embedding:</strong> Add these lines to NichRoute's netlify.toml in GitHub to allow ContentForge to embed it directly:<br/>
+                <code style={{ display:'block', marginTop:6, padding:'6px 8px', background:'rgba(0,0,0,.3)', borderRadius:4, fontSize:10, color:'#E8F4F0' }}>
+                  {'[[headers]]'}<br/>
+                  {'  for = "/*"'}<br/>
+                  {'  [headers.values]'}<br/>
+                  {'    X-Frame-Options = "ALLOW-FROM https://contentstudiohub.com"'}
+                </code>
+              </div>
             </div>
           )}
           {page === 'scriptwriter' && <ScriptWriter />}
