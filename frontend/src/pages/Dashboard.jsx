@@ -71,11 +71,12 @@ const STEPS = [
     title: 'Publish & Schedule',
     platform: 'Both',
     tasks: [
-      { id: 'pub1', text: 'Copy post → paste to Facebook (or schedule via Post Submitter)' },
-      { id: 'pub2', text: 'Upload video to YouTube Studio → AI writes metadata → Publish' },
-      { id: 'pub3', text: 'Share post in NichRoute Facebook Groups for extra reach' },
+      { id: 'pub1', text: 'Copy post text → paste to Facebook or Post Submitter' },
+      { id: 'pub2', text: 'Upload video → YouTube Studio → AI metadata → Publish' },
+      { id: 'pub3', text: 'Share in NichRoute Facebook Groups for extra reach' },
     ],
     action: { label: 'Open Post Submitter', page: 'submitter' },
+    isPublish: true,
   },
 ];
 
@@ -97,6 +98,10 @@ export default function Dashboard({ onNavigate }) {
   const [activeStep, setActive] = useState(1);
   const [tip]                   = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   const [stats, setStats]       = useState({ posts: 0, videos: 0, links: 0 });
+  const [pubPost, setPubPost]   = useState(null);   // latest scheduled post
+  const [pubVideo, setPubVideo] = useState(null);   // latest completed video
+  const [pubLink, setPubLink]   = useState(null);   // best affiliate link
+  const [pubCopied, setPubCopied] = useState('');
   const today = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
 
   useEffect(() => {
@@ -114,6 +119,17 @@ export default function Dashboard({ onNavigate }) {
     const vbHistory = JSON.parse(localStorage.getItem('cf_vb_history') || '[]');
     const scheduled = JSON.parse(localStorage.getItem('cf_fb_scheduled') || '[]');
     setStats(s => ({ ...s, videos: vbHistory.length, posts: scheduled.length }));
+    // Load publish-ready content
+    const completedVideos = vbHistory.filter(v => v.status === 'completed');
+    if (completedVideos.length > 0) setPubVideo(completedVideos[0]);
+    if (scheduled.length > 0) setPubPost(scheduled[0]);
+    // Load best affiliate link
+    fetch(API + '/api/affiliate/match', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: 'home business', count: 1 }),
+    }).then(r => r.json()).then(d => {
+      if (d.links?.[0]) setPubLink(d.links[0]);
+    }).catch(() => {});
   }, []);
 
   function toggleCheck(id, stepId) {
@@ -250,15 +266,84 @@ export default function Dashboard({ onNavigate }) {
                 ))}
               </div>
 
+              {/* Publish panel — shows for step 6 */}
+              {step.isPublish && (
+                <div style={{ marginBottom: 14 }}>
+                  {/* Latest post */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>📝 Latest Saved Post</div>
+                    {pubPost ? (
+                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10 }}>
+                        <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', marginBottom: 8 }}>
+                          {pubPost.content?.slice(0, 200)}{pubPost.content?.length > 200 ? '…' : ''}
+                        </div>
+                        <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
+                          style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy Post for Facebook'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '10px', background: 'rgba(255,255,255,.03)', borderRadius: 8, fontSize: 11, color: TXT3, textAlign: 'center' }}>
+                        No posts saved yet — generate one in Step 3 first
+                        <button onClick={() => onNavigate && onNavigate('calendar')}
+                          style={{ display: 'block', margin: '6px auto 0', padding: '4px 12px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          → Go to Content Calendar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Latest video */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🎬 Latest Completed Video</div>
+                    {pubVideo ? (
+                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 3 }}>{pubVideo.topic || 'Video'}</div>
+                          <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · {pubVideo.result?.clipsCount || 0} clips</div>
+                        </div>
+                        <button onClick={() => onNavigate && onNavigate('video')}
+                          style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          📺 Upload to YouTube
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '10px', background: 'rgba(255,255,255,.03)', borderRadius: 8, fontSize: 11, color: TXT3, textAlign: 'center' }}>
+                        No videos yet — create one in Step 4 first
+                        <button onClick={() => onNavigate && onNavigate('video')}
+                          style={{ display: 'block', margin: '6px auto 0', padding: '4px 12px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          → Go to Video Builder
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Affiliate link */}
+                  {pubLink && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🔗 Affiliate Link (included in post)</div>
+                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 2 }}>{pubLink.name}</div>
+                          <div style={{ fontSize: 10, color: TXT3, wordBreak: 'break-all' }}>{pubLink.url?.slice(0, 50)}…</div>
+                        </div>
+                        <button onClick={() => { navigator.clipboard.writeText(pubLink.url || '').catch(() => {}); setPubCopied('link'); setTimeout(() => setPubCopied(''), 2000); }}
+                          style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                          {pubCopied === 'link' ? '✓' : '📋'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Navigation */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => {
-                    // Mark all tasks in this step as done
                     const next = { ...checks };
                     step.tasks.forEach(t => { next[t.id] = true; });
                     setChecks(next);
                     localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-                    // Navigate to the tool
                     if (onNavigate) onNavigate(step.action.page);
                   }}
                   style={{ flex: 1, padding: '12px', borderRadius: 8, border: 'none', background: step.color, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 2px 12px ${step.color}44` }}>
