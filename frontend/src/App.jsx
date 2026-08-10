@@ -5,6 +5,7 @@ import Composer from './pages/Composer.jsx';
 import VideoEngine from './pages/VideoEngine.jsx';
 import ContentCalendar from './pages/ContentCalendar.jsx';
 import AffiliateLibrary from './pages/AffiliateLibrary.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import BulkGenerator from './pages/BulkGenerator.jsx';
@@ -749,7 +750,7 @@ const PAGE_LABELS = {
 
 export default function App() {
   const [authed, setAuthed]       = useState(checkAuth);
-  const [page, setPage]           = useState('composer');
+  const [page, setPage]           = useState('dashboard');
   const [platforms, setPlatforms] = useState({ facebook:true, instagram:true, reddit:true });
   const [sidebarOpen, setSidebar] = useState(false);
 
@@ -783,6 +784,7 @@ export default function App() {
           </div>
         </header>
         <main>
+          {page === 'dashboard'  && <Dashboard onNavigate={setPage} />}
           {page === 'composer'   && <Composer onPlatformsChange={setPlatforms} />}
           {page === 'video'      && <VideoEngine />}
           {page === 'scheduler'  && <Scheduler />}
