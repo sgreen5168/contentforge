@@ -12,100 +12,109 @@ const ACCH = '#5DCAA5';
 
 const STEPS = [
   {
-    id: 1, icon: '🔍', color: '#8B5CF6', label: 'Research',
-    title: 'Research & Product Discovery',
-    platform: 'NichRoute',
+    id: 1, icon: '🔍', color: '#8B5CF6',
+    label: 'Research',
+    title: 'Step 1 — Research & Product Discovery',
+    description: 'Start here every session. Find what products to promote and what topics are trending in your niche.',
     tasks: [
-      { id: 'r1', text: 'Browse NichRoute for trending products in your niche' },
-      { id: 'r2', text: 'Find 1-2 ClickBank products to promote today' },
-      { id: 'r3', text: 'Sync affiliate links to ContentForge library' },
+      { id: 'r1', text: 'Open NichRoute and browse trending products in your niche' },
+      { id: 'r2', text: 'Pick 1-2 ClickBank or Amazon products to promote today' },
+      { id: 'r3', text: 'Go to Affiliate Library → Import from NichRoute to sync links' },
     ],
-    action: { label: 'Open NichRoute', page: 'nichroute' },
+    tool: { label: '→ Open NichRoute', page: 'nichroute', color: '#8B5CF6' },
+    tip: 'NichRoute finds the products. ContentForge promotes them. Start here so the right links flow into everything else automatically.',
   },
   {
-    id: 2, icon: '📅', color: '#1D9E75', label: 'Plan',
-    title: 'Content Planning',
-    platform: 'ContentForge',
+    id: 2, icon: '📅', color: '#1D9E75',
+    label: 'Plan Topic',
+    title: 'Step 2 — Pick Your Topic',
+    description: 'Choose which topic from your 70-day content plan to work on today. One topic produces a post, a script, and a video.',
     tasks: [
-      { id: 'p1', text: 'Pick a topic from the 70-day Content Calendar' },
-      { id: 'p2', text: 'Choose affiliate mode: None / Link Only / + Disclosure' },
+      { id: 'p1', text: 'Open Content Calendar and pick a topic for today' },
+      { id: 'p2', text: 'Expand that day — choose your affiliate mode (None / Link / + Disclosure)' },
       { id: 'p3', text: 'Generate the photo image prompt for the post' },
     ],
-    action: { label: 'Open Calendar', page: 'calendar' },
+    tool: { label: '→ Open Content Calendar', page: 'calendar', color: '#1D9E75' },
+    tip: 'One topic = one post + one video script + one image. Three pieces of content, one idea, under 20 minutes.',
   },
   {
-    id: 3, icon: '✍️', color: '#3B82F6', label: 'Create',
-    title: 'Create Content',
-    platform: 'ContentForge',
+    id: 3, icon: '✍️', color: '#3B82F6',
+    label: 'Write Post',
+    title: 'Step 3 — Generate the Facebook Post',
+    description: 'Click Generate on your chosen topic. ContentForge writes the post, inserts the affiliate link, and adds the disclosure — all automatically.',
     tasks: [
-      { id: 'c1', text: 'Generate the Facebook post from your topic' },
-      { id: 'c2', text: 'Generate a 30-second video script from same topic' },
-      { id: 'c3', text: 'Review and edit both — read aloud to check flow' },
+      { id: 'c1', text: 'Click ✍️ Generate This Post on your chosen topic' },
+      { id: 'c2', text: 'Press 🔊 Read Post Aloud to check it flows naturally' },
+      { id: 'c3', text: 'Click 📅 Save to Schedule — post is now saved for Step 6' },
     ],
-    action: { label: 'Open Composer', page: 'composer' },
+    tool: { label: '→ Open Content Calendar', page: 'calendar', color: '#3B82F6' },
+    tip: 'The affiliate link auto-inserts based on your topic. It matches the product most relevant to what you are writing about.',
   },
   {
-    id: 4, icon: '🎬', color: '#EF4444', label: 'Produce',
-    title: 'Produce Video',
-    platform: 'ContentForge',
+    id: 4, icon: '🎬', color: '#EF4444',
+    label: 'Make Video',
+    title: 'Step 4 — Produce the Video',
+    description: 'ContentForge writes the script, records the voiceover, finds matching video clips, and delivers a finished MP4 with your affiliate link burned into the final 5 seconds.',
     tasks: [
-      { id: 'v1', text: 'Paste script into Video Builder — select voice and music' },
-      { id: 'v2', text: 'Click Create Video — wait 3-4 minutes' },
-      { id: 'v3', text: 'Preview, download, and confirm CTA overlay is visible' },
+      { id: 'v1', text: 'Go to AI Video Engine → 🎬 Video Builder tab' },
+      { id: 'v2', text: 'Type the same topic from Step 2 → click ▶ Create Video' },
+      { id: 'v3', text: 'Wait 3-4 minutes → preview the video and confirm CTA overlay shows' },
     ],
-    action: { label: 'Open Video Builder', page: 'video' },
+    tool: { label: '→ Open Video Builder', page: 'video', color: '#EF4444' },
+    tip: 'Your affiliate link appears automatically in the last 5 seconds of every video as a capture scene — no manual steps needed.',
   },
   {
-    id: 5, icon: '💰', color: '#F59E0B', label: 'Monetise',
-    title: 'Auto-Monetise',
-    platform: 'ContentForge',
+    id: 5, icon: '💰', color: '#F59E0B',
+    label: 'Check Links',
+    title: 'Step 5 — Verify Monetisation',
+    description: 'Confirm your affiliate link is in the post and in the video description before publishing.',
     tasks: [
-      { id: 'm1', text: 'Confirm affiliate link is inserted in post' },
-      { id: 'm2', text: 'Check affiliate link appears in video description' },
-      { id: 'm3', text: 'Verify FTC disclosure is present if required' },
+      { id: 'm1', text: 'Open saved post — confirm affiliate link appears at the end' },
+      { id: 'm2', text: 'Open Affiliate Library — verify links are synced from NichRoute' },
+      { id: 'm3', text: 'If no link appeared — go to Affiliate Library and add one manually' },
     ],
-    action: { label: 'Open Affiliate Library', page: 'affiliate' },
+    tool: { label: '→ Open Affiliate Library', page: 'affiliate', color: '#F59E0B' },
+    tip: 'Links only auto-insert when you have at least one link saved in the Affiliate Library. Add your ClickBank hoplinks there first.',
   },
   {
-    id: 6, icon: '📤', color: '#06B6D4', label: 'Publish',
-    title: 'Publish & Schedule',
-    platform: 'Both',
+    id: 6, icon: '📤', color: '#06B6D4',
+    label: 'Publish',
+    title: 'Step 6 — Publish Everything',
+    description: 'Your post and video are ready. Publish to Facebook and YouTube from here.',
     tasks: [
-      { id: 'pub1', text: 'Copy post text → paste to Facebook or Post Submitter' },
-      { id: 'pub2', text: 'Upload video → YouTube Studio → AI metadata → Publish' },
-      { id: 'pub3', text: 'Share in NichRoute Facebook Groups for extra reach' },
+      { id: 'pub1', text: 'Copy your saved post → paste to Facebook or Post Submitter' },
+      { id: 'pub2', text: 'Go to YouTube Studio → upload video → AI writes metadata → Publish' },
+      { id: 'pub3', text: 'Share post link in NichRoute Facebook Groups for extra reach' },
     ],
-    action: { label: 'Open Post Submitter', page: 'submitter' },
+    tool: { label: '→ Open Post Submitter', page: 'submitter', color: '#06B6D4' },
+    tip: 'One session = one Facebook post + one YouTube video + one affiliate link. Repeat daily across your 70-day plan.',
     isPublish: true,
   },
 ];
 
 const TIPS = [
-  'Start with one topic and let it produce a post, a script, and a video — three pieces of content from one idea.',
-  'Your strongest performing posts usually come from curiosity hooks — lead with a question or a surprising statement.',
+  'Start with one topic and produce a post, a script, and a video — three pieces of content from one idea.',
+  'Your strongest posts come from curiosity hooks — lead with a question or a surprising statement.',
   'Generate the image prompt alongside every post — Facebook posts with images get 3x more reach.',
-  'Batch your content: generate 5-7 posts in one sitting, schedule them across the week.',
+  'Batch your content: generate 5-7 posts in one sitting and schedule them across the week.',
   'The video CTA in the last 5 seconds is where affiliate conversions happen — make it clear and direct.',
-  'Run your script through Read Aloud before recording — if it sounds awkward spoken, it will feel awkward on video.',
   'Sync NichRoute links at the start of every session so your affiliate library stays current.',
-  'Posts about personal transformation and real results consistently outperform generic advice posts.',
 ];
 
 export default function Dashboard({ onNavigate }) {
-  const [checks, setChecks]     = useState(() => {
+  const [checks, setChecks]       = useState(() => {
     try { return JSON.parse(localStorage.getItem('cf_daily_checks') || '{}'); } catch { return {}; }
   });
-  const [activeStep, setActive] = useState(1);
-  const [tip]                   = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
-  const [stats, setStats]       = useState({ posts: 0, videos: 0, links: 0 });
-  const [pubPost, setPubPost]   = useState(null);   // latest scheduled post
-  const [pubVideo, setPubVideo] = useState(null);   // latest completed video
-  const [pubLink, setPubLink]   = useState(null);   // best affiliate link
+  const [activeStep, setActive]   = useState(1);
+  const [tip]                     = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const [stats, setStats]         = useState({ posts: 0, videos: 0, links: 0 });
+  const [pubPost, setPubPost]     = useState(null);
+  const [pubVideo, setPubVideo]   = useState(null);
+  const [pubLink, setPubLink]     = useState(null);
   const [pubCopied, setPubCopied] = useState('');
   const today = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
 
   useEffect(() => {
-    // Check if it's a new day — reset checklist
     const lastDay = localStorage.getItem('cf_checklist_day');
     const todayStr = new Date().toDateString();
     if (lastDay !== todayStr) {
@@ -113,265 +122,273 @@ export default function Dashboard({ onNavigate }) {
       localStorage.setItem('cf_daily_checks', '{}');
       localStorage.setItem('cf_checklist_day', todayStr);
     }
-    // Load quick stats
-    fetch(`${API}/api/affiliate/status`).then(r => r.json())
-      .then(d => setStats(s => ({ ...s, links: d.library || 0 }))).catch(() => {});
+    fetch(`${API}/api/affiliate/status`)
+      .then(r => r.json())
+      .then(d => setStats(s => ({ ...s, links: d.library || 0 })))
+      .catch(() => {});
     const vbHistory = JSON.parse(localStorage.getItem('cf_vb_history') || '[]');
     const scheduled = JSON.parse(localStorage.getItem('cf_fb_scheduled') || '[]');
-    setStats(s => ({ ...s, videos: vbHistory.length, posts: scheduled.length }));
-    // Load publish-ready content
+    setStats(s => ({ ...s, videos: vbHistory.filter(v => v.status === 'completed').length, posts: scheduled.length }));
     const completedVideos = vbHistory.filter(v => v.status === 'completed');
     if (completedVideos.length > 0) setPubVideo(completedVideos[0]);
     if (scheduled.length > 0) setPubPost(scheduled[0]);
-    // Load best affiliate link
-    fetch(API + '/api/affiliate/match', {
+    fetch(`${API}/api/affiliate/match`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic: 'home business', count: 1 }),
-    }).then(r => r.json()).then(d => {
-      if (d.links?.[0]) setPubLink(d.links[0]);
-    }).catch(() => {});
+    }).then(r => r.json()).then(d => { if (d.links?.[0]) setPubLink(d.links[0]); }).catch(() => {});
   }, []);
 
   function toggleCheck(id, stepId) {
     const next = { ...checks, [id]: !checks[id] };
     setChecks(next);
     localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-    // Auto-advance to next step when all tasks in current step are done
-    const currentStep = STEPS.find(s => s.id === stepId);
-    if (currentStep) {
-      const allDone = currentStep.tasks.every(t => t.id === id ? !checks[id] : next[t.id]);
-      if (allDone && stepId < 6) {
-        setTimeout(() => setActive(stepId + 1), 600);
-      }
+    const step = STEPS.find(s => s.id === stepId);
+    if (step) {
+      const allDone = step.tasks.every(t => t.id === id ? !checks[id] : next[t.id]);
+      if (allDone && stepId < 6) setTimeout(() => setActive(stepId + 1), 500);
     }
   }
 
-  function stepProgress(step) {
-    const done = step.tasks.filter(t => checks[t.id]).length;
-    return { done, total: step.tasks.length, pct: Math.round(done / step.tasks.length * 100) };
+  function goToStep(stepId) {
+    setActive(stepId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const totalTasks  = STEPS.reduce((a, s) => a + s.tasks.length, 0);
-  const totalDone   = STEPS.reduce((a, s) => a + s.tasks.filter(t => checks[t.id]).length, 0);
-  const dayProgress = Math.round(totalDone / totalTasks * 100);
+  function openTool(page) {
+    const next = { ...checks };
+    const step = STEPS.find(s => s.id === activeStep);
+    if (step) step.tasks.forEach(t => { next[t.id] = true; });
+    setChecks(next);
+    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
+    if (onNavigate) onNavigate(page);
+  }
 
-  const card = (extra = {}) => ({
-    background: BG2, border: `1px solid ${BORD}`, borderRadius: 12, ...extra,
-  });
+  const totalTasks = STEPS.reduce((a, s) => a + s.tasks.length, 0);
+  const totalDone  = STEPS.reduce((a, s) => a + s.tasks.filter(t => checks[t.id]).length, 0);
+  const dayPct     = Math.round(totalDone / totalTasks * 100);
+  const activeData = STEPS.find(s => s.id === activeStep);
 
   return (
-    <div style={{ padding: 20, maxWidth: 1100, fontFamily: 'inherit', color: TXT }}>
+    <div style={{ padding: 20, maxWidth: 1000, fontFamily: 'inherit', color: TXT }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: TXT, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 26 }}>🚀</span> ContentForge Command Center
+            🚀 Command Center
           </div>
-          <div style={{ fontSize: 12, color: TXT3, marginTop: 4 }}>{today}</div>
+          <div style={{ fontSize: 12, color: TXT3, marginTop: 2 }}>{today}</div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { label: 'Videos made', value: stats.videos, icon: '🎬', color: '#EF4444' },
-            { label: 'Posts saved', value: stats.posts,  icon: '📝', color: '#3B82F6' },
-            { label: 'Aff. links',  value: stats.links,  icon: '🔗', color: ACC },
+            { label: 'Videos', value: stats.videos, icon: '🎬', color: '#EF4444' },
+            { label: 'Posts',  value: stats.posts,  icon: '📝', color: '#3B82F6' },
+            { label: 'Links',  value: stats.links,  icon: '🔗', color: ACC },
           ].map(s => (
-            <div key={s.label} style={{ ...card(), padding: '10px 16px', textAlign: 'center', minWidth: 80 }}>
-              <div style={{ fontSize: 18 }}>{s.icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div key={s.label} style={{ background: BG2, border: `1px solid ${BORD}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 16 }}>{s.icon}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 9, color: TXT3 }}>{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Day progress bar */}
-      <div style={{ ...card(), padding: '12px 16px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: TXT }}>Today's Progress</span>
-          <span style={{ fontSize: 12, color: ACCH, fontWeight: 700 }}>{totalDone}/{totalTasks} tasks · {dayProgress}% complete</span>
+      {/* Progress bar */}
+      <div style={{ background: BG2, border: `1px solid ${BORD}`, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>Daily Progress</span>
+          <span style={{ fontSize: 11, color: ACCH, fontWeight: 700 }}>{totalDone}/{totalTasks} tasks · {dayPct}%</span>
         </div>
         <div style={{ height: 8, background: 'rgba(255,255,255,.08)', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: dayProgress + '%', background: `linear-gradient(90deg, ${ACC}, ${ACCH})`, borderRadius: 4, transition: 'width .4s ease' }} />
+          <div style={{ height: '100%', width: dayPct + '%', background: `linear-gradient(90deg,${ACC},${ACCH})`, borderRadius: 4, transition: 'width .4s' }} />
         </div>
-        {dayProgress === 100 && (
-          <div style={{ marginTop: 8, fontSize: 11, color: ACCH, textAlign: 'center' }}>
-            ✅ All done for today — great work!
-          </div>
-        )}
       </div>
 
       {/* Daily tip */}
-      <div style={{ ...card(), padding: '10px 14px', marginBottom: 16, background: 'rgba(29,158,117,.05)', border: '1px solid rgba(29,158,117,.15)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
-        <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6 }}><strong style={{ color: ACCH }}>Daily tip:</strong> {tip}</div>
+      <div style={{ background: 'rgba(29,158,117,.06)', border: '1px solid rgba(29,158,117,.15)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
+        💡 <strong style={{ color: ACCH }}>Tip:</strong> {tip}
       </div>
 
-      {/* 6-step workflow */}
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 12 }}>
-
-        {/* Step selector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {STEPS.map(step => {
-            const prog = stepProgress(step);
-            const isActive = activeStep === step.id;
-            const done = prog.done === prog.total;
-            return (
-              <button key={step.id} onClick={() => setActive(step.id)}
-                style={{ padding: '10px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: isActive ? `2px solid ${step.color}` : `1px solid ${BORD}`, background: isActive ? `${step.color}22` : 'rgba(255,255,255,.03)', transition: 'all .15s', boxShadow: isActive ? `0 0 0 3px ${step.color}22` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <span style={{ fontSize: 16 }}>{done ? '✅' : step.icon}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? step.color : TXT }}>{step.label}</span>
-                  {isActive && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: step.color, color: 'white', marginLeft: 2 }}>NOW</span>}
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: done ? ACCH : TXT3 }}>{prog.done}/{prog.total}</span>
-                </div>
-                <div style={{ height: 3, background: 'rgba(255,255,255,.08)', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: prog.pct + '%', background: done ? ACC : step.color, borderRadius: 2, transition: 'width .3s' }} />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Active step detail */}
-        {STEPS.filter(s => s.id === activeStep).map(step => {
-          const prog = stepProgress(step);
+      {/* Step selector — horizontal row of 6 numbered buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginBottom: 16 }}>
+        {STEPS.map(step => {
+          const done  = step.tasks.filter(t => checks[t.id]).length;
+          const total = step.tasks.length;
+          const isActive = activeStep === step.id;
+          const allDone  = done === total;
           return (
-            <div key={step.id} style={card({ padding: 20 })}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: `${step.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                  {step.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: TXT }}>{step.title}</div>
-                  <div style={{ fontSize: 11, color: TXT3 }}>
-                    <span style={{ padding: '1px 7px', borderRadius: 8, background: `${step.color}22`, color: step.color, fontSize: 10 }}>{step.platform}</span>
-                    <span style={{ marginLeft: 8 }}>{prog.done}/{prog.total} tasks complete</span>
-                  </div>
-                </div>
+            <button key={step.id} onClick={() => goToStep(step.id)}
+              style={{
+                padding: '10px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                textAlign: 'center', transition: 'all .2s',
+                border: isActive ? `3px solid ${step.color}` : `2px solid ${allDone ? step.color + '60' : BORD}`,
+                background: isActive ? `${step.color}25` : allDone ? `${step.color}10` : 'rgba(255,255,255,.03)',
+                boxShadow: isActive ? `0 0 16px ${step.color}40` : 'none',
+              }}>
+              <div style={{ fontSize: 20, marginBottom: 3 }}>{allDone ? '✅' : step.icon}</div>
+              <div style={{ fontSize: 10, fontWeight: isActive ? 800 : 500, color: isActive ? step.color : allDone ? step.color : TXT3 }}>
+                {step.label}
               </div>
-
-              {/* Tasks */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                {step.tasks.map(task => (
-                  <div key={task.id} onClick={() => toggleCheck(task.id, step.id)}
-                    style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: checks[task.id] ? 'rgba(29,158,117,.08)' : 'rgba(255,255,255,.03)', border: `1px solid ${checks[task.id] ? 'rgba(29,158,117,.2)' : BORD}`, transition: 'all .15s' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${checks[task.id] ? ACC : 'rgba(255,255,255,.2)'}`, background: checks[task.id] ? ACC : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: 'all .15s' }}>
-                      {checks[task.id] && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✓</span>}
-                    </div>
-                    <span style={{ fontSize: 12, color: checks[task.id] ? TXT3 : TXT2, lineHeight: 1.5, textDecoration: checks[task.id] ? 'line-through' : 'none' }}>
-                      {task.text}
-                    </span>
-                  </div>
-                ))}
+              <div style={{ fontSize: 9, color: isActive ? step.color : TXT3, marginTop: 2 }}>
+                {done}/{total}
               </div>
-
-              {/* Publish panel — shows for step 6 */}
-              {step.isPublish && (
-                <div style={{ marginBottom: 14 }}>
-                  {/* Latest post */}
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>📝 Latest Saved Post</div>
-                    {pubPost ? (
-                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10 }}>
-                        <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 80, overflow: 'auto', whiteSpace: 'pre-wrap', marginBottom: 8 }}>
-                          {pubPost.content?.slice(0, 200)}{pubPost.content?.length > 200 ? '…' : ''}
-                        </div>
-                        <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
-                          style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy Post for Facebook'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '10px', background: 'rgba(255,255,255,.03)', borderRadius: 8, fontSize: 11, color: TXT3, textAlign: 'center' }}>
-                        No posts saved yet — generate one in Step 3 first
-                        <button onClick={() => onNavigate && onNavigate('calendar')}
-                          style={{ display: 'block', margin: '6px auto 0', padding: '4px 12px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          → Go to Content Calendar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Latest video */}
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🎬 Latest Completed Video</div>
-                    {pubVideo ? (
-                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 3 }}>{pubVideo.topic || 'Video'}</div>
-                          <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · {pubVideo.result?.clipsCount || 0} clips</div>
-                        </div>
-                        <button onClick={() => onNavigate && onNavigate('video')}
-                          style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          📺 Upload to YouTube
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '10px', background: 'rgba(255,255,255,.03)', borderRadius: 8, fontSize: 11, color: TXT3, textAlign: 'center' }}>
-                        No videos yet — create one in Step 4 first
-                        <button onClick={() => onNavigate && onNavigate('video')}
-                          style={{ display: 'block', margin: '6px auto 0', padding: '4px 12px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          → Go to Video Builder
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Affiliate link */}
-                  {pubLink && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🔗 Affiliate Link (included in post)</div>
-                      <div style={{ background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 8, padding: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: TXT, marginBottom: 2 }}>{pubLink.name}</div>
-                          <div style={{ fontSize: 10, color: TXT3, wordBreak: 'break-all' }}>{pubLink.url?.slice(0, 50)}…</div>
-                        </div>
-                        <button onClick={() => { navigator.clipboard.writeText(pubLink.url || '').catch(() => {}); setPubCopied('link'); setTimeout(() => setPubCopied(''), 2000); }}
-                          style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                          {pubCopied === 'link' ? '✓' : '📋'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+              {isActive && (
+                <div style={{ marginTop: 4, fontSize: 8, padding: '1px 4px', borderRadius: 3, background: step.color, color: 'white', display: 'inline-block' }}>
+                  NOW
                 </div>
               )}
-
-              {/* Navigation */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => {
-                    const next = { ...checks };
-                    step.tasks.forEach(t => { next[t.id] = true; });
-                    setChecks(next);
-                    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-                    if (onNavigate) onNavigate(step.action.page);
-                  }}
-                  style={{ flex: 1, padding: '12px', borderRadius: 8, border: 'none', background: step.color, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 2px 12px ${step.color}44` }}>
-                  {step.action.label} →
-                </button>
-                {activeStep < 6 && (
-                  <button onClick={() => setActive(activeStep + 1)}
-                    style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Next step ›
-                  </button>
-                )}
-                {activeStep > 1 && (
-                  <button onClick={() => setActive(activeStep - 1)}
-                    style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    ‹ Back
-                  </button>
-                )}
-              </div>
-
-              {/* Reset today */}
-              <button onClick={() => { setChecks({}); localStorage.setItem('cf_daily_checks', '{}'); }}
-                style={{ marginTop: 10, width: '100%', padding: '6px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                ↺ Reset today's checklist
-              </button>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {/* Active step detail */}
+      {activeData && (
+        <div style={{ background: BG2, border: `2px solid ${activeData.color}40`, borderRadius: 14, overflow: 'hidden' }}>
+
+          {/* Step header */}
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORD}`, background: `${activeData.color}10` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 50, height: 50, borderRadius: 12, background: `${activeData.color}25`, border: `2px solid ${activeData.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                {activeData.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: activeData.color, marginBottom: 4 }}>{activeData.title}</div>
+                <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.5 }}>{activeData.description}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: 20 }}>
+            {/* How it benefits you tip */}
+            <div style={{ padding: '10px 12px', background: `${activeData.color}10`, border: `1px solid ${activeData.color}30`, borderRadius: 8, marginBottom: 16, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
+              <strong style={{ color: activeData.color }}>Why this step matters:</strong> {activeData.tip}
+            </div>
+
+            {/* Tasks */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10 }}>Checklist</div>
+              {activeData.tasks.map((task, i) => (
+                <div key={task.id} onClick={() => toggleCheck(task.id, activeData.id)}
+                  style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 9, cursor: 'pointer', marginBottom: 6, background: checks[task.id] ? `${activeData.color}12` : 'rgba(255,255,255,.03)', border: `1px solid ${checks[task.id] ? activeData.color + '40' : BORD}`, transition: 'all .15s' }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${checks[task.id] ? activeData.color : 'rgba(255,255,255,.2)'}`, background: checks[task.id] ? activeData.color : 'transparent', transition: 'all .15s' }}>
+                    {checks[task.id] && <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>✓</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: TXT3, marginRight: 6 }}>{i + 1}.</span>
+                    <span style={{ fontSize: 12, color: checks[task.id] ? TXT3 : TXT2, textDecoration: checks[task.id] ? 'line-through' : 'none', lineHeight: 1.5 }}>{task.text}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Publish panel for Step 6 */}
+            {activeData.isPublish && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10 }}>Ready to Publish</div>
+
+                {/* Post */}
+                <div style={{ marginBottom: 8, padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#1877F2', marginBottom: 6 }}>📘 Facebook Post</div>
+                  {pubPost ? (
+                    <div>
+                      <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 70, overflow: 'auto', marginBottom: 8 }}>
+                        {pubPost.content?.slice(0, 180)}{pubPost.content?.length > 180 ? '…' : ''}
+                      </div>
+                      <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
+                        style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy Post'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: TXT3 }}>
+                      No post saved yet —
+                      <button onClick={() => openTool('calendar')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
+                        go to Step 3 to generate one
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video */}
+                <div style={{ marginBottom: 8, padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>🎬 Video</div>
+                  {pubVideo ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pubVideo.topic || 'Completed video'}</div>
+                        <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · Ready to upload</div>
+                      </div>
+                      <button onClick={() => openTool('video')}
+                        style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        📺 YouTube Studio
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: TXT3 }}>
+                      No video yet —
+                      <button onClick={() => openTool('video')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
+                        go to Step 4 to create one
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Affiliate link */}
+                <div style={{ padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ACC, marginBottom: 6 }}>🔗 Affiliate Link</div>
+                  {pubLink ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pubLink.name}</div>
+                        <div style={{ fontSize: 10, color: ACCH }}>Already included in your post automatically</div>
+                      </div>
+                      <button onClick={() => { navigator.clipboard.writeText(pubLink.url || '').catch(() => {}); setPubCopied('link'); setTimeout(() => setPubCopied(''), 2000); }}
+                        style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {pubCopied === 'link' ? '✓' : '📋 Copy'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: TXT3 }}>
+                      No links saved —
+                      <button onClick={() => openTool('affiliate')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
+                        add one in Affiliate Library
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => openTool(activeData.tool.page)}
+                style={{ flex: 1, padding: '13px', borderRadius: 10, border: 'none', background: activeData.color, color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 3px 14px ${activeData.color}50` }}>
+                {activeData.tool.label}
+              </button>
+              {activeStep > 1 && (
+                <button onClick={() => goToStep(activeStep - 1)}
+                  style={{ padding: '13px 18px', borderRadius: 10, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ‹ Back
+                </button>
+              )}
+              {activeStep < 6 && (
+                <button onClick={() => goToStep(activeStep + 1)}
+                  style={{ padding: '13px 18px', borderRadius: 10, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Next ›
+                </button>
+              )}
+            </div>
+
+            {/* Reset */}
+            <button onClick={() => { setChecks({}); localStorage.setItem('cf_daily_checks', '{}'); }}
+              style={{ marginTop: 10, width: '100%', padding: '6px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+              ↺ Reset today's checklist
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
