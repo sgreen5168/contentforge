@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './Sidebar.module.css';
 
 const NAV = [
+  { id:'dashboard', label:'Command Center',    icon:'🚀', section:'Content', badge:'Home' },
   { id:'composer',  label:'AI Composer',        icon:'✦',  section:'Content' },
   { id:'video',     label:'AI Video Engine',     icon:'▶',  section:'Content', badge:'New' },
   { id:'bulk',      label:'Bulk Generator',      icon:'⚡',  section:'Content', badge:'New' },
