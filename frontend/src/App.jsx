@@ -784,7 +784,7 @@ export default function App() {
           </div>
         </header>
         <main>
-          {page === 'dashboard'  && <Dashboard onNavigate={setPage} />}
+          {page === 'dashboard'  && <Dashboard onNavigate={navigateTo} />}
           {page === 'composer'   && <Composer onPlatformsChange={setPlatforms} />}
           {page === 'video'      && <VideoEngine />}
           {page === 'scheduler'  && <Scheduler />}
