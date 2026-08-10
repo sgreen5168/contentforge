@@ -116,10 +116,18 @@ export default function Dashboard({ onNavigate }) {
     setStats(s => ({ ...s, videos: vbHistory.length, posts: scheduled.length }));
   }, []);
 
-  function toggleCheck(id) {
+  function toggleCheck(id, stepId) {
     const next = { ...checks, [id]: !checks[id] };
     setChecks(next);
     localStorage.setItem('cf_daily_checks', JSON.stringify(next));
+    // Auto-advance to next step when all tasks in current step are done
+    const currentStep = STEPS.find(s => s.id === stepId);
+    if (currentStep) {
+      const allDone = currentStep.tasks.every(t => t.id === id ? !checks[id] : next[t.id]);
+      if (allDone && stepId < 6) {
+        setTimeout(() => setActive(stepId + 1), 600);
+      }
+    }
   }
 
   function stepProgress(step) {
@@ -194,10 +202,11 @@ export default function Dashboard({ onNavigate }) {
             const done = prog.done === prog.total;
             return (
               <button key={step.id} onClick={() => setActive(step.id)}
-                style={{ padding: '10px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: isActive ? `2px solid ${step.color}` : `1px solid ${BORD}`, background: isActive ? `${step.color}18` : 'rgba(255,255,255,.03)', transition: 'all .15s' }}>
+                style={{ padding: '10px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', border: isActive ? `2px solid ${step.color}` : `1px solid ${BORD}`, background: isActive ? `${step.color}22` : 'rgba(255,255,255,.03)', transition: 'all .15s', boxShadow: isActive ? `0 0 0 3px ${step.color}22` : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
                   <span style={{ fontSize: 16 }}>{done ? '✅' : step.icon}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? step.color : TXT }}>{step.label}</span>
+                  {isActive && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 4, background: step.color, color: 'white', marginLeft: 2 }}>NOW</span>}
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: done ? ACCH : TXT3 }}>{prog.done}/{prog.total}</span>
                 </div>
                 <div style={{ height: 3, background: 'rgba(255,255,255,.08)', borderRadius: 2, overflow: 'hidden' }}>
@@ -229,7 +238,7 @@ export default function Dashboard({ onNavigate }) {
               {/* Tasks */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {step.tasks.map(task => (
-                  <div key={task.id} onClick={() => toggleCheck(task.id)}
+                  <div key={task.id} onClick={() => toggleCheck(task.id, step.id)}
                     style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: checks[task.id] ? 'rgba(29,158,117,.08)' : 'rgba(255,255,255,.03)', border: `1px solid ${checks[task.id] ? 'rgba(29,158,117,.2)' : BORD}`, transition: 'all .15s' }}>
                     <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${checks[task.id] ? ACC : 'rgba(255,255,255,.2)'}`, background: checks[task.id] ? ACC : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: 'all .15s' }}>
                       {checks[task.id] && <span style={{ color: 'white', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✓</span>}
@@ -243,8 +252,16 @@ export default function Dashboard({ onNavigate }) {
 
               {/* Navigation */}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { if (onNavigate) onNavigate(step.action.page); }}
-                  style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: step.color, color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => {
+                    // Mark all tasks in this step as done
+                    const next = { ...checks };
+                    step.tasks.forEach(t => { next[t.id] = true; });
+                    setChecks(next);
+                    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
+                    // Navigate to the tool
+                    if (onNavigate) onNavigate(step.action.page);
+                  }}
+                  style={{ flex: 1, padding: '12px', borderRadius: 8, border: 'none', background: step.color, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 2px 12px ${step.color}44` }}>
                   {step.action.label} →
                 </button>
                 {activeStep < 6 && (
