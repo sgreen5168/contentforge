@@ -293,19 +293,34 @@ export default function Dashboard({ onNavigate }) {
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#1877F2', marginBottom: 6 }}>📘 Facebook Post</div>
                   {pubPost ? (
                     <div>
-                      <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 70, overflow: 'auto', marginBottom: 8 }}>
-                        {pubPost.content?.slice(0, 180)}{pubPost.content?.length > 180 ? '…' : ''}
+                      <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 80, overflow: 'auto', marginBottom: 8, whiteSpace: 'pre-wrap' }}>
+                        {pubPost.content?.slice(0, 220)}{pubPost.content?.length > 220 ? '…' : ''}
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
-                        style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy Post'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
+                          style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy for Facebook'}
+                        </button>
+                        <button onClick={() => openTool('submitter')}
+                          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(24,119,242,.3)', background: 'transparent', color: '#4FA3FF', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          📤 Post Submitter
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: TXT3 }}>
-                      No post saved yet —
-                      <button onClick={() => openTool('calendar')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
-                        go to Step 3 to generate one
+                    <div>
+                      <div style={{ fontSize: 11, color: '#FAC775', padding: '8px 10px', background: 'rgba(245,158,11,.08)', borderRadius: 6, marginBottom: 6, lineHeight: 1.6 }}>
+                        ⚠ No posts saved yet. Here is what to do:
+                      </div>
+                      <div style={{ fontSize: 11, color: TXT3, lineHeight: 1.8 }}>
+                        1. Go to <strong style={{ color: TXT }}>Content Calendar</strong> (Step 2-3)<br/>
+                        2. Expand any day → click <strong style={{ color: TXT }}>✍️ Generate This Post</strong><br/>
+                        3. Click <strong style={{ color: TXT }}>📅 Save to Schedule</strong><br/>
+                        4. Come back here — your post will appear above
+                      </div>
+                      <button onClick={() => openTool('calendar')}
+                        style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1D9E75', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        → Go Generate a Post Now
                       </button>
                     </div>
                   )}
@@ -318,7 +333,7 @@ export default function Dashboard({ onNavigate }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pubVideo.topic || 'Completed video'}</div>
-                        <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · Ready to upload</div>
+                        <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · {pubVideo.result?.clipsCount || 0} clips · Ready to upload</div>
                       </div>
                       <button onClick={() => openTool('video')}
                         style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -326,10 +341,19 @@ export default function Dashboard({ onNavigate }) {
                       </button>
                     </div>
                   ) : (
-                    <div style={{ fontSize: 11, color: TXT3 }}>
-                      No video yet —
-                      <button onClick={() => openTool('video')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
-                        go to Step 4 to create one
+                    <div>
+                      <div style={{ fontSize: 11, color: '#FAC775', padding: '8px 10px', background: 'rgba(245,158,11,.08)', borderRadius: 6, marginBottom: 6, lineHeight: 1.6 }}>
+                        ⚠ No completed videos yet. Here is what to do:
+                      </div>
+                      <div style={{ fontSize: 11, color: TXT3, lineHeight: 1.8 }}>
+                        1. Go to <strong style={{ color: TXT }}>AI Video Engine → 🎬 Video Builder</strong><br/>
+                        2. Type your topic → click <strong style={{ color: TXT }}>▶ Create Video</strong><br/>
+                        3. Wait 3-4 minutes for it to finish<br/>
+                        4. Come back here — your video will appear above
+                      </div>
+                      <button onClick={() => openTool('video')}
+                        style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        → Go Create a Video Now
                       </button>
                     </div>
                   )}
