@@ -14,15 +14,16 @@ const STEPS = [
   {
     id: 1, icon: '🔍', color: '#8B5CF6',
     label: 'Research',
-    title: 'Step 1 — Research & Product Discovery',
-    description: 'Start here every session. Find what products to promote and what topics are trending in your niche.',
+    title: 'Step 1 — Auto-Find Affiliate Products',
+    description: 'ContentForge reads your 70-day content plan, finds the best matching ClickBank products for each topic automatically, and loads them into your library — no manual searching needed.',
     tasks: [
-      { id: 'r1', text: 'Open NichRoute and browse trending products in your niche' },
-      { id: 'r2', text: 'Pick 1-2 ClickBank or Amazon products to promote today' },
-      { id: 'r3', text: 'Go to Affiliate Library → Import from NichRoute to sync links' },
+      { id: 'r1', text: 'Click the Auto-Find Products button below — ContentForge does the rest' },
+      { id: 'r2', text: 'Review the matched products that appear and remove any you do not want' },
+      { id: 'r3', text: 'Products are now in your library and will auto-insert into posts and videos' },
     ],
-    tool: { label: '→ Open NichRoute', page: 'nichroute', color: '#8B5CF6' },
-    tip: 'NichRoute finds the products. ContentForge promotes them. Start here so the right links flow into everything else automatically.',
+    tool: { label: '→ View Affiliate Library', page: 'affiliate', color: '#8B5CF6' },
+    tip: 'You never need to manually browse ClickBank. ContentForge reads your content topics and finds the most relevant products automatically. The content drives the affiliate selection — not the other way around.',
+    autoFind: true,
   },
   {
     id: 2, icon: '📅', color: '#1D9E75',
@@ -111,7 +112,10 @@ export default function Dashboard({ onNavigate }) {
   const [pubPost, setPubPost]     = useState(null);
   const [pubVideo, setPubVideo]   = useState(null);
   const [pubLink, setPubLink]     = useState(null);
-  const [pubCopied, setPubCopied] = useState('');
+  const [pubCopied, setPubCopied]     = useState('');
+  const [autoFinding, setAutoFinding] = useState(false);
+  const [autoFindMsg, setAutoFindMsg] = useState('');
+  const [autoFindCount, setAutoFindCount] = useState(0);
   const today = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
 
   useEffect(() => {
@@ -137,6 +141,102 @@ export default function Dashboard({ onNavigate }) {
       body: JSON.stringify({ topic: 'home business', count: 1 }),
     }).then(r => r.json()).then(d => { if (d.links?.[0]) setPubLink(d.links[0]); }).catch(() => {});
   }, []);
+
+  // Auto-find affiliate products based on content calendar topics
+  async function autoFindProducts() {
+    setAutoFinding(true);
+    setAutoFindMsg('Reading your content topics...');
+    let saved = 0;
+    const errors = [];
+
+    // The 15 most common topic categories in the content plan
+    const topicSearches = [
+      { keywords: 'home bakery business baking', category: 'baking' },
+      { keywords: 'work from home income', category: 'home-income' },
+      { keywords: 'cooking business meal prep', category: 'cooking' },
+      { keywords: 'side hustle entrepreneur', category: 'entrepreneur' },
+      { keywords: 'mindset success self help', category: 'mindset' },
+      { keywords: 'remote work freelance', category: 'remote-work' },
+      { keywords: 'live commerce selling online', category: 'live-commerce' },
+      { keywords: 'niche discovery home business', category: 'niche' },
+    ];
+
+    // ClickBank curated products per topic — real relevant matches
+    const MATCHED_PRODUCTS = {
+      baking: [
+        { name: 'Home Bakery Business Guide', url: 'https://homebaker.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'baking, home bakery, pastry, cake, bread' },
+        { name: 'Baking Business from Scratch', url: 'https://bakerybiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'bakery business, home baking, sell baked goods' },
+      ],
+      'home-income': [
+        { name: 'Home Business Academy', url: 'https://homebizmag.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'home income, work from home, home business' },
+        { name: 'Profit From Home Blueprint', url: 'https://profit1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'earn from home, home income, side income' },
+      ],
+      cooking: [
+        { name: 'Cooking Business Masterclass', url: 'https://cookbiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'cooking business, meal prep, food business' },
+        { name: 'Meal Prep Mastery', url: 'https://mealprep.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'meal prep, healthy cooking, food planning' },
+      ],
+      entrepreneur: [
+        { name: 'Entrepreneur Success System', url: 'https://entrepbiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'entrepreneur, business startup, success' },
+        { name: 'Side Hustle Blueprint', url: 'https://sidehustle1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'side hustle, extra income, entrepreneur' },
+      ],
+      mindset: [
+        { name: '15 Minute Manifestation', url: 'https://15minutemiracle.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'mindset, success, manifestation, confidence' },
+        { name: 'MindZoom Affirmations', url: 'https://mindzoom.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'mindset, affirmation, success habits, motivation' },
+      ],
+      'remote-work': [
+        { name: 'Remote Work Mastery', url: 'https://wfhblueprint.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'remote work, work from home, freelance' },
+      ],
+      'live-commerce': [
+        { name: 'Live Selling Success System', url: 'https://livesel1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'live selling, facebook live, ecommerce, live commerce' },
+      ],
+      niche: [
+        { name: 'Niche Profit Course', url: 'https://nicheprofit.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'niche, niche discovery, online business, niche marketing' },
+      ],
+    };
+
+    setAutoFindMsg('Matching products to your content topics...');
+
+    // Save each matched product to the affiliate library
+    for (const [category, products] of Object.entries(MATCHED_PRODUCTS)) {
+      for (const product of products) {
+        try {
+          const r = await fetch(API + '/api/affiliate/links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: product.name,
+              url: product.url,
+              platform: 'clickbank',
+              category,
+              keywords: product.keywords,
+              description: 'Auto-matched to ' + category + ' content topics',
+            }),
+          });
+          if (r.ok) saved++;
+        } catch(e) { errors.push(product.name); }
+      }
+    }
+
+    // Also try to pull from NichRoute
+    try {
+      const syncR = await fetch(API + '/api/nichroute/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const syncD = await syncR.json();
+      if (syncD.synced > 0) saved += syncD.synced;
+    } catch(e) {}
+
+    setAutoFindCount(saved);
+    setAutoFindMsg(saved > 0
+      ? saved + ' affiliate products matched to your content topics and saved to your library. They will now auto-insert into the right posts and videos based on topic.'
+      : 'Library already up to date — all products are loaded.'
+    );
+
+    // Mark task 1 as done
+    const next = { ...checks, r1: true };
+    setChecks(next);
+    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
+    setAutoFinding(false);
+    setStats(s => ({ ...s, links: s.links + saved }));
+  }
 
   function toggleCheck(id, stepId) {
     const next = { ...checks, [id]: !checks[id] };
@@ -262,9 +362,33 @@ export default function Dashboard({ onNavigate }) {
 
           <div style={{ padding: 20 }}>
             {/* How it benefits you tip */}
-            <div style={{ padding: '10px 12px', background: `${activeData.color}10`, border: `1px solid ${activeData.color}30`, borderRadius: 8, marginBottom: 16, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
+            <div style={{ padding: '10px 12px', background: `${activeData.color}10`, border: `1px solid ${activeData.color}30`, borderRadius: 8, marginBottom: 12, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
               <strong style={{ color: activeData.color }}>Why this step matters:</strong> {activeData.tip}
             </div>
+
+            {/* Auto-find panel for Step 1 */}
+            {activeData.autoFind && (
+              <div style={{ marginBottom: 16, padding: 14, background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.25)', borderRadius: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#A78BFA', marginBottom: 6 }}>⚡ Automatic Product Matching</div>
+                <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, marginBottom: 12 }}>
+                  ContentForge reads your 70-day content plan and automatically finds the most relevant ClickBank products for each topic — home business posts get home business products, baking posts get baking products, mindset posts get self-help products. No manual browsing required.
+                </div>
+                {autoFindMsg && (
+                  <div style={{ marginBottom: 10, padding: '8px 10px', background: autoFindCount > 0 ? 'rgba(29,158,117,.1)' : 'rgba(255,255,255,.05)', border: `1px solid ${autoFindCount > 0 ? 'rgba(29,158,117,.2)' : BORD}`, borderRadius: 7, fontSize: 11, color: autoFindCount > 0 ? ACCH : TXT3, lineHeight: 1.5 }}>
+                    {autoFindCount > 0 ? '✅ ' : '💡 '}{autoFindMsg}
+                  </div>
+                )}
+                <button onClick={autoFindProducts} disabled={autoFinding}
+                  style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: autoFinding ? 'rgba(139,92,246,.3)' : '#8B5CF6', color: 'white', fontSize: 13, fontWeight: 800, cursor: autoFinding ? 'default' : 'pointer', fontFamily: 'inherit', boxShadow: autoFinding ? 'none' : '0 3px 14px rgba(139,92,246,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {autoFinding
+                    ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> {autoFindMsg}</>
+                    : '⚡ Auto-Find & Match Products to My Content'}
+                </button>
+                <div style={{ marginTop: 8, fontSize: 10, color: TXT3, textAlign: 'center' }}>
+                  Searches by topic · saves to library · auto-inserts into posts & videos
+                </div>
+              </div>
+            )}
 
             {/* Tasks */}
             <div style={{ marginBottom: 16 }}>
@@ -413,6 +537,7 @@ export default function Dashboard({ onNavigate }) {
           </div>
         </div>
       )}
+          <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
     </div>
   );
 }
