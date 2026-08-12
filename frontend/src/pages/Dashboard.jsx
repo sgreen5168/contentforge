@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://stellar-achievement-production-ea9d.up.railway.app';
+const VB_API = 'https://contentforge-production-c8d9.up.railway.app';
 
 const BG2  = '#112240';
 const BORD = 'rgba(255,255,255,.08)';
@@ -10,534 +11,494 @@ const TXT3 = 'rgba(232,244,240,.4)';
 const ACC  = '#1D9E75';
 const ACCH = '#5DCAA5';
 
-const STEPS = [
-  {
-    id: 1, icon: '🔍', color: '#8B5CF6',
-    label: 'Research',
-    title: 'Step 1 — Auto-Find Affiliate Products',
-    description: 'ContentForge reads your 70-day content plan, finds the best matching ClickBank products for each topic automatically, and loads them into your library — no manual searching needed.',
-    tasks: [
-      { id: 'r1', text: 'Click the Auto-Find Products button below — ContentForge does the rest' },
-      { id: 'r2', text: 'Review the matched products that appear and remove any you do not want' },
-      { id: 'r3', text: 'Products are now in your library and will auto-insert into posts and videos' },
-    ],
-    tool: { label: '→ View Affiliate Library', page: 'affiliate', color: '#8B5CF6' },
-    tip: 'You never need to manually browse ClickBank. ContentForge reads your content topics and finds the most relevant products automatically. The content drives the affiliate selection — not the other way around.',
-    autoFind: true,
-  },
-  {
-    id: 2, icon: '📅', color: '#1D9E75',
-    label: 'Plan Topic',
-    title: 'Step 2 — Pick Your Topic',
-    description: 'Choose which topic from your 70-day content plan to work on today. One topic produces a post, a script, and a video.',
-    tasks: [
-      { id: 'p1', text: 'Open Content Calendar and pick a topic for today' },
-      { id: 'p2', text: 'Expand that day — choose your affiliate mode (None / Link / + Disclosure)' },
-      { id: 'p3', text: 'Generate the photo image prompt for the post' },
-    ],
-    tool: { label: '→ Open Content Calendar', page: 'calendar', color: '#1D9E75' },
-    tip: 'One topic = one post + one video script + one image. Three pieces of content, one idea, under 20 minutes.',
-  },
-  {
-    id: 3, icon: '✍️', color: '#3B82F6',
-    label: 'Write Post',
-    title: 'Step 3 — Generate the Facebook Post',
-    description: 'Click Generate on your chosen topic. ContentForge writes the post, inserts the affiliate link, and adds the disclosure — all automatically.',
-    tasks: [
-      { id: 'c1', text: 'Click ✍️ Generate This Post on your chosen topic' },
-      { id: 'c2', text: 'Press 🔊 Read Post Aloud to check it flows naturally' },
-      { id: 'c3', text: 'Click 📅 Save to Schedule — post is now saved for Step 6' },
-    ],
-    tool: { label: '→ Open Content Calendar', page: 'calendar', color: '#3B82F6' },
-    tip: 'The affiliate link auto-inserts based on your topic. It matches the product most relevant to what you are writing about.',
-  },
-  {
-    id: 4, icon: '🎬', color: '#EF4444',
-    label: 'Make Video',
-    title: 'Step 4 — Produce the Video',
-    description: 'ContentForge writes the script, records the voiceover, finds matching video clips, and delivers a finished MP4 with your affiliate link burned into the final 5 seconds.',
-    tasks: [
-      { id: 'v1', text: 'Go to AI Video Engine → 🎬 Video Builder tab' },
-      { id: 'v2', text: 'Type the same topic from Step 2 → click ▶ Create Video' },
-      { id: 'v3', text: 'Wait 3-4 minutes → preview the video and confirm CTA overlay shows' },
-    ],
-    tool: { label: '→ Open Video Builder', page: 'video', color: '#EF4444' },
-    tip: 'Your affiliate link appears automatically in the last 5 seconds of every video as a capture scene — no manual steps needed.',
-  },
-  {
-    id: 5, icon: '💰', color: '#F59E0B',
-    label: 'Check Links',
-    title: 'Step 5 — Verify Monetisation',
-    description: 'Confirm your affiliate link is in the post and in the video description before publishing.',
-    tasks: [
-      { id: 'm1', text: 'Open saved post — confirm affiliate link appears at the end' },
-      { id: 'm2', text: 'Open Affiliate Library — verify links are synced from NichRoute' },
-      { id: 'm3', text: 'If no link appeared — go to Affiliate Library and add one manually' },
-    ],
-    tool: { label: '→ Open Affiliate Library', page: 'affiliate', color: '#F59E0B' },
-    tip: 'Links only auto-insert when you have at least one link saved in the Affiliate Library. Add your ClickBank hoplinks there first.',
-  },
-  {
-    id: 6, icon: '📤', color: '#06B6D4',
-    label: 'Publish',
-    title: 'Step 6 — Publish Everything',
-    description: 'Your post and video are ready. Publish to Facebook and YouTube from here.',
-    tasks: [
-      { id: 'pub1', text: 'Copy your saved post → paste to Facebook or Post Submitter' },
-      { id: 'pub2', text: 'Go to YouTube Studio → upload video → AI writes metadata → Publish' },
-      { id: 'pub3', text: 'Share post link in NichRoute Facebook Groups for extra reach' },
-    ],
-    tool: { label: '→ Open Post Submitter', page: 'submitter', color: '#06B6D4' },
-    tip: 'One session = one Facebook post + one YouTube video + one affiliate link. Repeat daily across your 70-day plan.',
-    isPublish: true,
-  },
+const TOPICS = [
+  { id:'home-bakery',    cat:'baking',       label:'Home Bakery Business',        icon:'🧁', hook:"Starting a home bakery is simpler than most people think." },
+  { id:'wfh-income',     cat:'home-income',  label:'Earning from Home',           icon:'🏠', hook:"People are building real income from their kitchens and home offices." },
+  { id:'meal-prep',      cat:'meal-prep',    label:'Meal Prep & Food Planning',   icon:'🥗', hook:"Two hours of prep saves hours of stress all week." },
+  { id:'side-hustle',    cat:'side-hustle',  label:'Side Hustle Ideas',           icon:'💰', hook:"Most people are sitting on income they have not tapped yet." },
+  { id:'mindset',        cat:'mindset',      label:'Success Mindset',             icon:'💡', hook:"The difference between those who succeed and those who quit is smaller than you think." },
+  { id:'live-commerce',  cat:'live-commerce',label:'Live Selling on Facebook',    icon:'📱', hook:"Live selling is the fastest growing income stream right now." },
+  { id:'cooking-biz',    cat:'cooking-biz',  label:'Cooking as a Business',       icon:'🍳', hook:"Skills you take for granted are worth money to other people." },
+  { id:'niche',          cat:'niche',        label:'Finding Your Niche',          icon:'🎯', hook:"Most people try to appeal to everyone — and reach no one." },
+  { id:'entrepreneur',   cat:'entrepreneur', label:'Entrepreneurship',            icon:'🚀', hook:"The truth about starting a business nobody tells you." },
+  { id:'remote-work',    cat:'remote-work',  label:'Remote Work Tips',            icon:'💻', hook:"Working from home changed everything — but only after the right setup." },
 ];
 
-const TIPS = [
-  'Start with one topic and produce a post, a script, and a video — three pieces of content from one idea.',
-  'Your strongest posts come from curiosity hooks — lead with a question or a surprising statement.',
-  'Generate the image prompt alongside every post — Facebook posts with images get 3x more reach.',
-  'Batch your content: generate 5-7 posts in one sitting and schedule them across the week.',
-  'The video CTA in the last 5 seconds is where affiliate conversions happen — make it clear and direct.',
-  'Sync NichRoute links at the start of every session so your affiliate library stays current.',
+const PIPELINE_STEPS = [
+  { id:'post',    icon:'📝', label:'Facebook post',    color:'#1877F2' },
+  { id:'script',  icon:'🎬', label:'Video script',     color:'#EF4444' },
+  { id:'video',   icon:'▶',  label:'Video (MP4)',      color:'#EF4444' },
+  { id:'link',    icon:'🔗', label:'Affiliate link',   color:'#1D9E75' },
+  { id:'landing', icon:'🌐', label:'Landing page',     color:'#8B5CF6' },
 ];
 
 export default function Dashboard({ onNavigate }) {
-  const [checks, setChecks]       = useState(() => {
-    try { return JSON.parse(localStorage.getItem('cf_daily_checks') || '{}'); } catch { return {}; }
-  });
-  const [activeStep, setActive]   = useState(1);
-  const [tip]                     = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
-  const [stats, setStats]         = useState({ posts: 0, videos: 0, links: 0 });
-  const [pubPost, setPubPost]     = useState(null);
-  const [pubVideo, setPubVideo]   = useState(null);
-  const [pubLink, setPubLink]     = useState(null);
-  const [pubCopied, setPubCopied]     = useState('');
-  const [autoFinding, setAutoFinding] = useState(false);
-  const [autoFindMsg, setAutoFindMsg] = useState('');
-  const [autoFindCount, setAutoFindCount] = useState(0);
-  const today = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  const [selectedTopic, setTopic]   = useState(null);
+  const [running, setRunning]       = useState(false);
+  const [pipeline, setPipeline]     = useState({});   // stepId → { status, data, error }
+  const [results, setResults]       = useState(null);
+  const [copied, setCopied]         = useState('');
+  const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
+  const abortRef                    = useRef(false);
 
   useEffect(() => {
-    const lastDay = localStorage.getItem('cf_checklist_day');
-    const todayStr = new Date().toDateString();
-    if (lastDay !== todayStr) {
-      setChecks({});
-      localStorage.setItem('cf_daily_checks', '{}');
-      localStorage.setItem('cf_checklist_day', todayStr);
-    }
-    fetch(`${API}/api/affiliate/status`)
-      .then(r => r.json())
-      .then(d => setStats(s => ({ ...s, links: d.library || 0 })))
-      .catch(() => {});
-    const vbHistory = JSON.parse(localStorage.getItem('cf_vb_history') || '[]');
-    const scheduled = JSON.parse(localStorage.getItem('cf_fb_scheduled') || '[]');
-    setStats(s => ({ ...s, videos: vbHistory.filter(v => v.status === 'completed').length, posts: scheduled.length }));
-    const completedVideos = vbHistory.filter(v => v.status === 'completed');
-    if (completedVideos.length > 0) setPubVideo(completedVideos[0]);
-    if (scheduled.length > 0) setPubPost(scheduled[0]);
-    fetch(`${API}/api/affiliate/match`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: 'home business', count: 1 }),
-    }).then(r => r.json()).then(d => { if (d.links?.[0]) setPubLink(d.links[0]); }).catch(() => {});
-  }, []);
+    fetch(API + '/api/affiliate/status')
+      .then(r=>r.json())
+      .then(d=>setStats(s=>({...s,links:d.library||0})))
+      .catch(()=>{});
+    const h = JSON.parse(localStorage.getItem('cf_vb_history')||'[]');
+    const p = JSON.parse(localStorage.getItem('cf_fb_scheduled')||'[]');
+    setStats(s=>({...s,videos:h.filter(v=>v.status==='completed').length,posts:p.length}));
+  },[]);
 
-  // Auto-find affiliate products based on content calendar topics
-  async function autoFindProducts() {
-    setAutoFinding(true);
-    setAutoFindMsg('Reading your content topics...');
-    let saved = 0;
-    const errors = [];
+  function updateStep(id, update) {
+    setPipeline(prev => ({ ...prev, [id]: { ...(prev[id]||{}), ...update } }));
+  }
 
-    // The 15 most common topic categories in the content plan
-    const topicSearches = [
-      { keywords: 'home bakery business baking', category: 'baking' },
-      { keywords: 'work from home income', category: 'home-income' },
-      { keywords: 'cooking business meal prep', category: 'cooking' },
-      { keywords: 'side hustle entrepreneur', category: 'entrepreneur' },
-      { keywords: 'mindset success self help', category: 'mindset' },
-      { keywords: 'remote work freelance', category: 'remote-work' },
-      { keywords: 'live commerce selling online', category: 'live-commerce' },
-      { keywords: 'niche discovery home business', category: 'niche' },
-    ];
+  async function runPipeline(topic) {
+    if (running) return;
+    setRunning(true);
+    abortRef.current = false;
+    setResults(null);
+    setPipeline({});
+    const out = {};
 
-    // ClickBank curated products per topic — real relevant matches
-    const MATCHED_PRODUCTS = {
-      baking: [
-        { name: 'Home Bakery Business Guide', url: 'https://homebaker.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'baking, home bakery, pastry, cake, bread' },
-        { name: 'Baking Business from Scratch', url: 'https://bakerybiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'bakery business, home baking, sell baked goods' },
-      ],
-      'home-income': [
-        { name: 'Home Business Academy', url: 'https://homebizmag.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'home income, work from home, home business' },
-        { name: 'Profit From Home Blueprint', url: 'https://profit1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'earn from home, home income, side income' },
-      ],
-      cooking: [
-        { name: 'Cooking Business Masterclass', url: 'https://cookbiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'cooking business, meal prep, food business' },
-        { name: 'Meal Prep Mastery', url: 'https://mealprep.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'meal prep, healthy cooking, food planning' },
-      ],
-      entrepreneur: [
-        { name: 'Entrepreneur Success System', url: 'https://entrepbiz.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'entrepreneur, business startup, success' },
-        { name: 'Side Hustle Blueprint', url: 'https://sidehustle1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'side hustle, extra income, entrepreneur' },
-      ],
-      mindset: [
-        { name: '15 Minute Manifestation', url: 'https://15minutemiracle.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'mindset, success, manifestation, confidence' },
-        { name: 'MindZoom Affirmations', url: 'https://mindzoom.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'mindset, affirmation, success habits, motivation' },
-      ],
-      'remote-work': [
-        { name: 'Remote Work Mastery', url: 'https://wfhblueprint.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'remote work, work from home, freelance' },
-      ],
-      'live-commerce': [
-        { name: 'Live Selling Success System', url: 'https://livesel1.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'live selling, facebook live, ecommerce, live commerce' },
-      ],
-      niche: [
-        { name: 'Niche Profit Course', url: 'https://nicheprofit.hop.clickbank.net/?affiliate=sgreen5168', keywords: 'niche, niche discovery, online business, niche marketing' },
-      ],
-    };
-
-    setAutoFindMsg('Matching products to your content topics...');
-
-    // Save each matched product to the affiliate library
-    for (const [category, products] of Object.entries(MATCHED_PRODUCTS)) {
-      for (const product of products) {
-        try {
-          const r = await fetch(API + '/api/affiliate/links', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: product.name,
-              url: product.url,
-              platform: 'clickbank',
-              category,
-              keywords: product.keywords,
-              description: 'Auto-matched to ' + category + ' content topics',
-            }),
-          });
-          if (r.ok) saved++;
-        } catch(e) { errors.push(product.name); }
-      }
-    }
-
-    // Also try to pull from NichRoute
+    // ── Step 1: Generate Facebook post ───────────────────────────────────────
+    updateStep('post', { status:'running' });
     try {
-      const syncR = await fetch(API + '/api/nichroute/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const syncD = await syncR.json();
-      if (syncD.synced > 0) saved += syncD.synced;
-    } catch(e) {}
-
-    setAutoFindCount(saved);
-    setAutoFindMsg(saved > 0
-      ? saved + ' affiliate products matched to your content topics and saved to your library. They will now auto-insert into the right posts and videos based on topic.'
-      : 'Library already up to date — all products are loaded.'
-    );
-
-    // Mark task 1 as done
-    const next = { ...checks, r1: true };
-    setChecks(next);
-    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-    setAutoFinding(false);
-    setStats(s => ({ ...s, links: s.links + saved }));
-  }
-
-  function toggleCheck(id, stepId) {
-    const next = { ...checks, [id]: !checks[id] };
-    setChecks(next);
-    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-    const step = STEPS.find(s => s.id === stepId);
-    if (step) {
-      const allDone = step.tasks.every(t => t.id === id ? !checks[id] : next[t.id]);
-      if (allDone && stepId < 6) setTimeout(() => setActive(stepId + 1), 500);
+      const r = await fetch(API + '/api/generate', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          inputMode:'topic',
+          topic: topic.label + ' — ' + topic.hook,
+          style:'Casual', platforms:['facebook'], affiliate:false,
+        }),
+      });
+      const d = await r.json();
+      const postText = d.posts?.facebook?.text || d.post?.text || d.text || '';
+      if (!postText) throw new Error('No post content returned');
+      out.post = postText;
+      updateStep('post', { status:'done', data: postText });
+    } catch(e) {
+      updateStep('post', { status:'error', error: e.message });
     }
+
+    if (abortRef.current) { setRunning(false); return; }
+
+    // ── Step 2: Generate video script ─────────────────────────────────────────
+    updateStep('script', { status:'running' });
+    try {
+      const r = await fetch(API + '/api/video/script', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          inputMode:'topic', topic: topic.label,
+          style:'Casual', persona:'ugc-creator',
+          duration:'30s', platforms:['youtube'], videoType:'ugc-persona',
+        }),
+      });
+      const d = await r.json();
+      const script = d.script?.fullScript || d.script?.hook || '';
+      if (!script) throw new Error('No script returned');
+      out.script = script;
+      out.hook   = d.script?.hook || '';
+      updateStep('script', { status:'done', data: script });
+    } catch(e) {
+      updateStep('script', { status:'error', error: e.message });
+    }
+
+    if (abortRef.current) { setRunning(false); return; }
+
+    // ── Step 3: Match affiliate link ──────────────────────────────────────────
+    updateStep('link', { status:'running' });
+    try {
+      const r = await fetch(API + '/api/affiliate/match', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1 }),
+      });
+      const d = await r.json();
+      const link = d.links?.[0];
+      out.link = link || null;
+      updateStep('link', { status: link ? 'done' : 'warn', data: link, error: link ? null : 'No links in library yet — add one in Affiliate Library' });
+
+      // Auto-insert link into post
+      if (link && out.post) {
+        out.post = out.post + '
+
+🔗 ' + link.name + '
+' + link.url + '
+
+#ad This post contains affiliate links.';
+        updateStep('post', { status:'done', data: out.post });
+      }
+    } catch(e) {
+      updateStep('link', { status:'error', error: e.message });
+    }
+
+    if (abortRef.current) { setRunning(false); return; }
+
+    // ── Step 4: Build video via Video Builder ─────────────────────────────────
+    updateStep('video', { status:'running' });
+    try {
+      const vbR = await fetch(VB_API + '/video/create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          topic:  topic.label,
+          length: 30,
+          format: '9:16',
+          voice:  'nova',
+          music:  'uplifting',
+          affiliateUrl: out.link?.url || '',
+          affiliateCTA: out.link?.name || '',
+        }),
+      });
+      const vbD = await vbR.json();
+      if (!vbD.id) throw new Error('Video Builder did not return a job ID');
+      out.videoJobId = vbD.id;
+      updateStep('video', { status:'building', data: { jobId: vbD.id } });
+
+      // Poll until done (max 5 minutes)
+      let elapsed = 0;
+      while (elapsed < 300) {
+        await new Promise(r=>setTimeout(r,8000));
+        elapsed += 8;
+        if (abortRef.current) break;
+        const pollR = await fetch(VB_API + '/video/' + vbD.id);
+        const pollD = await pollR.json();
+        updateStep('video', { status:'building', data: pollD, progress: pollD.progress });
+        if (pollD.status === 'completed') {
+          out.video = pollD;
+          out.videoUrl = VB_API + '/video/' + vbD.id + '/file';
+          updateStep('video', { status:'done', data: pollD, url: out.videoUrl });
+          break;
+        }
+        if (pollD.status === 'failed') {
+          throw new Error(pollD.step || 'Video generation failed');
+        }
+      }
+      if (!out.video) updateStep('video', { status:'warn', error:'Video still processing — check Video Builder tab' });
+    } catch(e) {
+      updateStep('video', { status:'error', error: e.message });
+    }
+
+    if (abortRef.current) { setRunning(false); return; }
+
+    // ── Step 5: Generate landing page snippet ─────────────────────────────────
+    updateStep('landing', { status:'running' });
+    try {
+      const ctaBlock = out.link
+        ? '<a class="cta-btn" href="' + out.link.url + '" target="_blank">\u{1F449} ' + out.link.name + '</a><p class="disclosure">#ad Affiliate link — I earn a commission at no cost to you.</p>'
+        : '';
+      const postBlock = out.post
+        ? '<div class="post-preview">' + out.post.replace(/\n/g,'<br>') + '</div>'
+        : '';
+      const landingHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + topic.label + '</title>'
+        + '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0B1829;color:#E8F4F0;min-height:100vh}'
+        + '.hero{padding:60px 24px 40px;text-align:center;max-width:680px;margin:0 auto}'
+        + 'h1{font-size:28px;font-weight:700;margin-bottom:16px;line-height:1.3}'
+        + '.hook{font-size:16px;color:rgba(232,244,240,.7);margin-bottom:32px;line-height:1.6}'
+        + '.cta-btn{display:inline-block;padding:16px 36px;background:#1D9E75;color:#fff;border-radius:10px;font-size:16px;font-weight:700;text-decoration:none;margin-bottom:12px}'
+        + '.disclosure{font-size:11px;color:rgba(232,244,240,.4);margin-top:8px}'
+        + '.post-preview{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;margin:32px 0;text-align:left;font-size:14px;line-height:1.7}'
+        + '</style></head><body><div class="hero">'
+        + '<h1>' + topic.label + '</h1>'
+        + '<p class="hook">' + topic.hook + '</p>'
+        + ctaBlock + postBlock
+        + '</div></body></html>';
+      out.landing = landingHtml;
+      updateStep('landing', { status:'done', data: landingHtml });
+    } catch(e) {
+      updateStep('landing', { status:'error', error: e.message });
+    }
+
+    // Save post to scheduled
+    if (out.post) {
+      try {
+        const scheduled = JSON.parse(localStorage.getItem('cf_fb_scheduled')||'[]');
+        scheduled.unshift({ id: Date.now(), topic: topic.label, cat: topic.cat, content: out.post, scheduledDate: new Date().toLocaleDateString(), time: '9:00 AM' });
+        localStorage.setItem('cf_fb_scheduled', JSON.stringify(scheduled.slice(0,50)));
+        setStats(s=>({...s,posts:s.posts+1}));
+      } catch {}
+    }
+
+    setResults(out);
+    setRunning(false);
   }
 
-  function goToStep(stepId) {
-    setActive(stepId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function copy(text, id) {
+    navigator.clipboard.writeText(text).catch(()=>{});
+    setCopied(id);
+    setTimeout(()=>setCopied(''),2000);
   }
 
-  function openTool(page) {
-    const next = { ...checks };
-    const step = STEPS.find(s => s.id === activeStep);
-    if (step) step.tasks.forEach(t => { next[t.id] = true; });
-    setChecks(next);
-    localStorage.setItem('cf_daily_checks', JSON.stringify(next));
-    if (onNavigate) onNavigate(page);
+  function downloadLanding(html) {
+    const blob = new Blob([html],{type:'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = (selectedTopic?.id||'page') + '-landing.html';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
-  const totalTasks = STEPS.reduce((a, s) => a + s.tasks.length, 0);
-  const totalDone  = STEPS.reduce((a, s) => a + s.tasks.filter(t => checks[t.id]).length, 0);
-  const dayPct     = Math.round(totalDone / totalTasks * 100);
-  const activeData = STEPS.find(s => s.id === activeStep);
+  const stepStatus = (id) => pipeline[id]?.status || 'waiting';
+  const stepIcon   = (s) => ({ waiting:'○', running:'⟳', building:'⟳', done:'✅', warn:'⚠️', error:'❌' }[s]||'○');
 
   return (
-    <div style={{ padding: 20, maxWidth: 1000, fontFamily: 'inherit', color: TXT }}>
+    <div style={{ padding:20, maxWidth:1000, fontFamily:'inherit', color:TXT }}>
 
       {/* Header */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: TXT, display: 'flex', alignItems: 'center', gap: 10 }}>
-            🚀 Command Center
-          </div>
-          <div style={{ fontSize: 12, color: TXT3, marginTop: 2 }}>{today}</div>
+          <div style={{ fontSize:22, fontWeight:700, color:TXT }}>🚀 Command Center</div>
+          <div style={{ fontSize:12, color:TXT3, marginTop:2 }}>Select a topic → everything generates automatically → you just post</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[
-            { label: 'Videos', value: stats.videos, icon: '🎬', color: '#EF4444' },
-            { label: 'Posts',  value: stats.posts,  icon: '📝', color: '#3B82F6' },
-            { label: 'Links',  value: stats.links,  icon: '🔗', color: ACC },
-          ].map(s => (
-            <div key={s.label} style={{ background: BG2, border: `1px solid ${BORD}`, borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 16 }}>{s.icon}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: 9, color: TXT3 }}>{s.label}</div>
+        <div style={{ display:'flex', gap:8 }}>
+          {[{l:'Videos',v:stats.videos,i:'🎬',c:'#EF4444'},{l:'Posts saved',v:stats.posts,i:'📝',c:'#1877F2'},{l:'Links',v:stats.links,i:'🔗',c:ACC}].map(s=>(
+            <div key={s.l} style={{ background:BG2, border:`1px solid ${BORD}`, borderRadius:10, padding:'8px 14px', textAlign:'center' }}>
+              <div style={{ fontSize:16 }}>{s.i}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:s.c }}>{s.v}</div>
+              <div style={{ fontSize:9, color:TXT3 }}>{s.l}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div style={{ background: BG2, border: `1px solid ${BORD}`, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: TXT }}>Daily Progress</span>
-          <span style={{ fontSize: 11, color: ACCH, fontWeight: 700 }}>{totalDone}/{totalTasks} tasks · {dayPct}%</span>
-        </div>
-        <div style={{ height: 8, background: 'rgba(255,255,255,.08)', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: dayPct + '%', background: `linear-gradient(90deg,${ACC},${ACCH})`, borderRadius: 4, transition: 'width .4s' }} />
-        </div>
+      {/* How it works strip */}
+      <div style={{ display:'flex', gap:0, marginBottom:16, background:BG2, border:`1px solid ${BORD}`, borderRadius:10, overflow:'hidden' }}>
+        {[['1','Pick a topic',''],['→','',''],['2','Everything generates',''],['→','',''],['3','You review & post','']].map((s,i)=>(
+          <div key={i} style={{ flex:s[1]?1:0, padding:s[1]?'10px 8px':'10px 4px', textAlign:'center' }}>
+            {s[0]==='→' ? <div style={{ color:TXT3, fontSize:16 }}>→</div> : (
+              <>
+                <div style={{ fontSize:11, fontWeight:700, color:ACCH }}>{s[0]}</div>
+                <div style={{ fontSize:11, color:TXT2 }}>{s[1]}</div>
+              </>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Daily tip */}
-      <div style={{ background: 'rgba(29,158,117,.06)', border: '1px solid rgba(29,158,117,.15)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
-        💡 <strong style={{ color: ACCH }}>Tip:</strong> {tip}
-      </div>
+      {/* Topic selector */}
+      {!running && !results && (
+        <div>
+          <div style={{ fontSize:12, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:10 }}>Choose your topic for today</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:16 }}>
+            {TOPICS.map(t=>(
+              <button key={t.id} onClick={()=>setTopic(t.id===selectedTopic?.id ? null : t)}
+                style={{ padding:'12px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border: selectedTopic?.id===t.id ? `2px solid ${ACC}` : `1px solid ${BORD}`, background: selectedTopic?.id===t.id ? 'rgba(29,158,117,.15)' : 'rgba(255,255,255,.03)', transition:'all .15s', boxShadow: selectedTopic?.id===t.id ? `0 0 14px rgba(29,158,117,.3)` : 'none' }}>
+                <div style={{ fontSize:22, marginBottom:5 }}>{t.icon}</div>
+                <div style={{ fontSize:10, fontWeight:700, color: selectedTopic?.id===t.id ? ACCH : TXT2, lineHeight:1.3 }}>{t.label}</div>
+              </button>
+            ))}
+          </div>
 
-      {/* Step selector — horizontal row of 6 numbered buttons */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginBottom: 16 }}>
-        {STEPS.map(step => {
-          const done  = step.tasks.filter(t => checks[t.id]).length;
-          const total = step.tasks.length;
-          const isActive = activeStep === step.id;
-          const allDone  = done === total;
-          return (
-            <button key={step.id} onClick={() => goToStep(step.id)}
-              style={{
-                padding: '10px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                textAlign: 'center', transition: 'all .2s',
-                border: isActive ? `3px solid ${step.color}` : `2px solid ${allDone ? step.color + '60' : BORD}`,
-                background: isActive ? `${step.color}25` : allDone ? `${step.color}10` : 'rgba(255,255,255,.03)',
-                boxShadow: isActive ? `0 0 16px ${step.color}40` : 'none',
-              }}>
-              <div style={{ fontSize: 20, marginBottom: 3 }}>{allDone ? '✅' : step.icon}</div>
-              <div style={{ fontSize: 10, fontWeight: isActive ? 800 : 500, color: isActive ? step.color : allDone ? step.color : TXT3 }}>
-                {step.label}
-              </div>
-              <div style={{ fontSize: 9, color: isActive ? step.color : TXT3, marginTop: 2 }}>
-                {done}/{total}
-              </div>
-              {isActive && (
-                <div style={{ marginTop: 4, fontSize: 8, padding: '1px 4px', borderRadius: 3, background: step.color, color: 'white', display: 'inline-block' }}>
-                  NOW
+          {selectedTopic && (
+            <div style={{ background:BG2, border:`1px solid ${BORD}`, borderRadius:12, padding:16, marginBottom:16 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+                <span style={{ fontSize:28 }}>{selectedTopic.icon}</span>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:TXT }}>{selectedTopic.label}</div>
+                  <div style={{ fontSize:11, color:TXT3, fontStyle:'italic' }}>"{selectedTopic.hook}"</div>
                 </div>
-              )}
+              </div>
+              <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, marginBottom:14, padding:'10px 12px', background:'rgba(29,158,117,.06)', border:'1px solid rgba(29,158,117,.15)', borderRadius:8 }}>
+                <strong style={{ color:ACCH }}>What ContentForge will do automatically:</strong><br/>
+                📝 Write a Facebook post about this topic<br/>
+                🎬 Generate a 30-second video script and produce the MP4<br/>
+                🔗 Find and embed the best matching affiliate link<br/>
+                🌐 Build a landing page with your post and affiliate CTA<br/>
+                <strong style={{ color:TXT3 }}>You just review and post.</strong>
+              </div>
+              <button onClick={()=>runPipeline(selectedTopic)}
+                style={{ width:'100%', padding:'14px', borderRadius:10, border:'none', background:ACC, color:'white', fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 3px 16px rgba(29,158,117,.4)' }}>
+                ⚡ Generate Everything for "{selectedTopic.label}"
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pipeline progress */}
+      {running && (
+        <div style={{ background:BG2, border:`1px solid ${BORD}`, borderRadius:12, padding:20, marginBottom:16 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:TXT, marginBottom:16 }}>
+            ⚡ Generating everything for "{selectedTopic?.label}"…
+          </div>
+          {PIPELINE_STEPS.map(step=>{
+            const s = stepStatus(step.id);
+            const p = pipeline[step.id];
+            return (
+              <div key={step.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:`1px solid ${BORD}` }}>
+                <div style={{ fontSize:18, width:24, textAlign:'center', animation: s==='running'||s==='building' ? 'spin .8s linear infinite' : 'none' }}>
+                  {s==='waiting' ? '○' : s==='done' ? '✅' : s==='error' ? '❌' : s==='warn' ? '⚠️' : step.icon}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:TXT }}>{step.label}</div>
+                  {s==='running' || s==='building' ? (
+                    <div style={{ fontSize:10, color:ACCH }}>
+                      {s==='building' && p?.data?.step ? p.data.step : 'Working…'}
+                      {s==='building' && p?.progress ? ` (${p.progress}%)` : ''}
+                    </div>
+                  ) : s==='done' ? (
+                    <div style={{ fontSize:10, color:ACCH }}>Complete ✓</div>
+                  ) : s==='error' ? (
+                    <div style={{ fontSize:10, color:'#F09595' }}>{p?.error}</div>
+                  ) : (
+                    <div style={{ fontSize:10, color:TXT3 }}>Waiting…</div>
+                  )}
+                </div>
+                {(s==='running'||s==='building') && (
+                  <div style={{ width:80, height:4, background:'rgba(255,255,255,.08)', borderRadius:2, overflow:'hidden' }}>
+                    <div style={{ height:'100%', background:step.color, borderRadius:2, animation:'progress-bar 1.5s ease-in-out infinite' }} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <button onClick={()=>{ abortRef.current=true; setRunning(false); }}
+            style={{ marginTop:14, padding:'7px 14px', borderRadius:7, border:'1px solid rgba(226,75,74,.3)', background:'transparent', color:'#F09595', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+            ✕ Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Results — review and post */}
+      {results && !running && (
+        <div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:TXT }}>✅ Everything is ready — review and post</div>
+            <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); }}
+              style={{ padding:'6px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+              ↺ Start over
             </button>
-          );
-        })}
-      </div>
+          </div>
 
-      {/* Active step detail */}
-      {activeData && (
-        <div style={{ background: BG2, border: `2px solid ${activeData.color}40`, borderRadius: 14, overflow: 'hidden' }}>
-
-          {/* Step header */}
-          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${BORD}`, background: `${activeData.color}10` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 50, height: 50, borderRadius: 12, background: `${activeData.color}25`, border: `2px solid ${activeData.color}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
-                {activeData.icon}
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: activeData.color, marginBottom: 4 }}>{activeData.title}</div>
-                <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.5 }}>{activeData.description}</div>
-              </div>
+          {/* Facebook post */}
+          <div style={{ background:BG2, border:'1px solid rgba(24,119,242,.3)', borderRadius:12, marginBottom:10, overflow:'hidden' }}>
+            <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(24,119,242,.06)' }}>
+              <span style={{ fontSize:12, fontWeight:700, color:'#4FA3FF' }}>📘 Facebook Post — ready to copy</span>
+              <button onClick={()=>copy(results.post||'','post')}
+                style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#1877F2', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='post'?'✓ Copied!':'📋 Copy Post'}
+              </button>
+            </div>
+            <div style={{ padding:'12px 14px', fontSize:12, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', maxHeight:180, overflow:'auto' }}>
+              {results.post || 'Post generation failed — try again'}
             </div>
           </div>
 
-          <div style={{ padding: 20 }}>
-            {/* How it benefits you tip */}
-            <div style={{ padding: '10px 12px', background: `${activeData.color}10`, border: `1px solid ${activeData.color}30`, borderRadius: 8, marginBottom: 12, fontSize: 11, color: TXT2, lineHeight: 1.6 }}>
-              <strong style={{ color: activeData.color }}>Why this step matters:</strong> {activeData.tip}
-            </div>
-
-            {/* Auto-find panel for Step 1 */}
-            {activeData.autoFind && (
-              <div style={{ marginBottom: 16, padding: 14, background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.25)', borderRadius: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#A78BFA', marginBottom: 6 }}>⚡ Automatic Product Matching</div>
-                <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, marginBottom: 12 }}>
-                  ContentForge reads your 70-day content plan and automatically finds the most relevant ClickBank products for each topic — home business posts get home business products, baking posts get baking products, mindset posts get self-help products. No manual browsing required.
+          {/* Video script */}
+          {results.script && (
+            <div style={{ background:BG2, border:'1px solid rgba(239,68,68,.3)', borderRadius:12, marginBottom:10, overflow:'hidden' }}>
+              <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(239,68,68,.06)' }}>
+                <span style={{ fontSize:12, fontWeight:700, color:'#FC8F8F' }}>🎬 Video Script (30 seconds)</span>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={()=>copy(results.script,'script')}
+                    style={{ padding:'5px 12px', borderRadius:6, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='script'?'✓ Copied!':'📋 Copy Script'}
+                  </button>
+                  <button onClick={()=>onNavigate&&onNavigate('video')}
+                    style={{ padding:'5px 12px', borderRadius:6, border:'none', background:'#EF4444', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    📺 YouTube Studio
+                  </button>
                 </div>
-                {autoFindMsg && (
-                  <div style={{ marginBottom: 10, padding: '8px 10px', background: autoFindCount > 0 ? 'rgba(29,158,117,.1)' : 'rgba(255,255,255,.05)', border: `1px solid ${autoFindCount > 0 ? 'rgba(29,158,117,.2)' : BORD}`, borderRadius: 7, fontSize: 11, color: autoFindCount > 0 ? ACCH : TXT3, lineHeight: 1.5 }}>
-                    {autoFindCount > 0 ? '✅ ' : '💡 '}{autoFindMsg}
+              </div>
+              <div style={{ padding:'12px 14px', fontSize:11, color:TXT2, lineHeight:1.7, maxHeight:120, overflow:'auto' }}>
+                {results.script}
+              </div>
+              {results.video ? (
+                <div style={{ padding:'10px 14px', borderTop:`1px solid ${BORD}`, display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:11, color:ACCH, flex:1 }}>✅ Video MP4 ready</span>
+                  <a href={results.videoUrl} download target="_blank" rel="noreferrer"
+                    style={{ padding:'5px 12px', borderRadius:6, border:'none', background:'#EF4444', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', textDecoration:'none' }}>
+                    ⬇ Download MP4
+                  </a>
+                </div>
+              ) : pipeline.video?.status === 'error' ? (
+                <div style={{ padding:'10px 14px', borderTop:`1px solid ${BORD}`, fontSize:11, color:'#FAC775' }}>
+                  ⚠ Video could not be generated — {pipeline.video?.error}
+                  <button onClick={()=>onNavigate&&onNavigate('video')} style={{ marginLeft:8, background:'none', border:'none', color:ACCH, fontSize:11, cursor:'pointer', textDecoration:'underline', fontFamily:'inherit' }}>
+                    Open Video Builder →
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Affiliate link */}
+          <div style={{ background:BG2, border:`1px solid rgba(29,158,117,.3)`, borderRadius:12, marginBottom:10, overflow:'hidden' }}>
+            <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, background:'rgba(29,158,117,.06)' }}>
+              <span style={{ fontSize:12, fontWeight:700, color:ACCH }}>🔗 Affiliate Link</span>
+            </div>
+            <div style={{ padding:'12px 14px' }}>
+              {results.link ? (
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:TXT }}>{results.link.name}</div>
+                    <div style={{ fontSize:10, color:ACCH }}>Already included in your post automatically</div>
                   </div>
-                )}
-                <button onClick={autoFindProducts} disabled={autoFinding}
-                  style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: autoFinding ? 'rgba(139,92,246,.3)' : '#8B5CF6', color: 'white', fontSize: 13, fontWeight: 800, cursor: autoFinding ? 'default' : 'pointer', fontFamily: 'inherit', boxShadow: autoFinding ? 'none' : '0 3px 14px rgba(139,92,246,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  {autoFinding
-                    ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} /> {autoFindMsg}</>
-                    : '⚡ Auto-Find & Match Products to My Content'}
+                  <button onClick={()=>copy(results.link.url,'link')}
+                    style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='link'?'✓':'📋 Copy link'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize:11, color:'#FAC775', lineHeight:1.6 }}>
+                  No affiliate links in library yet — your post was generated without one.
+                  <button onClick={()=>onNavigate&&onNavigate('affiliate')}
+                    style={{ display:'block', marginTop:6, background:'none', border:'none', color:ACCH, fontSize:11, cursor:'pointer', textDecoration:'underline', fontFamily:'inherit', padding:0 }}>
+                    → Add links in Affiliate Library
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Landing page */}
+          {results.landing && (
+            <div style={{ background:BG2, border:'1px solid rgba(139,92,246,.3)', borderRadius:12, marginBottom:16, overflow:'hidden' }}>
+              <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(139,92,246,.06)' }}>
+                <span style={{ fontSize:12, fontWeight:700, color:'#A78BFA' }}>🌐 Landing Page — ready to deploy</span>
+                <button onClick={()=>downloadLanding(results.landing)}
+                  style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#8B5CF6', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  ⬇ Download HTML
                 </button>
-                <div style={{ marginTop: 8, fontSize: 10, color: TXT3, textAlign: 'center' }}>
-                  Searches by topic · saves to library · auto-inserts into posts & videos
-                </div>
               </div>
-            )}
-
-            {/* Tasks */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10 }}>Checklist</div>
-              {activeData.tasks.map((task, i) => (
-                <div key={task.id} onClick={() => toggleCheck(task.id, activeData.id)}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 9, cursor: 'pointer', marginBottom: 6, background: checks[task.id] ? `${activeData.color}12` : 'rgba(255,255,255,.03)', border: `1px solid ${checks[task.id] ? activeData.color + '40' : BORD}`, transition: 'all .15s' }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${checks[task.id] ? activeData.color : 'rgba(255,255,255,.2)'}`, background: checks[task.id] ? activeData.color : 'transparent', transition: 'all .15s' }}>
-                    {checks[task.id] && <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>✓</span>}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: TXT3, marginRight: 6 }}>{i + 1}.</span>
-                    <span style={{ fontSize: 12, color: checks[task.id] ? TXT3 : TXT2, textDecoration: checks[task.id] ? 'line-through' : 'none', lineHeight: 1.5 }}>{task.text}</span>
-                  </div>
-                </div>
-              ))}
+              <div style={{ padding:'12px 14px', fontSize:11, color:TXT2, lineHeight:1.6 }}>
+                A complete HTML landing page for <strong style={{ color:TXT }}>{selectedTopic?.label}</strong> — includes your post content, affiliate CTA button, and disclosure. Deploy to any web host or use as a link-in-bio page.
+              </div>
             </div>
+          )}
 
-            {/* Publish panel for Step 6 */}
-            {activeData.isPublish && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TXT3, textTransform: 'uppercase', letterSpacing: .5, marginBottom: 10 }}>Ready to Publish</div>
-
-                {/* Post */}
-                <div style={{ marginBottom: 8, padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#1877F2', marginBottom: 6 }}>📘 Facebook Post</div>
-                  {pubPost ? (
-                    <div>
-                      <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.6, maxHeight: 80, overflow: 'auto', marginBottom: 8, whiteSpace: 'pre-wrap' }}>
-                        {pubPost.content?.slice(0, 220)}{pubPost.content?.length > 220 ? '…' : ''}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => { navigator.clipboard.writeText(pubPost.content || '').catch(() => {}); setPubCopied('post'); setTimeout(() => setPubCopied(''), 2000); }}
-                          style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1877F2', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {pubCopied === 'post' ? '✓ Copied!' : '📋 Copy for Facebook'}
-                        </button>
-                        <button onClick={() => openTool('submitter')}
-                          style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(24,119,242,.3)', background: 'transparent', color: '#4FA3FF', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          📤 Post Submitter
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: 11, color: '#FAC775', padding: '8px 10px', background: 'rgba(245,158,11,.08)', borderRadius: 6, marginBottom: 6, lineHeight: 1.6 }}>
-                        ⚠ No posts saved yet. Here is what to do:
-                      </div>
-                      <div style={{ fontSize: 11, color: TXT3, lineHeight: 1.8 }}>
-                        1. Go to <strong style={{ color: TXT }}>Content Calendar</strong> (Step 2-3)<br/>
-                        2. Expand any day → click <strong style={{ color: TXT }}>✍️ Generate This Post</strong><br/>
-                        3. Click <strong style={{ color: TXT }}>📅 Save to Schedule</strong><br/>
-                        4. Come back here — your post will appear above
-                      </div>
-                      <button onClick={() => openTool('calendar')}
-                        style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1D9E75', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        → Go Generate a Post Now
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Video */}
-                <div style={{ marginBottom: 8, padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>🎬 Video</div>
-                  {pubVideo ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pubVideo.topic || 'Completed video'}</div>
-                        <div style={{ fontSize: 10, color: TXT3 }}>{pubVideo.result?.aspectRatio || ''} · {pubVideo.result?.clipsCount || 0} clips · Ready to upload</div>
-                      </div>
-                      <button onClick={() => openTool('video')}
-                        style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        📺 YouTube Studio
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <div style={{ fontSize: 11, color: '#FAC775', padding: '8px 10px', background: 'rgba(245,158,11,.08)', borderRadius: 6, marginBottom: 6, lineHeight: 1.6 }}>
-                        ⚠ No completed videos yet. Here is what to do:
-                      </div>
-                      <div style={{ fontSize: 11, color: TXT3, lineHeight: 1.8 }}>
-                        1. Go to <strong style={{ color: TXT }}>AI Video Engine → 🎬 Video Builder</strong><br/>
-                        2. Type your topic → click <strong style={{ color: TXT }}>▶ Create Video</strong><br/>
-                        3. Wait 3-4 minutes for it to finish<br/>
-                        4. Come back here — your video will appear above
-                      </div>
-                      <button onClick={() => openTool('video')}
-                        style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: 'none', background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        → Go Create a Video Now
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Affiliate link */}
-                <div style={{ padding: 12, background: 'rgba(255,255,255,.04)', border: `1px solid ${BORD}`, borderRadius: 9 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: ACC, marginBottom: 6 }}>🔗 Affiliate Link</div>
-                  {pubLink ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: TXT }}>{pubLink.name}</div>
-                        <div style={{ fontSize: 10, color: ACCH }}>Already included in your post automatically</div>
-                      </div>
-                      <button onClick={() => { navigator.clipboard.writeText(pubLink.url || '').catch(() => {}); setPubCopied('link'); setTimeout(() => setPubCopied(''), 2000); }}
-                        style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {pubCopied === 'link' ? '✓' : '📋 Copy'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 11, color: TXT3 }}>
-                      No links saved —
-                      <button onClick={() => openTool('affiliate')} style={{ background: 'none', border: 'none', color: ACCH, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '0 4px' }}>
-                        add one in Affiliate Library
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => openTool(activeData.tool.page)}
-                style={{ flex: 1, padding: '13px', borderRadius: 10, border: 'none', background: activeData.color, color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 3px 14px ${activeData.color}50` }}>
-                {activeData.tool.label}
+          {/* Final post actions */}
+          <div style={{ background:'rgba(24,119,242,.06)', border:'1px solid rgba(24,119,242,.2)', borderRadius:12, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#4FA3FF', marginBottom:12 }}>📤 Final step — you post it</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <button onClick={()=>copy(results.post||'','post2')}
+                style={{ padding:'12px', borderRadius:9, border:'none', background:'#1877F2', color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='post2'?'✓ Copied!':'📘 Copy & Post to Facebook'}
               </button>
-              {activeStep > 1 && (
-                <button onClick={() => goToStep(activeStep - 1)}
-                  style={{ padding: '13px 18px', borderRadius: 10, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ‹ Back
-                </button>
-              )}
-              {activeStep < 6 && (
-                <button onClick={() => goToStep(activeStep + 1)}
-                  style={{ padding: '13px 18px', borderRadius: 10, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Next ›
-                </button>
-              )}
+              <button onClick={()=>onNavigate&&onNavigate('video')}
+                style={{ padding:'12px', borderRadius:9, border:'none', background:'#EF4444', color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                📺 Upload Video to YouTube
+              </button>
+              <button onClick={()=>onNavigate&&onNavigate('submitter')}
+                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                📅 Schedule Post
+              </button>
+              <button onClick={()=>onNavigate&&onNavigate('nichroute')}
+                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                🎯 Share in NichRoute Groups
+              </button>
             </div>
-
-            {/* Reset */}
-            <button onClick={() => { setChecks({}); localStorage.setItem('cf_daily_checks', '{}'); }}
-              style={{ marginTop: 10, width: '100%', padding: '6px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-              ↺ Reset today's checklist
-            </button>
           </div>
         </div>
       )}
-          <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes progress-bar { 0%{transform:translateX(-100%)} 100%{transform:translateX(300%)} }
+      `}} />
     </div>
   );
 }
