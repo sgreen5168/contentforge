@@ -39,6 +39,10 @@ export default function Dashboard({ onNavigate }) {
   const [results, setResults]       = useState(null);
   const [copied, setCopied]         = useState('');
   const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
+  const [history, setHistory]       = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cf_cmd_history') || '[]'); } catch { return []; }
+  });
+  const [viewingSession, setViewing] = useState(null);  // null = current, or index
   const abortRef                    = useRef(false);
 
   useEffect(() => {
@@ -216,6 +220,22 @@ export default function Dashboard({ onNavigate }) {
       } catch {}
     }
 
+    // Save to session history
+    const session = {
+      id: Date.now(),
+      topic: selectedTopic,
+      date: new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }),
+      time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }),
+      post:    out.post    || null,
+      script:  out.script  || null,
+      link:    out.link    || null,
+      landing: out.landing || null,
+      videoUrl: out.videoUrl || null,
+    };
+    const newHistory = [session, ...history].slice(0, 20); // keep last 20
+    setHistory(newHistory);
+    localStorage.setItem('cf_cmd_history', JSON.stringify(newHistory));
+
     setResults(out);
     setRunning(false);
   }
@@ -273,6 +293,32 @@ export default function Dashboard({ onNavigate }) {
           </div>
         ))}
       </div>
+
+      {/* Session History */}
+      {!running && history.length > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <span>📋 Previous Sessions — click to retrieve</span>
+            <button onClick={()=>{ setHistory([]); localStorage.removeItem('cf_cmd_history'); }}
+              style={{ background:'none', border:'none', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+              Clear history
+            </button>
+          </div>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {history.slice(0,6).map((session, idx) => (
+              <button key={session.id} onClick={()=>{
+                  setResults({ post:session.post, script:session.script, link:session.link, landing:session.landing, videoUrl:session.videoUrl });
+                  setTopic(session.topic);
+                  setViewing(idx);
+                }}
+                style={{ padding:'7px 12px', borderRadius:8, cursor:'pointer', fontFamily:'inherit', textAlign:'left', border:`1px solid ${BORD}`, background: viewingSession===idx ? 'rgba(29,158,117,.1)' : 'rgba(255,255,255,.03)', transition:'all .15s' }}>
+                <div style={{ fontSize:11, fontWeight:700, color: viewingSession===idx ? ACCH : TXT }}>{session.topic?.icon} {session.topic?.label}</div>
+                <div style={{ fontSize:9, color:TXT3 }}>{session.date} · {session.time}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Topic selector */}
       {!running && !results && (
@@ -363,7 +409,7 @@ export default function Dashboard({ onNavigate }) {
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:700, color:TXT }}>✅ Everything is ready — review and post</div>
-            <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); }}
+            <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); setViewing(null); }}
               style={{ padding:'6px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
               ↺ Start over
             </button>
