@@ -122,12 +122,8 @@ export default function Dashboard({ onNavigate }) {
 
       // Auto-insert link into post
       if (link && out.post) {
-        out.post = out.post + '
-
-🔗 ' + link.name + '
-' + link.url + '
-
-#ad This post contains affiliate links.';
+        const newline = String.fromCharCode(10);
+        out.post = out.post + newline + newline + '\uD83D\uDD17 ' + link.name + newline + link.url + newline + newline + '#ad This post contains affiliate links.';
         updateStep('post', { status:'done', data: out.post });
       }
     } catch(e) {
