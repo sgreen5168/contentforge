@@ -1,6 +1,7 @@
 [build]
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
+watchPatterns = ["video-engine-only (1)/video-engine/backend/**"]
 
 [deploy]
 startCommand = "node server.js"
