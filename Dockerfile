@@ -7,11 +7,11 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy from the backend subfolder
-COPY video-engine-only\ \(1\)/video-engine/backend/package.json ./
+# Copy backend files using array syntax to handle special chars in path
+COPY ["video-engine-only (1)/video-engine/backend/package.json", "./"]
 RUN npm install --production
 
-COPY video-engine-only\ \(1\)/video-engine/backend/server.js ./
+COPY ["video-engine-only (1)/video-engine/backend/server.js", "./"]
 
 EXPOSE 8080
 
