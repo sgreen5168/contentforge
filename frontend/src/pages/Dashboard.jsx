@@ -182,33 +182,49 @@ export default function Dashboard({ onNavigate }) {
 
     if (abortRef.current) { setRunning(false); return; }
 
-    // ── Step 5: Generate landing page snippet ─────────────────────────────────
+    // ── Step 5: Create public landing page on NichRoute ─────────────────────
     updateStep('landing', { status:'running' });
     try {
-      const ctaBlock = out.link
-        ? '<a class="cta-btn" href="' + out.link.url + '" target="_blank">\u{1F449} ' + out.link.name + '</a><p class="disclosure">#ad Affiliate link — I earn a commission at no cost to you.</p>'
-        : '';
-      const postBlock = out.post
-        ? '<div class="post-preview">' + out.post.replace(/\n/g,'<br>') + '</div>'
-        : '';
-      const landingHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + topic.label + '</title>'
-        + '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0B1829;color:#E8F4F0;min-height:100vh}'
-        + '.hero{padding:60px 24px 40px;text-align:center;max-width:680px;margin:0 auto}'
-        + 'h1{font-size:28px;font-weight:700;margin-bottom:16px;line-height:1.3}'
-        + '.hook{font-size:16px;color:rgba(232,244,240,.7);margin-bottom:32px;line-height:1.6}'
-        + '.cta-btn{display:inline-block;padding:16px 36px;background:#1D9E75;color:#fff;border-radius:10px;font-size:16px;font-weight:700;text-decoration:none;margin-bottom:12px}'
-        + '.disclosure{font-size:11px;color:rgba(232,244,240,.4);margin-top:8px}'
-        + '.post-preview{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:24px;margin:32px 0;text-align:left;font-size:14px;line-height:1.7}'
-        + '</style></head><body><div class="hero">'
-        + '<h1>' + topic.label + '</h1>'
-        + '<p class="hook">' + topic.hook + '</p>'
-        + ctaBlock + postBlock
-        + '</div></body></html>';
-      out.landing = landingHtml;
-      updateStep('landing', { status:'done', data: landingHtml });
+      const landingR = await fetch(API + '/api/nichroute/create-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic:         topic.label,
+          topicId:       topic.id,
+          postContent:   out.post   || '',
+          affiliateUrl:  out.link?.url  || '',
+          affiliateName: out.link?.name || '',
+          videoUrl:      out.videoUrl   || '',
+          category:      topic.cat,
+        }),
+      });
+      const landingD = await landingR.json();
+      if (landingD.url) {
+        out.landingUrl = landingD.url;
+        out.landing    = landingD.url;
+        updateStep('landing', { status:'done', data: landingD.url });
+        // Update post to use landing page URL instead of raw affiliate link
+        if (out.post && landingD.url) {
+          const nl = String.fromCharCode(10);
+          out.post = out.post.trimEnd() + nl + nl + 'Full details here: ' + landingD.url;
+          updateStep('post', { status:'done', data: out.post });
+        }
+        throw new Error('DONE');  // skip old fallback code below
+      }
+    } catch(skipErr) {
+      if (!out.landingUrl) {
+      try {
+      // Fallback: downloadable HTML if NichRoute unavailable
+      const ctaLine = out.link ? 'Get the product: ' + out.link.url : '';
+      const fallbackHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + topic.label + '</title></head><body style="font-family:sans-serif;max-width:680px;margin:0 auto;padding:32px"><h1>' + topic.label + '</h1><p>' + (out.post||'').replace(/\n/g,'<br>') + '</p><p>' + ctaLine + '</p></body></html>';
+      out.landing = fallbackHtml;
+      out.landingUrl = null;
+      updateStep('landing', { status:'warn', data: fallbackHtml, error: 'Saved as downloadable — deploy manually' });
     } catch(e) {
       updateStep('landing', { status:'error', error: e.message });
     }
+    } // close if (!out.landingUrl)
+    } // close catch(skipErr)
 
     // Save post to scheduled
     if (out.post) {
@@ -501,13 +517,35 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ background:BG2, border:'1px solid rgba(139,92,246,.3)', borderRadius:12, marginBottom:16, overflow:'hidden' }}>
               <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(139,92,246,.06)' }}>
                 <span style={{ fontSize:12, fontWeight:700, color:'#A78BFA' }}>🌐 Landing Page — ready to deploy</span>
-                <button onClick={()=>downloadLanding(results.landing)}
-                  style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#8B5CF6', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  ⬇ Download HTML
-                </button>
+                {results.landingUrl && results.landingUrl !== 'downloaded' ? (
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={()=>copy(results.landingUrl,'landing')}
+                      style={{ padding:'5px 12px', borderRadius:6, border:'1px solid rgba(139,92,246,.3)', background:'transparent', color:'#A78BFA', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied==='landing'?'✓ Copied!':'📋 Copy URL'}
+                    </button>
+                    <a href={results.landingUrl} target="_blank" rel="noreferrer"
+                      style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#8B5CF6', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
+                      ↗ View Page
+                    </a>
+                  </div>
+                ) : (
+                  <button onClick={()=>downloadLanding(results.landing)}
+                    style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#8B5CF6', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    ⬇ Download HTML
+                  </button>
+                )}
               </div>
-              <div style={{ padding:'12px 14px', fontSize:11, color:TXT2, lineHeight:1.6 }}>
-                A complete HTML landing page for <strong style={{ color:TXT }}>{selectedTopic?.label}</strong> — includes your post content, affiliate CTA button, and disclosure. Deploy to any web host or use as a link-in-bio page.
+              <div style={{ padding:'12px 14px' }}>
+                {results.landingUrl && results.landingUrl !== 'downloaded' ? (
+                  <div>
+                    <div style={{ fontSize:12, color:ACCH, wordBreak:'break-all', marginBottom:6, fontWeight:600 }}>{results.landingUrl}</div>
+                    <div style={{ fontSize:11, color:TXT3, lineHeight:1.6 }}>Live on NichRoute — use this URL in your Facebook post, bio link, and YouTube description.</div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize:11, color:TXT2, lineHeight:1.6 }}>
+                    Landing page HTML ready to download and deploy. Contains your post, affiliate CTA, and FTC disclosure.
+                  </div>
+                )}
               </div>
             </div>
           )}
