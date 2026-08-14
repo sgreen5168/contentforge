@@ -43,6 +43,7 @@ export default function Dashboard({ onNavigate }) {
     try { return JSON.parse(localStorage.getItem('cf_cmd_history') || '[]'); } catch { return []; }
   });
   const [viewingSession, setViewing] = useState(null);  // null = current, or index
+  const [customTopic, setCustomTopic] = useState('');
   const abortRef                    = useRef(false);
 
   useEffect(() => {
@@ -298,7 +299,7 @@ export default function Dashboard({ onNavigate }) {
 
       {/* How it works strip */}
       <div style={{ display:'flex', gap:0, marginBottom:16, background:BG2, border:`1px solid ${BORD}`, borderRadius:10, overflow:'hidden' }}>
-        {[['1','Pick a topic',''],['→','',''],['2','Everything generates',''],['→','',''],['3','You review & post','']].map((s,i)=>(
+        {[['1','Type or pick a topic',''],['→','',''],['2','Post + Video + Landing page',''],['→','',''],['3','Review & publish','']].map((s,i)=>(
           <div key={i} style={{ flex:s[1]?1:0, padding:s[1]?'10px 8px':'10px 4px', textAlign:'center' }}>
             {s[0]==='→' ? <div style={{ color:TXT3, fontSize:16 }}>→</div> : (
               <>
@@ -339,7 +340,24 @@ export default function Dashboard({ onNavigate }) {
       {/* Topic selector */}
       {!running && !results && (
         <div>
-          <div style={{ fontSize:12, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:10 }}>Choose your topic for today</div>
+          {/* Free text topic input */}
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:6 }}>Type your own topic</div>
+            <div style={{ display:'flex', gap:8 }}>
+              <input value={customTopic} onChange={function(e){setCustomTopic(e.target.value);}}
+                onKeyDown={function(e){ if(e.key==='Enter'&&customTopic.trim()) setTopic({id:'custom',cat:'general',label:customTopic.trim(),icon:'✍️',hook:customTopic.trim()}); }}
+                placeholder="e.g. how to start a home bakery in 2026, meal prep for busy families..."
+                style={{ flex:1, padding:'10px 14px', borderRadius:9, border:`1px solid ${BORD}`, background:'rgba(255,255,255,.04)', color:TXT, fontSize:12, fontFamily:'inherit', outline:'none' }}
+              />
+              <button onClick={function(){if(customTopic.trim()) setTopic({id:'custom',cat:'general',label:customTopic.trim(),icon:'✍️',hook:customTopic.trim()});}}
+                disabled={!customTopic.trim()}
+                style={{ padding:'10px 18px', borderRadius:9, border:'none', background:customTopic.trim()?ACC:'rgba(29,158,117,.3)', color:'white', fontSize:12, fontWeight:700, cursor:customTopic.trim()?'pointer':'default', fontFamily:'inherit' }}>
+                Use →
+              </button>
+            </div>
+            <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>Press Enter or click Use → then click ⚡ Generate Everything</div>
+          </div>
+          <div style={{ fontSize:11, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:10 }}>Or choose a preset topic</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:16 }}>
             {TOPICS.map(t=>(
               <button key={t.id} onClick={()=>setTopic(t.id===selectedTopic?.id ? null : t)}
@@ -434,7 +452,7 @@ export default function Dashboard({ onNavigate }) {
           {/* Facebook post */}
           <div style={{ background:BG2, border:'1px solid rgba(24,119,242,.3)', borderRadius:12, marginBottom:10, overflow:'hidden' }}>
             <div style={{ padding:'10px 14px', borderBottom:`1px solid ${BORD}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(24,119,242,.06)' }}>
-              <span style={{ fontSize:12, fontWeight:700, color:'#4FA3FF' }}>📘 Facebook Post — ready to copy</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'#4FA3FF' }}>📘 Facebook Post — landing page URL included ✓</span>
               <button onClick={()=>copy(results.post||'','post')}
                 style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#1877F2', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                 {copied==='post'?'✓ Copied!':'📋 Copy Post'}
