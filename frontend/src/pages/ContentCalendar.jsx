@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 // Daily scheduled posts across home business, remote work, entrepreneurship,
 // cooking, baking, live commerce topics — Facebook-compliant, casual-professional tone
 
-const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 
 // ── Color tokens ──────────────────────────────────────────────────────────────
 const BG   = '#0B1829';
