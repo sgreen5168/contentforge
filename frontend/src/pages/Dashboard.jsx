@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 const VB_API = 'https://contentforge-production-c8d9.up.railway.app';
 
 const BG2  = '#112240';
