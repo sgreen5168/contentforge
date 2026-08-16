@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '50mb' }));
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 const jobs = new Map();
 
 async function updateJob(id, updates) {
