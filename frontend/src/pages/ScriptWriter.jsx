@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = 'https://contentforge-production-6e13.up.railway.app';
 
 const MODES    = [['topic','Topic'],['url','URL'],['affiliate','Affiliate link']];
 const STYLES   = ['UGC Story','Educational','VSL','Reel Ad','Product Review','Inspirational','Comparison','Problem/Solution'];
