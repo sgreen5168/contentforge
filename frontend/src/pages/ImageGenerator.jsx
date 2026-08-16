@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-const API = 'https://stellar-achievement-production-ea9d.up.railway.app';
+const API = 'https://contentforge-production-6e13.up.railway.app';
 
 const STYLES = [
   { id:'photorealistic', label:'Photorealistic',  icon:'📸' },
