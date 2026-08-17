@@ -102,10 +102,12 @@ export default function Dashboard({ onNavigate }) {
         }),
       });
       const d = await r.json();
-      const script = d.script?.fullScript || d.script?.hook || '';
-      if (!script) throw new Error('No script returned');
+      // Handle both response formats
+      const scriptObj = d.script || d;
+      const script = scriptObj?.fullScript || scriptObj?.script || scriptObj?.hook || d?.text || '';
+      if (!script) throw new Error('No script returned — ' + JSON.stringify(d).slice(0,100));
       out.script = script;
-      out.hook   = d.script?.hook || '';
+      out.hook   = scriptObj?.hook || '';
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
