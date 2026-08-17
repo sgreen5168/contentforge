@@ -68,14 +68,38 @@ export default function Dashboard({ onNavigate }) {
     setPipeline({});
     const out = {};
 
-    // ── Step 1: Generate Facebook post ───────────────────────────────────────
+    // ── Step 1: Match affiliate link FIRST so it flows into everything ────────
+    updateStep('link', { status:'running' });
+    try {
+      const r = await fetch(API + '/api/affiliate/match', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1 }),
+      });
+      const d = await r.json();
+      out.link = d.links?.[0] || null;
+      if (out.link) {
+        updateStep('link', { status:'done', data: out.link });
+      } else {
+        updateStep('link', { status:'warn', error:'No affiliate links saved — add links in Affiliate Library' });
+      }
+    } catch(e) {
+      updateStep('link', { status:'warn', error: e.message });
+    }
+
+    if (abortRef.current) { setRunning(false); return; }
+
+    // ── Step 2: Generate Facebook post with affiliate link woven in naturally ──
     updateStep('post', { status:'running' });
     try {
+      const affiliateInstruction = out.link
+        ? 'Naturally weave this affiliate product into the post as a recommendation. Product: "' + out.link.name + '". The product link will appear as: ' + out.link.url + '. Write the post so the product mention feels organic — not like an ad. End the post with: "Full details and resources: [LANDING_PAGE_URL]" as a placeholder.'
+        : 'End the post with: "Full details: [LANDING_PAGE_URL]" as a placeholder for the landing page link.';
+
       const r = await fetch(API + '/api/generate', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           inputMode:'topic',
-          topic: topic.label + ' — ' + topic.hook,
+          topic: topic.label + ' — ' + topic.hook + '. ' + affiliateInstruction,
           style:'Casual', platforms:['facebook'], affiliate:false,
         }),
       });
@@ -90,24 +114,26 @@ export default function Dashboard({ onNavigate }) {
 
     if (abortRef.current) { setRunning(false); return; }
 
-    // ── Step 2: Generate video script ─────────────────────────────────────────
+    // ── Step 3: Generate video script (different angle from post) ─────────────
     updateStep('script', { status:'running' });
     try {
       const r = await fetch(API + '/api/video/script', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          inputMode:'topic', topic: topic.label,
+          inputMode:'topic',
+          topic: topic.label,
           style:'Casual', persona:'ugc-creator',
           duration:'30s', platforms:['youtube'], videoType:'ugc-persona',
+          affiliateProduct: out.link?.name || '',
+          affiliateUrl: out.link?.url || '',
         }),
       });
       const d = await r.json();
-      // Handle both response formats
       const scriptObj = d.script || d;
       const script = scriptObj?.fullScript || scriptObj?.script || scriptObj?.hook || d?.text || '';
-      if (!script) throw new Error('No script returned — ' + JSON.stringify(d).slice(0,100));
+      if (!script) throw new Error('Script generation failed — check Anthropic credits');
       out.script = script;
-      out.hook   = scriptObj?.hook || '';
+      out.hook = scriptObj?.hook || '';
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
@@ -115,41 +141,14 @@ export default function Dashboard({ onNavigate }) {
 
     if (abortRef.current) { setRunning(false); return; }
 
-    // ── Step 3: Match affiliate link ──────────────────────────────────────────
-    updateStep('link', { status:'running' });
-    try {
-      const r = await fetch(API + '/api/affiliate/match', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1 }),
-      });
-      const d = await r.json();
-      const link = d.links?.[0];
-      out.link = link || null;
-      updateStep('link', { status: link ? 'done' : 'warn', data: link, error: link ? null : 'No links in library yet — add one in Affiliate Library' });
-
-      // Auto-insert link into post
-      if (link && out.post) {
-        const newline = String.fromCharCode(10);
-        out.post = out.post + newline + newline + '\uD83D\uDD17 ' + link.name + newline + link.url + newline + newline + '#ad This post contains affiliate links.';
-        updateStep('post', { status:'done', data: out.post });
-      }
-    } catch(e) {
-      updateStep('link', { status:'error', error: e.message });
-    }
-
-    if (abortRef.current) { setRunning(false); return; }
-
-    // ── Step 4: Build video via Video Builder ─────────────────────────────────
+    // ── Step 4: Build video ───────────────────────────────────────────────────
     updateStep('video', { status:'running' });
     try {
       const vbR = await fetch(VB_API + '/video/create', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          topic:  topic.label,
-          length: 30,
-          format: '9:16',
-          voice:  'nova',
-          music:  'uplifting',
+          topic: topic.label,
+          length: 30, format: '9:16', voice: 'nova', music: 'uplifting',
           affiliateUrl: out.link?.url || '',
           affiliateCTA: out.link?.name || '',
         }),
@@ -158,8 +157,6 @@ export default function Dashboard({ onNavigate }) {
       if (!vbD.id) throw new Error('Video Builder did not return a job ID');
       out.videoJobId = vbD.id;
       updateStep('video', { status:'building', data: { jobId: vbD.id } });
-
-      // Poll until done (max 5 minutes)
       let elapsed = 0;
       while (elapsed < 300) {
         await new Promise(r=>setTimeout(r,8000));
@@ -174,90 +171,84 @@ export default function Dashboard({ onNavigate }) {
           updateStep('video', { status:'done', data: pollD, url: out.videoUrl });
           break;
         }
-        if (pollD.status === 'failed') {
-          throw new Error(pollD.step || 'Video generation failed');
-        }
+        if (pollD.status === 'failed') throw new Error(pollD.step || 'Video generation failed');
       }
-      if (!out.video) updateStep('video', { status:'warn', error:'Video still processing — check Video Builder tab' });
+      if (!out.video) updateStep('video', { status:'warn', error:'Still processing — check Video Builder tab' });
     } catch(e) {
       updateStep('video', { status:'error', error: e.message });
     }
 
     if (abortRef.current) { setRunning(false); return; }
 
-    // ── Step 5: Create public landing page on NichRoute ─────────────────────
+    // ── Step 5: Create NichRoute landing page (different content from post) ───
     updateStep('landing', { status:'running' });
     try {
       const landingR = await fetch(API + '/api/nichroute/create-page', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          topic:         topic.label,
-          topicId:       topic.id,
-          postContent:   out.post   || '',
-          affiliateUrl:  out.link?.url  || '',
+          topic: topic.label, topicId: topic.id,
+          postContent: out.post || '',
+          affiliateUrl: out.link?.url || '',
           affiliateName: out.link?.name || '',
-          videoUrl:      out.videoUrl   || '',
-          category:      topic.cat,
+          videoUrl: out.videoUrl || '',
+          category: topic.cat,
         }),
       });
       const landingD = await landingR.json();
       if (landingD.url) {
         out.landingUrl = landingD.url;
-        out.landing    = landingD.url;
+        out.landing = landingD.url;
         updateStep('landing', { status:'done', data: landingD.url });
-        // Update post to use landing page URL instead of raw affiliate link
-        if (out.post && landingD.url) {
-          const nl = String.fromCharCode(10);
-          out.post = out.post.trimEnd() + nl + nl + 'Full details here: ' + landingD.url;
+
+        // Replace [LANDING_PAGE_URL] placeholder in post with real URL
+        if (out.post) {
+          out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
+          // If placeholder wasn't there, append URL at end
+          if (!out.post.includes(landingD.url)) {
+            const nl = String.fromCharCode(10);
+            out.post = out.post.trimEnd() + nl + nl + 'Full details here: ' + landingD.url;
+          }
           updateStep('post', { status:'done', data: out.post });
         }
-        throw new Error('DONE');  // skip old fallback code below
+      } else {
+        throw new Error(landingD.error || 'No URL returned from NichRoute');
       }
-    } catch(skipErr) {
-      if (!out.landingUrl) {
-      try {
-      // Fallback: downloadable HTML if NichRoute unavailable
-      const ctaLine = out.link ? 'Get the product: ' + out.link.url : '';
-      const fallbackHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + topic.label + '</title></head><body style="font-family:sans-serif;max-width:680px;margin:0 auto;padding:32px"><h1>' + topic.label + '</h1><p>' + (out.post||'').replace(/\n/g,'<br>') + '</p><p>' + ctaLine + '</p></body></html>';
+    } catch(e) {
+      console.warn('Landing page failed:', e.message);
+      // Fallback: downloadable HTML
+      const fallbackHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + topic.label + '</title></head><body style="font-family:sans-serif;max-width:680px;margin:40px auto;padding:24px"><h1>' + topic.label + '</h1><p>' + (out.post||'').replace(/
+/g,'<br>') + '</p>' + (out.link ? '<p><a href="' + out.link.url + '" style="background:#1D9E75;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px">' + (out.link.name||'Get the product') + '</a></p><p style="font-size:11px;color:#888">#ad Affiliate link</p>' : '') + '</body></html>';
       out.landing = fallbackHtml;
       out.landingUrl = null;
-      updateStep('landing', { status:'warn', data: fallbackHtml, error: 'Saved as downloadable — deploy manually' });
-    } catch(e) {
-      updateStep('landing', { status:'error', error: e.message });
+      updateStep('landing', { status:'warn', data: fallbackHtml, error: 'NichRoute unavailable — use downloadable HTML' });
     }
-    } // close if (!out.landingUrl)
-    } // close catch(skipErr)
 
-    // Save post to scheduled
+    // ── Save to history ───────────────────────────────────────────────────────
+    const session = {
+      id: Date.now(), topic, date: new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }),
+      time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }),
+      post: out.post||null, script: out.script||null, link: out.link||null,
+      landing: out.landing||null, landingUrl: out.landingUrl||null, videoUrl: out.videoUrl||null,
+    };
+    const newHistory = [session, ...history].slice(0, 20);
+    setHistory(newHistory);
+    localStorage.setItem('cf_cmd_history', JSON.stringify(newHistory));
+
+    // ── Save post to scheduled ────────────────────────────────────────────────
     if (out.post) {
       try {
         const scheduled = JSON.parse(localStorage.getItem('cf_fb_scheduled')||'[]');
         scheduled.unshift({ id: Date.now(), topic: topic.label, cat: topic.cat, content: out.post, scheduledDate: new Date().toLocaleDateString(), time: '9:00 AM' });
         localStorage.setItem('cf_fb_scheduled', JSON.stringify(scheduled.slice(0,50)));
-        setStats(s=>({...s,posts:s.posts+1}));
+        setStats(s=>({...s, posts:s.posts+1}));
       } catch {}
     }
-
-    // Save to session history
-    const session = {
-      id: Date.now(),
-      topic: selectedTopic,
-      date: new Date().toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }),
-      time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }),
-      post:    out.post    || null,
-      script:  out.script  || null,
-      link:    out.link    || null,
-      landing: out.landing || null,
-      videoUrl: out.videoUrl || null,
-    };
-    const newHistory = [session, ...history].slice(0, 20); // keep last 20
-    setHistory(newHistory);
-    localStorage.setItem('cf_cmd_history', JSON.stringify(newHistory));
 
     setResults(out);
     setRunning(false);
   }
+
+  // Placeholder to avoid duplicate
 
   function copy(text, id) {
     navigator.clipboard.writeText(text).catch(()=>{});
