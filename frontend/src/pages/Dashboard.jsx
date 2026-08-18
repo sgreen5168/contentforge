@@ -12,17 +12,29 @@ const ACC  = '#1D9E75';
 const ACCH = '#5DCAA5';
 
 const TOPICS = [
-  { id:'home-bakery',    cat:'baking',       label:'Home Bakery Business',        icon:'🧁', hook:"Starting a home bakery is simpler than most people think." },
-  { id:'wfh-income',     cat:'home-income',  label:'Earning from Home',           icon:'🏠', hook:"People are building real income from their kitchens and home offices." },
-  { id:'meal-prep',      cat:'meal-prep',    label:'Meal Prep & Food Planning',   icon:'🥗', hook:"Two hours of prep saves hours of stress all week." },
-  { id:'side-hustle',    cat:'side-hustle',  label:'Side Hustle Ideas',           icon:'💰', hook:"Most people are sitting on income they have not tapped yet." },
-  { id:'mindset',        cat:'mindset',      label:'Success Mindset',             icon:'💡', hook:"The difference between those who succeed and those who quit is smaller than you think." },
-  { id:'live-commerce',  cat:'live-commerce',label:'Live Selling on Facebook',    icon:'📱', hook:"Live selling is the fastest growing income stream right now." },
-  { id:'cooking-biz',    cat:'cooking-biz',  label:'Cooking as a Business',       icon:'🍳', hook:"Skills you take for granted are worth money to other people." },
-  { id:'niche',          cat:'niche',        label:'Finding Your Niche',          icon:'🎯', hook:"Most people try to appeal to everyone — and reach no one." },
-  { id:'entrepreneur',   cat:'entrepreneur', label:'Entrepreneurship',            icon:'🚀', hook:"The truth about starting a business nobody tells you." },
-  { id:'remote-work',    cat:'remote-work',  label:'Remote Work Tips',            icon:'💻', hook:"Working from home changed everything — but only after the right setup." },
+  { id:'home-bakery',    cat:'baking',       label:'Home Bakery Business',        icon:'🧁', hook:"Starting a home bakery is simpler than most people think.",            videoType:'educational' },
+  { id:'wfh-income',     cat:'home-income',  label:'Earning from Home',           icon:'🏠', hook:"People are building real income from their kitchens and home offices.", videoType:'educational' },
+  { id:'meal-prep',      cat:'meal-prep',    label:'Meal Prep & Food Planning',   icon:'🥗', hook:"Two hours of prep saves hours of stress all week.",                    videoType:'educational' },
+  { id:'side-hustle',    cat:'side-hustle',  label:'Side Hustle Ideas',           icon:'💰', hook:"Most people are sitting on income they have not tapped yet.",           videoType:'educational' },
+  { id:'mindset',        cat:'mindset',      label:'Success Mindset',             icon:'💡', hook:"The difference between those who succeed and those who quit is smaller than you think.", videoType:'motivational' },
+  { id:'live-commerce',  cat:'live-commerce',label:'Live Selling on Facebook',    icon:'📱', hook:"Live selling is the fastest growing income stream right now.",          videoType:'educational' },
+  { id:'cooking-biz',    cat:'cooking-biz',  label:'Cooking as a Business',       icon:'🍳', hook:"Skills you take for granted are worth money to other people.",          videoType:'educational' },
+  { id:'niche',          cat:'niche',        label:'Finding Your Niche',          icon:'🎯', hook:"Most people try to appeal to everyone — and reach no one.",             videoType:'educational' },
+  { id:'entrepreneur',   cat:'entrepreneur', label:'Entrepreneurship',            icon:'🚀', hook:"The truth about starting a business nobody tells you.",                 videoType:'motivational' },
+  { id:'remote-work',    cat:'remote-work',  label:'Remote Work Tips',            icon:'💻', hook:"Working from home changed everything — but only after the right setup.", videoType:'educational' },
+  { id:'product-demo',   cat:'product-demo', label:'Product Demo & Review',       icon:'🎁', hook:"Here is exactly why this product changed the way I work.",              videoType:'product-demo' },
+  { id:'amazon-finds',   cat:'amazon',       label:'Amazon Product Finds',        icon:'📦', hook:"These Amazon products are worth every penny — and here is why.",        videoType:'product-demo' },
+  { id:'clickbank-pick', cat:'clickbank',    label:'ClickBank Product Spotlight', icon:'💳', hook:"This digital product solved a problem I did not know I had.",           videoType:'product-demo' },
+  { id:'health-wellness',cat:'health',       label:'Health & Wellness',           icon:'💪', hook:"Small daily habits that actually make a difference to your health.",     videoType:'educational' },
+  { id:'financial-tips', cat:'finance',      label:'Financial Freedom Tips',      icon:'💵', hook:"The money habits nobody teaches you in school.",                        videoType:'educational' },
 ];
+
+// High-view video strategies built into each topic type
+const VIDEO_STRATEGIES = {
+  'educational': 'Use a curiosity hook in the first 3 seconds. Reveal a surprising fact or challenge a common belief. Use numbered tips (Top 3, 5 mistakes etc). End with a clear next step.',
+  'motivational': 'Open with an emotional story or struggle. Build to a turning point. End with an inspiring call to action that feels personal.',
+  'product-demo': 'Start with the PROBLEM not the product. Show the before state. Demo the product solving it. End with social proof and where to get it.',
+};
 
 const PIPELINE_STEPS = [
   { id:'post',    icon:'📝', label:'Facebook post',    color:'#1877F2' },
@@ -91,8 +103,11 @@ export default function Dashboard({ onNavigate }) {
     // ── Step 2: Generate Facebook post with affiliate link woven in naturally ──
     updateStep('post', { status:'running' });
     try {
+      const isProductDemo = topic.videoType === 'product-demo';
       const affiliateInstruction = out.link
-        ? 'Naturally weave this affiliate product into the post as a recommendation. Product: "' + out.link.name + '". The product link will appear as: ' + out.link.url + '. Write the post so the product mention feels organic — not like an ad. End the post with: "Full details and resources: [LANDING_PAGE_URL]" as a placeholder.'
+        ? (isProductDemo
+            ? 'This is a PRODUCT DEMO post. Write it as an honest review/demo of: "' + out.link.name + '". Start with the problem it solves. Describe the experience of using it. Include 3 specific benefits. Be conversational and authentic — not salesy. End with: "Get it here: [LANDING_PAGE_URL]" as a placeholder.'
+            : 'Naturally weave this affiliate product into the post as a recommendation. Product: "' + out.link.name + '". Write the post so the product mention feels organic — not like an ad. End with: "Full details: [LANDING_PAGE_URL]" as a placeholder.')
         : 'End the post with: "Full details: [LANDING_PAGE_URL]" as a placeholder for the landing page link.';
 
       const r = await fetch(API + '/api/generate', {
@@ -117,13 +132,14 @@ export default function Dashboard({ onNavigate }) {
     // ── Step 3: Generate video script (different angle from post) ─────────────
     updateStep('script', { status:'running' });
     try {
+      const videoStrategy = VIDEO_STRATEGIES[topic.videoType] || VIDEO_STRATEGIES['educational'];
       const r = await fetch(API + '/api/video/script', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           inputMode:'topic',
-          topic: topic.label,
+          topic: topic.label + '. Strategy: ' + videoStrategy + (topic.videoType === 'product-demo' ? ' This is a product demo — focus on the product benefits and how it solves problems.' : ''),
           style:'Casual', persona:'ugc-creator',
-          duration:'30s', platforms:['youtube'], videoType:'ugc-persona',
+          duration:'30s', platforms:['youtube'], videoType: topic.videoType || 'ugc-persona',
           affiliateProduct: out.link?.name || '',
           affiliateUrl: out.link?.url || '',
         }),
