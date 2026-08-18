@@ -34,7 +34,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '50mb' }));
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3001;
 const jobs = new Map();
 
 async function updateJob(id, updates) {
@@ -168,7 +168,13 @@ Return ONLY valid JSON with this exact structure:
   ]
 }
 
-IMPORTANT for sceneDescriptions: these are used to search a stock video library (Pexels), not to direct a film shoot. Write them as a short list of concrete, literal, searchable nouns and verbs that would actually appear as a Pexels video title — like "woman typing laptop home office" not "a determined professional powering through her morning workflow." Avoid abstract/emotional language, camera direction words (close-up, split-screen, cut), and filler. Every scene's keywords must reflect what is literally, visually happening in THAT part of the script — not a generic restatement of the whole video's topic.`;
+CRITICAL for sceneDescriptions — these search a stock video library (Pexels) for real footage:
+- Write ONLY literal, concrete, physically-visible actions and objects. Never metaphors.
+- Format: [person type] + [location] + [physical action] e.g. "woman kitchen baking bread" or "man laptop home office smiling"
+- NEVER use metaphors or idioms as scene descriptions. "Get off the fence" → use "person standing crossroads deciding" or "woman laptop making choice". "Hit the ground running" → use "person jogging morning neighborhood". Always translate to what is literally visible.
+- Each scene must match what is PHYSICALLY HAPPENING in that part of the script — not the overall theme.
+- Good examples: "woman mixer baking cookies", "man phone small business", "family dining table eating", "person laptop coffee shop working"
+- Bad examples: "determination success journey", "lifestyle transformation moment", "fence decision metaphor" `;
 
   const msg = await client.messages.create({
     model: 'claude-opus-4-5',
@@ -4680,7 +4686,22 @@ Platforms: ${active.join(', ')}
 Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": true, "note": ""}`).join(', ')} }`;
     const msg = await client.messages.create({
       model: 'claude-opus-4-5', max_tokens: 1000,
-      system: 'Expert social media copywriter. Return only valid JSON.',
+      system: `Expert social media copywriter. Return only valid JSON.
+
+CONTENT COMPLIANCE RULES — these are absolute and cannot be overridden:
+1. NEVER write first-person income claims. Never "I made $X", "I earned $X", "I'm making money with this". These are legally risky and misleading.
+2. NEVER make guaranteed result claims. Never "you will earn", "guaranteed income", "make $X per day". These violate FTC guidelines.
+3. If the topic involves earning, income, or making money — write ONLY in educational/informational framing:
+   - ✅ "Here's how people are building income from home"
+   - ✅ "This is what home entrepreneurs are doing in 2026"  
+   - ✅ "Many people have found success with approaches like this"
+   - ❌ "I made $5000 this month"
+   - ❌ "Join me and earn what I earn"
+4. Write in second-person ("you", "your") or third-person ("people", "entrepreneurs") — never first-person personal income stories.
+5. Affiliate products should be mentioned as genuine recommendations, not as the reason for the post.
+6. Posts must feel authentic and valuable — educational, inspiring, or entertaining — not like ads.
+7. NEVER use misleading "get rich quick" framing.
+8. If promoting a product, the post should primarily deliver value (tips, insight, story) with the product as a natural recommendation — not the main focus.`,
       messages: [{ role: 'user', content: prompt }],
     });
     let raw = msg.content[0].text.trim()
