@@ -4320,11 +4320,12 @@ app.post('/api/nichroute/create-page', async (req, res) => {
     // Build landing page HTML
     const affBlock = affiliateUrl
       ? `<div style="text-align:center;margin:32px 0">
+           <p style="font-size:15px;color:#555;margin-bottom:16px;line-height:1.6;">Ready to learn more? Click below to explore the full details and see if this is the right fit for you.</p>
            <a href="${affiliateUrl}" target="_blank" rel="nofollow sponsored"
              style="display:inline-block;padding:16px 40px;background:#1D9E75;color:#fff;border-radius:10px;font-size:16px;font-weight:700;text-decoration:none;">
-             👉 ${affiliateName || 'Get the recommended product'}
+             Learn More →
            </a>
-           <p style="font-size:11px;color:#888;margin-top:8px;">#ad — Affiliate link. I earn a small commission at no extra cost to you.</p>
+           <p style="font-size:11px;color:#999;margin-top:12px;">#ad — This page contains affiliate links. I may earn a small commission at no extra cost to you.</p>
          </div>` : '';
 
     const videoBlock = videoUrl
@@ -4688,20 +4689,25 @@ Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": 
       model: 'claude-opus-4-5', max_tokens: 1000,
       system: `Expert social media copywriter. Return only valid JSON.
 
-CONTENT COMPLIANCE RULES — these are absolute and cannot be overridden:
-1. NEVER write first-person income claims. Never "I made $X", "I earned $X", "I'm making money with this". These are legally risky and misleading.
-2. NEVER make guaranteed result claims. Never "you will earn", "guaranteed income", "make $X per day". These violate FTC guidelines.
-3. If the topic involves earning, income, or making money — write ONLY in educational/informational framing:
-   - ✅ "Here's how people are building income from home"
-   - ✅ "This is what home entrepreneurs are doing in 2026"  
-   - ✅ "Many people have found success with approaches like this"
-   - ❌ "I made $5000 this month"
-   - ❌ "Join me and earn what I earn"
-4. Write in second-person ("you", "your") or third-person ("people", "entrepreneurs") — never first-person personal income stories.
-5. Affiliate products should be mentioned as genuine recommendations, not as the reason for the post.
-6. Posts must feel authentic and valuable — educational, inspiring, or entertaining — not like ads.
-7. NEVER use misleading "get rich quick" framing.
-8. If promoting a product, the post should primarily deliver value (tips, insight, story) with the product as a natural recommendation — not the main focus.`,
+HOOK RULES — the first line is everything:
+- NEVER start with "Okay so", "Okay,", "So I", "So here", "Hey guys", or any filler
+- Use one of these hook styles: Question | Bold statement | Surprising number | Contrast | Empathy | Scene-setting
+- Example good hooks: "Most people get this completely wrong.", "What if your kitchen could pay your bills?", "Three things nobody tells you about working from home."
+
+CONTENT RULES:
+- NEVER leave placeholder text like [problem], [result], [benefit], [product name] — always write the real content based on the topic provided
+- If a product name is generic (e.g. "ClickBank Product 1"), describe it by its benefit category instead — "this self-help program", "this home business course", "this productivity system"
+- Never write "buy now" — use "learn more", "check it out", "find out how", "explore it here", or similar
+- Posts must feel like authentic, valuable content a real person would write — not a template
+- The affiliate product (if any) is a natural recommendation at the end — not the main focus
+- Lead with value: a tip, insight, relatable moment, or surprising fact
+
+COMPLIANCE RULES:
+- NEVER write first-person income claims: "I made $X", "I earned $X"
+- NEVER write guaranteed results: "you will earn", "guaranteed income"
+- Income topics must use educational framing: "here's how people are doing this", "this is what works for home entrepreneurs"
+- Write in second-person ("you/your") or third-person ("people/entrepreneurs") — not first-person income stories
+- Posts must comply with Facebook, FTC, and platform advertising guidelines`,
       messages: [{ role: 'user', content: prompt }],
     });
     let raw = msg.content[0].text.trim()
