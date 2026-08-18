@@ -272,6 +272,26 @@ export default function Dashboard({ onNavigate }) {
 
   // Placeholder to avoid duplicate
 
+  function readAloud(text, type) {
+    if (!text) return;
+    if (!window.speechSynthesis) { alert('Read Aloud requires Chrome or Edge browser.'); return; }
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/https?:\/\/[^\s]+/g, 'link').replace(/[#*_~`]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = readSpeed;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    utterance.onend = () => setReading(null);
+    utterance.onerror = () => setReading(null);
+    setReading(type);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopReading() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setReading(null);
+  }
+
   function copy(text, id) {
     navigator.clipboard.writeText(text).catch(()=>{});
     setCopied(id);
