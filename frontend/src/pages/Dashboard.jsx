@@ -54,7 +54,14 @@ export default function Dashboard({ onNavigate }) {
   const [history, setHistory]       = useState(() => {
     try { return JSON.parse(localStorage.getItem('cf_cmd_history') || '[]'); } catch { return []; }
   });
-  const [viewingSession, setViewing] = useState(null);  // null = current, or index
+  const [viewingSession, setViewing] = useState(null);
+  const [editingPost, setEditingPost]     = useState(false);
+  const [editedPost, setEditedPost]       = useState('');
+  const [editingScript, setEditingScript] = useState(false);
+  const [editedScript, setEditedScript]   = useState('');
+  const [reading, setReading]             = useState(null); // 'post' | 'script' | null
+  const [readSpeed, setReadSpeed]         = useState(1.0);
+  const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const abortRef                    = useRef(false);
 
@@ -466,8 +473,37 @@ export default function Dashboard({ onNavigate }) {
                 {copied==='post'?'✓ Copied!':'📋 Copy Post'}
               </button>
             </div>
-            <div style={{ padding:'12px 14px', fontSize:12, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', maxHeight:180, overflow:'auto' }}>
-              {results.post || 'Post generation failed — try again'}
+            {editingPost ? (
+              <div style={{ padding:'12px 14px' }}>
+                <textarea value={editedPost} onChange={e=>setEditedPost(e.target.value)} rows={8}
+                  style={{ width:'100%', background:'rgba(22,61,106,.5)', border:'1px solid rgba(24,119,242,.3)', borderRadius:8, padding:10, fontSize:12, color:TXT, fontFamily:'inherit', outline:'none', resize:'vertical', lineHeight:1.7, boxSizing:'border-box' }} />
+                <div style={{ display:'flex', gap:6, marginTop:8 }}>
+                  <button onClick={()=>{ results.post=editedPost; setEditingPost(false); }}
+                    style={{ padding:'6px 14px', borderRadius:6, border:'none', background:'#1877F2', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>✓ Save</button>
+                  <button onClick={()=>setEditingPost(false)}
+                    style={{ padding:'6px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding:'12px 14px', fontSize:12, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', maxHeight:180, overflow:'auto' }}>
+                {results.post || 'Post generation failed — try again'}
+              </div>
+            )}
+            <div style={{ padding:'8px 14px', borderTop:`1px solid ${BORD}`, display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+              <button onClick={()=>{ if(reading==='post') stopReading(); else readAloud(results.post||'','post'); }}
+                style={{ padding:'5px 12px', borderRadius:6, border:'none', background:reading==='post'?'#EF4444':'rgba(24,119,242,.2)', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {reading==='post' ? '⏹ Stop' : '🔊 Read Post Aloud'}
+              </button>
+              {reading==='post' && [0.8,0.9,1.0,1.1,1.2,1.3].map(s=>(
+                <button key={s} onClick={()=>{ setReadSpeed(s); stopReading(); setTimeout(()=>readAloud(results.post||'','post'),100); }}
+                  style={{ padding:'3px 7px', borderRadius:4, border:`1px solid ${readSpeed===s?'#1877F2':BORD}`, background:readSpeed===s?'rgba(24,119,242,.2)':'transparent', color:readSpeed===s?'#4FA3FF':TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                  {s}x
+                </button>
+              ))}
+              <button onClick={()=>{ setEditedPost(results.post||''); setEditingPost(true); }}
+                style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
+                ✏️ Edit Post
+              </button>
             </div>
           </div>
 
@@ -487,8 +523,47 @@ export default function Dashboard({ onNavigate }) {
                   </button>
                 </div>
               </div>
-              <div style={{ padding:'12px 14px', fontSize:11, color:TXT2, lineHeight:1.7, maxHeight:120, overflow:'auto' }}>
-                {results.script}
+              {editingScript ? (
+                <div style={{ padding:'12px 14px' }}>
+                  <textarea value={editedScript} onChange={e=>setEditedScript(e.target.value)} rows={6}
+                    style={{ width:'100%', background:'rgba(22,61,106,.5)', border:'1px solid rgba(239,68,68,.3)', borderRadius:8, padding:10, fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', resize:'vertical', lineHeight:1.7 }} />
+                  <div style={{ display:'flex', gap:6, marginTop:8 }}>
+                    <button onClick={()=>{ if(results) results.script=editedScript; setEditingScript(false); }}
+                      style={{ padding:'6px 14px', borderRadius:6, border:'none', background:'#EF4444', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      ✓ Save edits
+                    </button>
+                    <button onClick={()=>setEditingScript(false)}
+                      style={{ padding:'6px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding:'12px 14px', fontSize:11, color:TXT2, lineHeight:1.7, maxHeight:120, overflow:'auto' }}>
+                  {results.script}
+                </div>
+              )}
+              {/* Script reader controls */}
+              <div style={{ padding:'8px 14px', borderTop:`1px solid ${BORD}`, display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+                <button onClick={()=>{ if(reading==='script') stopReading(); else readAloud(results.script||'','script'); }}
+                  style={{ padding:'5px 12px', borderRadius:6, border:'none', background: reading==='script'?'#EF4444':'rgba(239,68,68,.2)', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  {reading==='script' ? '⏹ Stop' : '🔊 Read Script Aloud'}
+                </button>
+                {reading==='script' && (
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:TXT3 }}>Speed:</span>
+                    {[0.8,0.9,1.0,1.1,1.2,1.3].map(s=>(
+                      <button key={s} onClick={()=>{ setReadSpeed(s); stopReading(); setTimeout(()=>readAloud(results.script||'','script'),100); }}
+                        style={{ padding:'3px 7px', borderRadius:4, border:`1px solid ${readSpeed===s?'#EF4444':BORD}`, background: readSpeed===s?'rgba(239,68,68,.2)':'transparent', color: readSpeed===s?'#FC8F8F':TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                        {s}x
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={()=>{ setEditedScript(results.script||''); setEditingScript(true); }}
+                  style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
+                  ✏️ Edit Script
+                </button>
               </div>
               {results.video ? (
                 <div style={{ padding:'10px 14px', borderTop:`1px solid ${BORD}`, display:'flex', alignItems:'center', gap:10 }}>
