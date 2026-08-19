@@ -225,11 +225,16 @@ export default function Dashboard({ onNavigate }) {
 
         // Replace [LANDING_PAGE_URL] placeholder in post with real URL
         if (out.post) {
-          out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
-          // If placeholder wasn't there, append URL at end
-          if (!out.post.includes(landingD.url)) {
+          if (out.post.includes('[LANDING_PAGE_URL]')) {
+            out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
+          } else {
             const nl = String.fromCharCode(10);
-            out.post = out.post.trimEnd() + nl + nl + 'Full details here: ' + landingD.url;
+            out.post = out.post.trimEnd() + nl + nl + 'Full details: ' + landingD.url;
+          }
+          // Remove the raw affiliate link that was added separately - keep only landing page URL
+          if (out.link && out.link.url) {
+            out.post = out.post.split(nl + out.link.url).join('');
+            out.post = out.post.split(nl + out.link.name + nl + out.link.url).join('');
           }
           updateStep('post', { status:'done', data: out.post });
         }
