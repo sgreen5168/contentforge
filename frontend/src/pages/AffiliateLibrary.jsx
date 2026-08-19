@@ -35,7 +35,10 @@ export default function AffiliateLibrary() {
   const [filterPlat, setFilterPlat] = useState('all');
   const [apiStatus, setApiStatus]   = useState(null);
   const [searching, setSearching]   = useState(false);
-  const [bulkMode, setBulkMode]     = useState(false);
+  const [bulkMode, setBulkMode]       = useState(false);
+  const [suggesting, setSuggesting]   = useState(false);
+  const [suggestTopic, setSuggestTopic] = useState('');
+  const [suggestResult, setSuggestResult] = useState(null);
   const [bulkText, setBulkText]     = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkResult, setBulkResult] = useState('');
@@ -156,6 +159,24 @@ export default function AffiliateLibrary() {
     setBulkMode(false);
     setBulkText('');
     loadLinks();
+  }
+
+  async function aiSuggestProducts() {
+    if (!suggestTopic.trim()) return;
+    setSuggesting(true); setSuggestResult(null);
+    try {
+      const r = await fetch(`${API}/api/affiliate/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: suggestTopic, category: 'general', count: 6 }),
+      });
+      const d = await r.json();
+      setSuggestResult(d);
+      loadLinks();
+    } catch(e) {
+      setSuggestResult({ error: e.message });
+    }
+    setSuggesting(false);
   }
 
   async function liveSearch() {
@@ -374,6 +395,66 @@ export default function AffiliateLibrary() {
           style={{ display:'inline-block', marginTop:12, padding:'8px 20px', borderRadius:8, background:'#F59E0B', color:'white', fontSize:12, fontWeight:700, textDecoration:'none' }}>
           Open ClickBank Marketplace ↗
         </a>
+      </div>
+
+      {/* AI Product Suggester */}
+      <div style={{ ...card(), padding:16, marginBottom:16, border:'1px solid rgba(139,92,246,.2)', background:'rgba(139,92,246,.03)' }}>
+        <div style={{ fontSize:13, fontWeight:700, color:TXT, marginBottom:4 }}>🤖 AI Product Finder</div>
+        <div style={{ fontSize:11, color:TXT3, marginBottom:10, lineHeight:1.5 }}>
+          Tell Claude what your content is about — it will suggest the best affiliate products from ClickBank and Amazon, find the right search terms, and save them to your library automatically.
+        </div>
+        <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+          <input value={suggestTopic} onChange={function(e){setSuggestTopic(e.target.value);}}
+            onKeyDown={function(e){if(e.key==='Enter') aiSuggestProducts();}}
+            placeholder="e.g. home bakery business, meal prep, success mindset..."
+            style={{ flex:1, background:'rgba(22,61,106,.5)', border:`1px solid ${BORD}`, borderRadius:8, padding:'8px 12px', fontSize:12, color:TXT, fontFamily:'inherit', outline:'none' }} />
+          <button onClick={aiSuggestProducts} disabled={suggesting || !suggestTopic.trim()}
+            style={{ padding:'8px 16px', borderRadius:8, border:'none', background:suggesting||!suggestTopic.trim()?'rgba(139,92,246,.3)':'#8B5CF6', color:'white', fontSize:12, fontWeight:700, cursor:suggesting||!suggestTopic.trim()?'default':'pointer', fontFamily:'inherit', flexShrink:0 }}>
+            {suggesting ? '🤖 Finding…' : '🤖 Find Products'}
+          </button>
+        </div>
+
+        {suggestResult && !suggestResult.error && (
+          <div style={{ padding:'10px 12px', background:'rgba(29,158,117,.08)', border:'1px solid rgba(29,158,117,.2)', borderRadius:8, fontSize:11, lineHeight:1.6 }}>
+            <div style={{ color:ACCH, fontWeight:700, marginBottom:6 }}>✅ {suggestResult.saved} products found and saved</div>
+            <div style={{ color:TXT3, marginBottom:8 }}>
+              These are saved as suggestions with marketplace search links. Click each one to find the real hoplink, then paste it back using the Edit button.
+            </div>
+            {(suggestResult.suggestions?.clickbank || []).map(function(p, i) {
+              return (
+                <div key={i} style={{ marginBottom:6, padding:'6px 8px', background:'rgba(255,255,255,.04)', borderRadius:6 }}>
+                  <span style={{ color:TXT, fontWeight:600 }}>💰 {p.name}</span>
+                  <span style={{ color:TXT3, marginLeft:6 }}>— {p.whyItFits}</span>
+                  <a href={'https://accounts.clickbank.com/marketplace.htm'} target="_blank" rel="noreferrer"
+                    style={{ marginLeft:8, color:'#818CF8', fontSize:10, textDecoration:'none' }}>
+                    Search ClickBank ↗
+                  </a>
+                </div>
+              );
+            })}
+            {(suggestResult.suggestions?.amazon || []).map(function(p, i) {
+              const searchUrl = 'https://www.amazon.com/s?tag=nichroute-20&k=' + encodeURIComponent(p.searchTerms || p.name);
+              return (
+                <div key={i} style={{ marginBottom:6, padding:'6px 8px', background:'rgba(255,255,255,.04)', borderRadius:6 }}>
+                  <span style={{ color:TXT, fontWeight:600 }}>📦 {p.name}</span>
+                  <span style={{ color:TXT3, marginLeft:6 }}>— {p.whyItFits}</span>
+                  <a href={searchUrl} target="_blank" rel="noreferrer"
+                    style={{ marginLeft:8, color:'#FB923C', fontSize:10, textDecoration:'none' }}>
+                    Find on Amazon ↗
+                  </a>
+                </div>
+              );
+            })}
+            <div style={{ marginTop:8, fontSize:10, color:TXT3 }}>
+              After clicking each link → get the hoplink → paste into Bulk Import below → your real links replace these suggestions.
+            </div>
+          </div>
+        )}
+        {suggestResult?.error && (
+          <div style={{ padding:'8px', background:'rgba(226,75,74,.08)', borderRadius:6, fontSize:11, color:'#F09595' }}>
+            ❌ {suggestResult.error}
+          </div>
+        )}
       </div>
 
       {/* Bulk Importer */}
