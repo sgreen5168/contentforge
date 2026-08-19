@@ -583,6 +583,23 @@ export default function AffiliateLibrary() {
                       style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                       📋 Copy
                     </button>
+                    <button onClick={() => {
+                      const newName = prompt('Product name:', link.name);
+                      if (!newName) return;
+                      const newKw = prompt('Keywords (comma separated):', (link.keywords||[]).join(', '));
+                      const newCat = prompt('Category:', link.category||'general');
+                      fetch(`${API}/api/affiliate/links/${link.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newName, keywords: (newKw||'').split(',').map(k=>k.trim()).filter(Boolean), category: newCat||'general' }),
+                      }).then(() => loadLinks()).catch(() => {
+                        // Fallback: remove and re-add with new name
+                        deleteLink(link.id);
+                      });
+                    }}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid rgba(99,102,241,.3)`, background: 'transparent', color: '#818CF8', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ✏️ Edit
+                    </button>
                     <button onClick={() => deleteLink(link.id)}
                       style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                       🗑 Remove
