@@ -1,4 +1,3 @@
-// ContentForge Backend v2.2
 import express from 'express';
 
 // ── FFmpeg path resolver ──────────────────────────────────────────────────────
@@ -4443,7 +4442,7 @@ app.post('/api/affiliate/suggest', async (req, res) => {
   const clerkId = process.env.CLICKBANK_CLERK_ID || 'sgreen5168';
 
   try {
-    // Use Claude to identify the best affiliate product categories and keywords
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
       model: 'claude-opus-4-5',
