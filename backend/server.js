@@ -4429,6 +4429,116 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
   }
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AI AFFILIATE PRODUCT SUGGESTER
+// Uses Claude to suggest the best affiliate products for any topic
+// Saves them as placeholders with real ClickBank marketplace search URLs
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/affiliate/suggest', async (req, res) => {
+  const { topic, category, count = 5 } = req.body;
+  if (!topic) return res.status(400).json({ error: 'topic required' });
+
+  const clerkId = process.env.CLICKBANK_CLERK_ID || 'sgreen5168';
+
+  try {
+    // Use Claude to identify the best affiliate product categories and keywords
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: 'claude-opus-4-5',
+      max_tokens: 800,
+      system: `You are an affiliate marketing expert. Given a content topic, suggest the most relevant affiliate product categories and specific search terms that would perform well on ClickBank and Amazon.
+
+Return ONLY valid JSON in this exact format:
+{
+  "clickbank": [
+    {
+      "name": "Product Name Here",
+      "searchTerms": "keywords to search on ClickBank marketplace",
+      "category": "business|health|selfhelp|relationships|spiritual|green",
+      "whyItFits": "one sentence explanation",
+      "marketplaceUrl": "https://marketplace.clickbank.com/?cbtype=affiliate#sortField=POPULARITY&language=ENGLISH&dynamicPage=false&categoryPath=CATEGORIES_PATH",
+      "keywords": ["keyword1", "keyword2", "keyword3"]
+    }
+  ],
+  "amazon": [
+    {
+      "name": "Product Type Here", 
+      "searchTerms": "what to search on Amazon",
+      "whyItFits": "one sentence explanation",
+      "amazonSearchUrl": "https://www.amazon.com/s?tag=nichroute-20&k=SEARCH+TERMS",
+      "keywords": ["keyword1", "keyword2", "keyword3"]
+    }
+  ]
+}`,
+      messages: [{ role: 'user', content: `Topic: "${topic}"
+Category: "${category || 'general'}"
+Suggest ${count} affiliate products total (mix of ClickBank and Amazon) that would be genuinely useful to someone interested in this topic.` }],
+    });
+
+    let suggestions;
+    try {
+      const text = response.content[0].text;
+      const clean = text.replace(/```json|```/g, '').trim();
+      suggestions = JSON.parse(clean);
+    } catch(e) {
+      return res.status(500).json({ error: 'Failed to parse AI suggestions' });
+    }
+
+    // Auto-save as pending links with marketplace search URLs
+    // These are NOT hoplinks yet — they guide the user to find and import real ones
+    const saved = [];
+
+    for (const product of (suggestions.clickbank || [])) {
+      const id = 'suggest_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+      const link = {
+        id,
+        name: product.name,
+        url: product.marketplaceUrl || 'https://accounts.clickbank.com/marketplace.htm',
+        platform: 'clickbank',
+        category: product.category || category || 'general',
+        keywords: product.keywords || [],
+        description: product.whyItFits + ' | Search: "' + product.searchTerms + '"',
+        status: 'pending', // needs real hoplink
+        searchTerms: product.searchTerms,
+        isPending: true,
+      };
+      affiliateLinks.set(id, link);
+      saved.push(link);
+    }
+
+    for (const product of (suggestions.amazon || [])) {
+      const searchParam = encodeURIComponent(product.searchTerms || product.name);
+      const id = 'suggest_amz_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+      const link = {
+        id,
+        name: product.name,
+        url: 'https://www.amazon.com/s?tag=nichroute-20&k=' + searchParam,
+        platform: 'amazon',
+        category: category || 'general',
+        keywords: product.keywords || [],
+        description: product.whyItFits + ' | Search on Amazon: "' + product.searchTerms + '"',
+        status: 'pending',
+        searchTerms: product.searchTerms,
+        isPending: true,
+      };
+      affiliateLinks.set(id, link);
+      saved.push(link);
+    }
+
+    res.json({
+      suggestions,
+      saved: saved.length,
+      message: saved.length + ' product suggestions saved. Click the links to find real hoplinks on each platform.',
+      pending: saved,
+    });
+
+  } catch(e) {
+    console.error('Affiliate suggest error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
