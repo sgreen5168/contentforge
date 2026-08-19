@@ -276,15 +276,28 @@ export default function Dashboard({ onNavigate }) {
     if (!text) return;
     if (!window.speechSynthesis) { alert('Read Aloud requires Chrome or Edge browser.'); return; }
     window.speechSynthesis.cancel();
-    const cleanText = text.replace(/https?:\/\/[^\s]+/g, 'link').replace(/[#*_~`]/g, '').trim();
+    // Clean text for natural reading
+    const cleanText = text
+      .split('\n').map(line => line
+        .replace(/[#*_`]/g, '')
+        .replace(/https\S*/g, '')
+      ).join(' ').replace(/  +/g, ' ').trim();
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = readSpeed;
-    utterance.pitch = 1.0;
+    // Use a natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang === 'en-US' && v.name.includes('Natural'))
+      || voices.find(v => v.lang === 'en-US' && v.name.includes('Google'))
+      || voices.find(v => v.lang === 'en-US')
+      || voices[0];
+    if (preferred) utterance.voice = preferred;
+    utterance.rate  = readSpeed;
+    utterance.pitch = 1.05;  // slightly warmer
     utterance.volume = 1.0;
     utterance.onend = () => setReading(null);
     utterance.onerror = () => setReading(null);
     setReading(type);
-    window.speechSynthesis.speak(utterance);
+    // Small delay to let voice load
+    setTimeout(() => window.speechSynthesis.speak(utterance), 100);
   }
 
   function stopReading() {
@@ -671,25 +684,67 @@ export default function Dashboard({ onNavigate }) {
             </div>
           )}
 
-          {/* Final post actions */}
-          <div style={{ background:'rgba(24,119,242,.06)', border:'1px solid rgba(24,119,242,.2)', borderRadius:12, padding:16 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:'#4FA3FF', marginBottom:12 }}>📤 Final step — you post it</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {/* Step-by-step publish checklist */}
+          <div style={{ background:'rgba(29,158,117,.05)', border:'1px solid rgba(29,158,117,.2)', borderRadius:12, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:ACCH, marginBottom:14 }}>📤 How to Publish — follow these steps in order</div>
+
+            {/* Step 1 */}
+            <div style={{ marginBottom:12, padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:ACCH, marginBottom:6 }}>Step 1 — Copy the Facebook post</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
+                The post already contains your landing page URL. Copy it and paste directly into Facebook. No raw affiliate link — just the landing page URL at the end.
+              </div>
               <button onClick={()=>copy(results.post||'','post2')}
-                style={{ padding:'12px', borderRadius:9, border:'none', background:'#1877F2', color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                {copied==='post2'?'✓ Copied!':'📘 Copy & Post to Facebook'}
+                style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#1877F2', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='post2'?'✓ Copied!':'📋 Copy Post for Facebook'}
               </button>
+            </div>
+
+            {/* Step 2 */}
+            <div style={{ marginBottom:12, padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#FC8F8F', marginBottom:6 }}>Step 2 — Upload the video to YouTube</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
+                Click YouTube Studio below. Upload your downloaded MP4. The AI will write your title, description, and tags — your affiliate link goes directly in the YouTube description (allowed on YouTube).
+              </div>
               <button onClick={()=>onNavigate&&onNavigate('video')}
-                style={{ padding:'12px', borderRadius:9, border:'none', background:'#EF4444', color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                📺 Upload Video to YouTube
+                style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                📺 Open YouTube Studio
               </button>
+            </div>
+
+            {/* Step 3 */}
+            {results.landingUrl && results.landingUrl !== 'downloaded' && (
+              <div style={{ marginBottom:12, padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#A78BFA', marginBottom:6 }}>Step 3 — Share the landing page link</div>
+                <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
+                  This is your live NichRoute page. Share it in Facebook groups, put it in your bio link, or post it in NichRoute communities. It has your affiliate CTA button already embedded.
+                </div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={()=>copy(results.landingUrl,'landingfinal')}
+                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(139,92,246,.3)', background:'transparent', color:'#A78BFA', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='landingfinal'?'✓ Copied!':'📋 Copy Landing Page URL'}
+                  </button>
+                  <a href={results.landingUrl} target="_blank" rel="noreferrer"
+                    style={{ padding:'8px 14px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, textDecoration:'none' }}>
+                    ↗ View Live Page
+                  </a>
+                  <button onClick={()=>onNavigate&&onNavigate('nichroute')}
+                    style={{ padding:'8px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                    🎯 Share in NichRoute Groups
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4 */}
+            <div style={{ padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#4FA3FF', marginBottom:6 }}>Step 4 — Schedule for later (optional)</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
+                Save the post to your scheduler to post at the best time — 9am or 7pm typically get the most reach on Facebook.
+              </div>
               <button onClick={()=>onNavigate&&onNavigate('submitter')}
-                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                📅 Schedule Post
-              </button>
-              <button onClick={()=>onNavigate&&onNavigate('nichroute')}
-                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-                🎯 Share in NichRoute Groups
+                style={{ padding:'8px 16px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                📅 Open Post Submitter
               </button>
             </div>
           </div>
