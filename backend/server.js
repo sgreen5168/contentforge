@@ -3738,6 +3738,21 @@ app.delete('/api/affiliate/links/:id', (req, res) => {
   res.json({ deleted: true });
 });
 
+app.put('/api/affiliate/links/:id', (req, res) => {
+  const link = affiliateLinks.get(req.params.id);
+  if (!link) return res.status(404).json({ error: 'Link not found' });
+  const { name, keywords, category, description } = req.body;
+  const updated = {
+    ...link,
+    name:        name        || link.name,
+    keywords:    keywords    || link.keywords,
+    category:    category    || link.category,
+    description: description || link.description,
+  };
+  affiliateLinks.set(req.params.id, updated);
+  res.json(updated);
+});
+
 // ── Auto-match links to a topic ───────────────────────────────────────────────
 app.post('/api/affiliate/match', async (req, res) => {
   try {
