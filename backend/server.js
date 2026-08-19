@@ -4479,10 +4479,34 @@ Suggest ${count} affiliate products total (mix of ClickBank and Amazon) that wou
     let suggestions;
     try {
       const text = response.content[0].text;
-      const clean = text.replace(/```json|```/g, '').trim();
-      suggestions = JSON.parse(clean);
+      // Try multiple parsing strategies
+      let clean = text.replace(/```json|```/g, '').trim();
+      
+      // Strategy 1: direct parse
+      try { suggestions = JSON.parse(clean); } catch {}
+      
+      // Strategy 2: find JSON object in text
+      if (!suggestions) {
+        const match = clean.match(/\{[\s\S]*\}/);
+        if (match) { try { suggestions = JSON.parse(match[0]); } catch {} }
+      }
+      
+      // Strategy 3: build fallback suggestions from text
+      if (!suggestions) {
+        console.warn('Could not parse AI JSON, using fallback. Raw:', clean.slice(0, 200));
+        suggestions = {
+          clickbank: [
+            { name: topic + ' Course', searchTerms: topic + ' training', category: category || 'general', whyItFits: 'Directly relevant to ' + topic, keywords: [topic] },
+            { name: topic + ' Blueprint', searchTerms: topic + ' system', category: category || 'general', whyItFits: 'Comprehensive guide for ' + topic, keywords: [topic] },
+          ],
+          amazon: [
+            { name: topic + ' Book', searchTerms: topic + ' book bestseller', whyItFits: 'Educational resource on ' + topic, keywords: [topic] },
+            { name: topic + ' Starter Kit', searchTerms: topic + ' supplies kit', whyItFits: 'Physical products for ' + topic, keywords: [topic] },
+          ],
+        };
+      }
     } catch(e) {
-      return res.status(500).json({ error: 'Failed to parse AI suggestions' });
+      return res.status(500).json({ error: 'Suggestion failed: ' + e.message });
     }
 
     // Auto-save as pending links with marketplace search URLs
