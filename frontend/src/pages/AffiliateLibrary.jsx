@@ -37,6 +37,7 @@ export default function AffiliateLibrary() {
   const [searching, setSearching]   = useState(false);
   const [bulkMode, setBulkMode]       = useState(false);
   const [suggesting, setSuggesting]   = useState(false);
+  const [showGuide, setShowGuide]     = useState(false);
   const [suggestTopic, setSuggestTopic] = useState('');
   const [suggestResult, setSuggestResult] = useState(null);
   const [bulkText, setBulkText]     = useState('');
@@ -397,6 +398,49 @@ export default function AffiliateLibrary() {
         </a>
       </div>
 
+      {/* Affiliate Search Guide */}
+      <div style={{ ...card(), padding:0, marginBottom:16, overflow:'hidden' }}>
+        <button onClick={()=>setShowGuide(!showGuide)}
+          style={{ width:'100%', padding:'12px 16px', background:'transparent', border:'none', cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'space-between', color:TXT }}>
+          <span style={{ fontSize:13, fontWeight:700 }}>📋 Affiliate Search Guide — what to search for each topic</span>
+          <span style={{ fontSize:12, color:TXT3 }}>{showGuide ? '▲ Hide' : '▼ Show'}</span>
+        </button>
+        {showGuide && (
+          <div style={{ borderTop:`1px solid ${BORD}`, padding:'12px 16px' }}>
+            <div style={{ fontSize:11, color:TXT3, marginBottom:10 }}>Use these search terms on ClickBank marketplace and Amazon to find matching affiliate products for each content topic.</div>
+            <div style={{ display:'grid', gap:6 }}>
+              {[
+                { topic:'Success Mindset 💡', cb:'manifestation · self help · law of attraction', amz:'mindset books · habit tracker · journal planner' },
+                { topic:'Earning from Home 🏠', cb:'work from home · home business blueprint', amz:'home office setup · desk organizer · webcam' },
+                { topic:'Side Hustle Ideas 💰', cb:'affiliate marketing · passive income', amz:'side hustle books · budget planner · laptop stand' },
+                { topic:'Health & Wellness 💪', cb:'weight loss · keto diet · intermittent fasting', amz:'fitness tracker · resistance bands · water bottle' },
+                { topic:'Meal Prep & Food 🥗', cb:'meal planning · nutrition guide · smoothie', amz:'meal prep containers · food scale · instant pot' },
+                { topic:'Home Bakery 🧁', cb:'home business blueprint · food business', amz:'stand mixer · baking pans · bakery packaging' },
+                { topic:'Financial Freedom 💵', cb:'stock market · wealth building · investing', amz:'personal finance books · budget planner' },
+                { topic:'Remote Work 💻', cb:'freelance writing · virtual assistant', amz:'standing desk · ring light · blue light glasses' },
+                { topic:'Live Selling 📱', cb:'ecommerce · dropshipping · social selling', amz:'ring light · phone tripod · microphone' },
+                { topic:'Entrepreneur 🚀', cb:'online business startup · digital marketing', amz:'business books · whiteboard · planner notebook' },
+                { topic:'Product Demo 🎁', cb:'affiliate marketing training', amz:'any product — use SiteStripe on the product page' },
+                { topic:'Finding Niche 🎯', cb:'niche profit · blogging · content marketing', amz:'camera · microphone · lighting kit' },
+                { topic:'Cooking Business 🍳', cb:'food business secrets · recipe ebook', amz:'chef knife set · food containers · vacuum sealer' },
+              ].map(function(r,i) {
+                return (
+                  <div key={i} style={{ padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:7, border:`1px solid ${BORD}` }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:TXT, marginBottom:3 }}>{r.topic}</div>
+                    <div style={{ fontSize:10, color:TXT3 }}><span style={{ color:ACCH }}>CB: </span>{r.cb}</div>
+                    <div style={{ fontSize:10, color:TXT3 }}><span style={{ color:'#F59E0B' }}>AMZ: </span>{r.amz}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ marginTop:10, fontSize:10, color:TXT3, lineHeight:1.5 }}>
+              ClickBank: marketplace.clickbank.com → search → Promote → sgreen5168 → Generate Hoplinks<br/>
+              Amazon: amazon.com → find product → SiteStripe Text button at top → copy amzn.to link
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* AI Product Suggester */}
       <div style={{ ...card(), padding:16, marginBottom:16, border:'1px solid rgba(139,92,246,.2)', background:'rgba(139,92,246,.03)' }}>
         <div style={{ fontSize:13, fontWeight:700, color:TXT, marginBottom:4 }}>🤖 AI Product Finder</div>
@@ -667,14 +711,15 @@ export default function AffiliateLibrary() {
                     <button onClick={() => {
                       const newName = prompt('Product name:', link.name);
                       if (!newName) return;
+                      const newUrl = prompt('Affiliate URL (paste real hoplink):', link.url);
+                      if (!newUrl) return;
                       const newKw = prompt('Keywords (comma separated):', (link.keywords||[]).join(', '));
                       const newCat = prompt('Category:', link.category||'general');
                       fetch(`${API}/api/affiliate/links/${link.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: newName, keywords: (newKw||'').split(',').map(k=>k.trim()).filter(Boolean), category: newCat||'general' }),
+                        body: JSON.stringify({ name: newName, url: newUrl, keywords: (newKw||'').split(',').map(k=>k.trim()).filter(Boolean), category: newCat||'general' }),
                       }).then(() => loadLinks()).catch(() => {
-                        // Fallback: remove and re-add with new name
                         deleteLink(link.id);
                       });
                     }}
