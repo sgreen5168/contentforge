@@ -78,6 +78,7 @@ export default function Dashboard({ onNavigate }) {
   const [readSpeed, setReadSpeed]         = useState(1.0);
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
+  const [showTopicGuide, setShowTopicGuide] = useState(null); // topic id or null
   const abortRef                    = useRef(false);
 
   useEffect(() => {
