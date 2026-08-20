@@ -4333,7 +4333,12 @@ app.post('/api/nichroute/create-page', async (req, res) => {
     const slug = slugBase + '-' + suffix;
 
     // Build landing page HTML
-    const affBlock = affiliateUrl
+    // Only use affiliate URL if it's a real hoplink, not a marketplace page
+    const isRealHoplink = affiliateUrl && 
+      (affiliateUrl.includes('hop.clickbank.net') || 
+       affiliateUrl.includes('amzn.to') || 
+       affiliateUrl.includes('amazon.com/dp'));
+    const affBlock = isRealHoplink
       ? `<div style="text-align:center;margin:32px 0">
            <p style="font-size:15px;color:#555;margin-bottom:16px;line-height:1.6;">Ready to learn more? Click below to explore the full details and see if this is the right fit for you.</p>
            <a href="${affiliateUrl}" target="_blank" rel="nofollow sponsored"
@@ -4412,7 +4417,12 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
 
       if (error2) {
         console.error('Landing page save error:', error.message, error2.message);
-        return res.status(500).json({ error: error.message });
+        // Both tables failed - return helpful error with slug so frontend knows what happened
+        return res.status(500).json({ 
+          error: 'articles table: ' + error.message + ' | content table: ' + error2.message,
+          slug, // return slug anyway so user knows what to try
+          attempted: true
+        });
       }
 
       const pageUrl = 'https://nichroute.com/content.html?slug=' + (data2.slug || slug);
