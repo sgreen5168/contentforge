@@ -4391,10 +4391,12 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
 </html>`;
 
     // Save to NichRoute Supabase submissions table (what content.html reads)
+    // NichRoute renders its own template — save plain text content, not HTML
+    const plainBody = (postContent || topic).slice(0, 2000);
     const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
-      body: pageHtml,
+      body: plainBody,
       niche: category || 'general',
       affiliate_url: affiliateUrl || null,
       content_type: 'landing_page',
