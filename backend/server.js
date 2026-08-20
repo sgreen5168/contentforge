@@ -3741,13 +3741,15 @@ app.delete('/api/affiliate/links/:id', (req, res) => {
 app.put('/api/affiliate/links/:id', (req, res) => {
   const link = affiliateLinks.get(req.params.id);
   if (!link) return res.status(404).json({ error: 'Link not found' });
-  const { name, keywords, category, description } = req.body;
+  const { name, url, keywords, category, description } = req.body;
   const updated = {
     ...link,
     name:        name        || link.name,
+    url:         url         || link.url,
     keywords:    keywords    || link.keywords,
     category:    category    || link.category,
     description: description || link.description,
+    isPending:   url && (url.includes('hop.clickbank.net') || url.includes('amzn.to')) ? false : link.isPending,
   };
   affiliateLinks.set(req.params.id, updated);
   res.json(updated);
@@ -4388,50 +4390,29 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
 </body>
 </html>`;
 
-    // Save to NichRoute Supabase articles table
-    const { data, error } = await db.from('articles').insert([{
+    // Save to NichRoute Supabase submissions table (what content.html reads)
+    const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
-      content: pageHtml,
-      excerpt: (postContent || topic).slice(0, 200),
-      category: category || 'general',
+      body: pageHtml,
+      niche: category || 'general',
       affiliate_url: affiliateUrl || null,
-      source: 'contentforge',
-      published: true,
+      content_type: 'landing_page',
       created_at: new Date().toISOString(),
     }]).select('id, slug').single();
 
     if (error) {
-      // Try alternate table name
-      const { data: data2, error: error2 } = await db.from('content').insert([{
+      console.error('Landing page save error:', error.message);
+      return res.status(500).json({ 
+        error: 'submissions table: ' + error.message,
         slug,
-        title: topic,
-        body: pageHtml,
-        excerpt: (postContent || topic).slice(0, 200),
-        category: category || 'general',
-        affiliate_url: affiliateUrl || null,
-        source: 'contentforge',
-        published: true,
-        created_at: new Date().toISOString(),
-      }]).select('id, slug').single();
-
-      if (error2) {
-        console.error('Landing page save error:', error.message, error2.message);
-        // Both tables failed - return helpful error with slug so frontend knows what happened
-        return res.status(500).json({ 
-          error: 'articles table: ' + error.message + ' | content table: ' + error2.message,
-          slug, // return slug anyway so user knows what to try
-          attempted: true
-        });
-      }
-
-      const pageUrl = 'https://nichroute.com/content.html?slug=' + (data2.slug || slug);
-      return res.json({ url: pageUrl, slug: data2.slug || slug, id: data2.id });
+        attempted: true
+      });
     }
 
-    const pageUrl = 'https://nichroute.com/content.html?slug=' + (data.slug || slug);
+    const pageUrl = 'https://nichroute.com/content.html?slug=' + (data?.slug || slug);
     console.log('✅ Landing page created:', pageUrl);
-    res.json({ url: pageUrl, slug: data.slug || slug, id: data.id });
+    res.json({ url: pageUrl, slug: data?.slug || slug, id: data?.id });
 
   } catch(e) {
     console.error('Landing page error:', e.message);
