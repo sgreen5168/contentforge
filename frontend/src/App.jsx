@@ -803,6 +803,60 @@ export default function App() {
           {page === 'affiliate'  && <AffiliateLibrary />}
           {page === 'amazon'    && <AmazonPicker />}
           {page === 'nichroute'  && (
+            <div style={{ padding:'32px 24px', maxWidth:700, margin:'0 auto', fontFamily:'inherit' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+                <span style={{ fontSize:32 }}>🎯</span>
+                <div>
+                  <div style={{ fontSize:20, fontWeight:800, color:'#E8F4F0' }}>NichRoute</div>
+                  <div style={{ fontSize:12, color:'rgba(232,244,240,.5)' }}>Landing pages · Group distribution · Content publishing</div>
+                </div>
+              </div>
+
+              {/* Quick actions */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+                <a href="https://nichroute.com/dashboard.html" target="_blank" rel="noreferrer"
+                  style={{ padding:'16px', borderRadius:10, background:'rgba(29,158,117,.1)', border:'1px solid rgba(29,158,117,.3)', color:'#E8F4F0', textDecoration:'none', display:'block' }}>
+                  <div style={{ fontSize:20, marginBottom:6 }}>🏠</div>
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:2 }}>NichRoute Dashboard</div>
+                  <div style={{ fontSize:11, color:'rgba(232,244,240,.5)' }}>Manage your content and groups</div>
+                </a>
+                <a href="https://nichroute.com/content.html" target="_blank" rel="noreferrer"
+                  style={{ padding:'16px', borderRadius:10, background:'rgba(139,92,246,.1)', border:'1px solid rgba(139,92,246,.3)', color:'#E8F4F0', textDecoration:'none', display:'block' }}>
+                  <div style={{ fontSize:20, marginBottom:6 }}>📄</div>
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:2 }}>View Landing Pages</div>
+                  <div style={{ fontSize:11, color:'rgba(232,244,240,.5)' }}>See all your published pages</div>
+                </a>
+              </div>
+
+              {/* How it connects */}
+              <div style={{ padding:'16px', borderRadius:10, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', marginBottom:16 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#E8F4F0', marginBottom:10 }}>🔗 How ContentForge connects to NichRoute</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {[
+                    ['⚡', 'Generate content in Command Center', 'A landing page is automatically created on NichRoute'],
+                    ['📝', 'Facebook post is generated', 'The NichRoute landing page URL replaces [LANDING_PAGE_URL]'],
+                    ['🔗', 'Affiliate link is matched', 'Embedded as Learn More → button on the landing page'],
+                    ['📺', 'Video is built', 'Affiliate CTA burned into final 5 seconds'],
+                  ].map(function(s,i) {
+                    return (
+                      <div key={i} style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                        <span style={{ fontSize:16, flexShrink:0 }}>{s[0]}</span>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:600, color:'#E8F4F0' }}>{s[1]}</div>
+                          <div style={{ fontSize:11, color:'rgba(232,244,240,.5)' }}>{s[2]}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ fontSize:11, color:'rgba(232,244,240,.4)', textAlign:'center' }}>
+                NichRoute opens in a new tab — keep both open side by side for the best workflow
+              </div>
+            </div>
+          )}
+          {false && (
             <div style={{ padding:40, maxWidth:600, margin:'0 auto', textAlign:'center', fontFamily:'inherit' }}>
               <div style={{ fontSize:48, marginBottom:16 }}>🎯</div>
               <div style={{ fontSize:22, fontWeight:700, color:'#E8F4F0', marginBottom:8 }}>NichRoute Dashboard v9.19</div>
