@@ -240,17 +240,20 @@ export default function Dashboard({ onNavigate }) {
         updateStep('landing', { status:'done', data: landingD.url });
 
         // Replace [LANDING_PAGE_URL] placeholder in post with real URL
-        if (out.post) {
+        if (out.post && landingD.url) {
+          const nl = String.fromCharCode(10);
+          // Clean any duplicate content first
+          const halfLen = Math.floor(out.post.length / 2);
+          const firstHalf = out.post.slice(0, halfLen);
+          const secondHalf = out.post.slice(halfLen);
+          if (secondHalf.trim() === firstHalf.trim()) {
+            out.post = firstHalf.trim();
+          }
+          // Replace placeholder or append URL
           if (out.post.includes('[LANDING_PAGE_URL]')) {
             out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
-          } else {
-            const nl = String.fromCharCode(10);
+          } else if (!out.post.includes('nichroute.com')) {
             out.post = out.post.trimEnd() + nl + nl + 'Full details: ' + landingD.url;
-          }
-          // Remove the raw affiliate link that was added separately - keep only landing page URL
-          if (out.link && out.link.url) {
-            out.post = out.post.split(nl + out.link.url).join('');
-            out.post = out.post.split(nl + out.link.name + nl + out.link.url).join('');
           }
           updateStep('post', { status:'done', data: out.post });
         }
