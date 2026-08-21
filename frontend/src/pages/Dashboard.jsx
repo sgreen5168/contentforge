@@ -258,15 +258,16 @@ export default function Dashboard({ onNavigate }) {
           updateStep('post', { status:'done', data: out.post });
         }
       } else {
-        throw new Error(landingD.error || 'No URL returned from NichRoute');
+        throw new Error(landingD.error || 'No URL returned. Response: ' + JSON.stringify(landingD).slice(0,200));
       }
     } catch(e) {
-      console.warn('Landing page failed:', e.message);
-      // Fallback: downloadable HTML
-      const fallbackHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + topic.label + '</title></head><body style="font-family:sans-serif;max-width:680px;margin:40px auto;padding:24px"><h1>' + topic.label + '</h1><p>' + (out.post||'').split('\n').join('<br>') + '</p>' + (out.link ? '<p><a href="' + out.link.url + '" style="background:#1D9E75;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px">' + (out.link.name||'Get the product') + '</a></p><p style="font-size:11px;color:#888">#ad Affiliate link</p>' : '') + '</body></html>';
-      out.landing = fallbackHtml;
-      out.landingUrl = null;
-      updateStep('landing', { status:'warn', data: fallbackHtml, error: 'NichRoute unavailable — use downloadable HTML' });
+      console.error('Landing page error:', e.message);
+      updateStep('landing', { status:'error', error: 'Landing page failed: ' + e.message });
+      // Still try to replace placeholder with a note
+      if (out.post && out.post.includes('[LANDING_PAGE_URL]')) {
+        out.post = out.post.replace('[LANDING_PAGE_URL]', '[Landing page creation failed — retry]');
+        updateStep('post', { status:'done', data: out.post });
+      }
     }
 
     // ── Save to history ───────────────────────────────────────────────────────
