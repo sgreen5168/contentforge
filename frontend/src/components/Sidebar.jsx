@@ -12,6 +12,7 @@ const NAV = [
   { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
   { id:'calendar',     label:'Content Calendar', icon:'📅', section:'Insights' },
   { id:'affiliate',    label:'Affiliate Library', icon:'🔗', section:'Insights' },
+  { id:'amazon',       label:'Amazon Picker',     icon:'📦', section:'Insights', badge:'New' },
   { id:'nichroute',    label:'NichRoute',         icon:'🎯', section:'Insights', badge:'v9.19' },
   { id:'scriptwriter', label:'Script Writer',    icon:'✦',  section:'Content' },
   { id:'landing',   label:'Landing Page Builder', icon:'🚀', section:'Content' },
