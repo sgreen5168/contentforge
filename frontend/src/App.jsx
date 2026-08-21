@@ -5,6 +5,7 @@ import Composer from './pages/Composer.jsx';
 import VideoEngine from './pages/VideoEngine.jsx';
 import ContentCalendar from './pages/ContentCalendar.jsx';
 import AffiliateLibrary from './pages/AffiliateLibrary.jsx';
+import AmazonPicker from './pages/AmazonPicker.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
@@ -800,6 +801,7 @@ export default function App() {
           {page === 'compliance' && <Compliance />}
           {page === 'calendar'   && <ContentCalendar />}
           {page === 'affiliate'  && <AffiliateLibrary />}
+          {page === 'amazon'    && <AmazonPicker />}
           {page === 'nichroute'  && (
             <div style={{ padding:40, maxWidth:600, margin:'0 auto', textAlign:'center', fontFamily:'inherit' }}>
               <div style={{ fontSize:48, marginBottom:16 }}>🎯</div>
@@ -818,6 +820,10 @@ export default function App() {
                 <div style={{ fontSize:11, color:'rgba(232,244,240,.6)', lineHeight:1.7, marginBottom:12 }}>
                   Your affiliate links sync automatically between both platforms via the shared Supabase database. Links you save in NichRoute appear in ContentForge's Affiliate Library and get auto-inserted into your posts.
                 </div>
+                <a href="#" onClick={function(e){ e.preventDefault(); window.dispatchEvent(new CustomEvent('cf-navigate', {detail:'amazon'})); }}
+                  style={navLink(page==='amazon')} title="Amazon Product Picker">
+                  📦 Amazon Picker<span style={badge('New')}>New</span>
+                </a>
                 <a href="#" onClick={function(e){ e.preventDefault(); window.dispatchEvent(new CustomEvent('cf-navigate', {detail:'affiliate'})); }}
                   style={{ fontSize:11, color:'#5DCAA5', textDecoration:'none', fontWeight:600 }}>
                   → Go to Affiliate Library to sync links
