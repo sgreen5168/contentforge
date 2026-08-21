@@ -78,6 +78,10 @@ function buildLink(asin) {
   return "https://www.amazon.com/dp/" + asin + "/?tag=" + ASSOCIATE_TAG;
 }
 
+function buildSearchLink(name) {
+  return "https://www.amazon.com/s?k=" + encodeURIComponent(name) + "&tag=" + ASSOCIATE_TAG;
+}
+
 export default function AmazonPicker({ onNavigate }) {
   const [selected, setSelected]   = useState([]);
   const [copied, setCopied]       = useState('');
@@ -190,9 +194,9 @@ export default function AmazonPicker({ onNavigate }) {
                         style={{ flex:1, padding:"5px 0", borderRadius:6, border:`1px solid ${BORD}`, background:"transparent", color:TXT3, fontSize:10, cursor:"pointer", fontFamily:"inherit" }}>
                         {copied===product.asin ? "✓ Copied!" : "📋 Copy Link"}
                       </button>
-                      <a href={buildLink(product.asin)} target="_blank" rel="noreferrer"
+                      <a href={buildSearchLink(product.name)} target="_blank" rel="noreferrer"
                         style={{ flex:1, padding:"5px 0", borderRadius:6, border:"none", background:"rgba(255,153,0,.15)", color:"#FFA500", fontSize:10, fontWeight:600, textDecoration:"none", textAlign:"center" }}>
-                        View on Amazon ↗
+                        Find on Amazon ↗
                       </a>
                     </div>
                   </div>
