@@ -222,6 +222,7 @@ export default function Dashboard({ onNavigate }) {
     // ── Step 5: Create NichRoute landing page (different content from post) ───
     updateStep('landing', { status:'running' });
     try {
+      console.log('Landing page: calling API...');
       const landingR = await fetch(API + '/api/nichroute/create-page', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -233,8 +234,11 @@ export default function Dashboard({ onNavigate }) {
           category: topic.cat,
         }),
       });
+      console.log('Landing page: response status', landingR.status);
       const landingD = await landingR.json();
+      console.log('Landing page: response data', JSON.stringify(landingD).slice(0,200));
       if (landingD.url) {
+        console.log('Landing page: URL received', landingD.url);
         out.landingUrl = landingD.url;
         out.landing = landingD.url;
         updateStep('landing', { status:'done', data: landingD.url });
