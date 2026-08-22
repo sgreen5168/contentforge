@@ -259,8 +259,11 @@ export default function Dashboard({ onNavigate }) {
             out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
             console.log('Post after replacement:', out.post.slice(-100));
           } else if (!out.post.includes('nichroute.com')) {
+            const nl = String.fromCharCode(10);
             out.post = out.post.trimEnd() + nl + nl + 'Full details: ' + landingD.url;
           }
+          // Force React to re-render the post immediately with the landing page URL
+          setResults(prev => prev ? { ...prev, post: out.post, landingUrl: landingD.url, landing: landingD.url } : out);
           updateStep('post', { status:'done', data: out.post });
         }
       } else {
