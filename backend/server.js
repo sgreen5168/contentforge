@@ -4336,14 +4336,25 @@ app.post('/api/nichroute/create-page', async (req, res) => {
 
     // Build landing page HTML
     // Only use affiliate URL if it's a real hoplink, not a marketplace page
-    const isRealHoplink = affiliateUrl && 
-      (affiliateUrl.includes('hop.clickbank.net') || 
-       affiliateUrl.includes('amzn.to') || 
-       affiliateUrl.includes('amazon.com/dp'));
+    // For Amazon /dp/ links, convert to search URL which is more reliable
+    let finalAffUrl = affiliateUrl;
+    if (affiliateUrl && affiliateUrl.includes('amazon.com/dp/')) {
+      const asin = affiliateUrl.match(/\/dp\/([A-Z0-9]+)/)?.[1];
+      const tag = affiliateUrl.match(/tag=([^&]+)/)?.[1] || 'nichroute-20';
+      if (asin) {
+        // Use search URL with product name for reliability
+        finalAffUrl = 'https://www.amazon.com/s?k=' + encodeURIComponent(affiliateName || asin) + '&tag=' + tag;
+      }
+    }
+    const isRealHoplink = finalAffUrl && 
+      (finalAffUrl.includes('hop.clickbank.net') || 
+       finalAffUrl.includes('amzn.to') || 
+       finalAffUrl.includes('amazon.com/s') ||
+       finalAffUrl.includes('amazon.com/dp'));
     const affBlock = isRealHoplink
       ? `<div style="text-align:center;margin:32px 0">
            <p style="font-size:15px;color:#555;margin-bottom:16px;line-height:1.6;">Ready to learn more? Click below to explore the full details and see if this is the right fit for you.</p>
-           <a href="${affiliateUrl}" target="_blank" rel="nofollow sponsored"
+           <a href="${finalAffUrl}" target="_blank" rel="nofollow sponsored"
              style="display:inline-block;padding:16px 40px;background:#1D9E75;color:#fff;border-radius:10px;font-size:16px;font-weight:700;text-decoration:none;">
              Learn More →
            </a>
