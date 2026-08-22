@@ -254,8 +254,10 @@ export default function Dashboard({ onNavigate }) {
             out.post = firstHalf.trim();
           }
           // Replace placeholder or append URL
+          console.log('Post includes placeholder:', out.post.includes('[LANDING_PAGE_URL]'));
           if (out.post.includes('[LANDING_PAGE_URL]')) {
             out.post = out.post.replace('[LANDING_PAGE_URL]', landingD.url);
+            console.log('Post after replacement:', out.post.slice(-100));
           } else if (!out.post.includes('nichroute.com')) {
             out.post = out.post.trimEnd() + nl + nl + 'Full details: ' + landingD.url;
           }
