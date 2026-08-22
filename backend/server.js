@@ -4403,7 +4403,13 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
 
     // Save to NichRoute Supabase submissions table (what content.html reads)
     // NichRoute renders its own template — save plain text content, not HTML
-    const plainBody = (postContent || topic).slice(0, 2000);
+    // Build the final page URL first so we can replace the placeholder
+    const tempUrl = 'https://nichroute.com/content.html?slug=' + slug;
+    const cleanedPost = (postContent || topic)
+      .replace('[LANDING_PAGE_URL]', tempUrl)
+      .replace('[landing page url]', tempUrl)
+      .slice(0, 2000);
+    const plainBody = cleanedPost;
     const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
