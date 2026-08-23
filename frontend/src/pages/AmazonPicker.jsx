@@ -74,8 +74,9 @@ const CATALOG = [
   },
 ];
 
-function buildLink(asin) {
-  return "https://www.amazon.com/dp/" + asin + "/?tag=" + ASSOCIATE_TAG;
+function buildLink(asin, name) {
+  // Use search URL — always works, never 404s
+  return "https://www.amazon.com/s?k=" + encodeURIComponent(name) + "&tag=" + ASSOCIATE_TAG;
 }
 
 function buildSearchLink(name) {
@@ -96,7 +97,7 @@ export default function AmazonPicker({ onNavigate }) {
   }
 
   function copyLink(asin, name) {
-    navigator.clipboard.writeText(buildLink(asin));
+    navigator.clipboard.writeText(buildLink(asin, name));
     setCopied(asin);
     setTimeout(() => setCopied(''), 2000);
   }
