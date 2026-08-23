@@ -119,10 +119,14 @@ export default function AffiliateLibrary() {
     if (!bulkText.trim()) return;
     setBulkSaving(true); setBulkResult('');
     // Extract all URLs from pasted text
-    const urlPattern = new RegExp('https?://[^\\s<>"]+hop\.clickbank\.net[^\\s<>"]*', 'gi');
-    const urls = [...new Set(bulkText.match(urlPattern) || [])];
+    const allMatches = bulkText.match(/https?:\/\/[^\s<>"]+/gi) || [];
+    const urls = [...new Set(allMatches)].filter(function(u) {
+      return u.includes('hop.clickbank.net') || u.includes('amzn.to') ||
+             (u.includes('amazon.com') && (u.includes('tag=') || u.includes('/dp/'))) ||
+             u.includes('awin1.com') || u.includes('shareasale.com');
+    });
     if (urls.length === 0) {
-      setBulkResult('❌ No ClickBank hoplinks found — make sure URLs contain hop.clickbank.net');
+      setBulkResult('❌ No affiliate links found — paste ClickBank hoplinks, Amazon amzn.to, or Awin links');
       setBulkSaving(false); return;
     }
     let saved = 0;
@@ -139,17 +143,19 @@ export default function AffiliateLibrary() {
       else if (healthKw.some(function(k){return context.includes(k);})) category = 'health';
       else if (mindsetKw.some(function(k){return context.includes(k);})) category = 'mindset';
       else if (ecommKw.some(function(k){return context.includes(k);})) category = 'side-hustle';
+      const platform = url.includes('hop.clickbank.net') ? 'clickbank' :
+                       (url.includes('amzn.to') || url.includes('amazon.com')) ? 'amazon' :
+                       url.includes('awin1.com') ? 'awin' : 'other';
+      const name = platform === 'amazon' ? 'Amazon Product ' + (saved+1) :
+                   platform === 'clickbank' ? 'ClickBank Product ' + (saved+1) : 'Affiliate Link ' + (saved+1);
       try {
         const r = await fetch(`${API}/api/affiliate/links`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: 'ClickBank Product ' + (saved + 1),
-            url,
-            platform: 'clickbank',
-            category,
-            keywords: category,
-            description: 'Imported from ClickBank — edit name and keywords',
+            name, url, platform, category,
+            keywords: [category],
+            description: 'Imported from ' + platform + ' — edit name and keywords',
           }),
         });
         if (r.ok) saved++;
