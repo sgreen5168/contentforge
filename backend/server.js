@@ -4457,15 +4457,42 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
 </body>
 </html>`;
 
-    // Save to NichRoute Supabase submissions table (what content.html reads)
-    // NichRoute renders its own template — save plain text content, not HTML
+    // Generate a DIFFERENT landing page body from the post
+    // The post hooks — the landing page closes with deeper value + product tie-in
+    let landingBody = '';
+    try {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const landingClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const landingResponse = await landingClient.messages.create({
+        model: 'claude-opus-4-5', max_tokens: 600,
+        system: `You write landing page body content that is DIFFERENT from the social media post that brought people here. 
+Your job: go deeper, provide more value, naturally connect to the affiliate product.
+Rules:
+- Write 150-250 words of helpful, specific content on the topic
+- Different angle from the post — more detailed, more actionable
+- Naturally mention the product as a helpful tool (not a hard sell)
+- Use second person (you/your) 
+- End with a gentle call to action: "Check it out below" or "Worth exploring if you want to go deeper"
+- NEVER use "cottage food laws" — say "home kitchen food selling rules" instead
+- NEVER use first-person product claims
+- Tone: warm, knowledgeable friend giving real advice`,
+        messages: [{ role: 'user', content: `Topic: "${topic}"
+Affiliate product: "${affiliateName || 'a helpful resource'}"
+Write landing page body content that goes deeper than this social post and naturally connects to the product:
+
+${(postContent||'').slice(0,500)}` }],
+      });
+      landingBody = landingResponse.content[0].text.trim();
+    } catch(e) {
+      console.warn('Landing page AI content failed, using post:', e.message);
+      landingBody = (postContent || topic).slice(0, 800);
+    }
+
     // Build the final page URL first so we can replace the placeholder
     const tempUrl = 'https://nichroute.com/content.html?slug=' + slug;
-    const cleanedPost = (postContent || topic)
+    const plainBody = landingBody
       .replace('[LANDING_PAGE_URL]', tempUrl)
-      .replace('[landing page url]', tempUrl)
-      .slice(0, 2000);
-    const plainBody = cleanedPost;
+      .replace('[landing page url]', tempUrl);
     const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
