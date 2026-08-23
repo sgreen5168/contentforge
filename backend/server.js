@@ -3709,7 +3709,59 @@ app.post('/api/youtube/upload-from-file', async (req, res) => {
 // AFFILIATE LINK LIBRARY — store, match, and auto-insert ClickBank/Amazon links
 // ══════════════════════════════════════════════════════════════════════════════
 
-const affiliateLinks = new Map(); // id → link object
+const affiliateLinks = new Map(); // id → link object — also persisted to Supabase
+
+// Load affiliate links from Supabase on startup
+async function loadAffiliateLinksFromSupabase() {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return;
+    const { data, error } = await db.from('affiliate_links').select('*');
+    if (error) {
+      // Table might not exist yet — create it
+      await db.rpc('query', { query: `CREATE TABLE IF NOT EXISTS affiliate_links (
+        id text PRIMARY KEY,
+        name text, url text, platform text, category text,
+        keywords text[], description text, clicks integer DEFAULT 0,
+        created_at timestamptz DEFAULT now()
+      )` }).catch(() => {});
+      return;
+    }
+    if (data) {
+      data.forEach(link => affiliateLinks.set(link.id, link));
+      console.log('✅ Loaded', data.length, 'affiliate links from Supabase');
+    }
+  } catch(e) {
+    console.warn('Could not load affiliate links from Supabase:', e.message);
+  }
+}
+
+// Save affiliate link to Supabase
+async function saveAffiliateLinkToSupabase(link) {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return;
+    await db.from('affiliate_links').upsert([{
+      id: link.id, name: link.name, url: link.url,
+      platform: link.platform, category: link.category,
+      keywords: link.keywords || [], description: link.description || '',
+      clicks: link.clicks || 0,
+    }]);
+  } catch(e) {
+    console.warn('Could not save affiliate link to Supabase:', e.message);
+  }
+}
+
+// Delete affiliate link from Supabase
+async function deleteAffiliateLinkFromSupabase(id) {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return;
+    await db.from('affiliate_links').delete().eq('id', id);
+  } catch(e) {
+    console.warn('Could not delete affiliate link from Supabase:', e.message);
+  }
+}
 
 // ── Save/update a link ────────────────────────────────────────────────────────
 app.post('/api/affiliate/links', (req, res) => {
@@ -3735,6 +3787,7 @@ app.get('/api/affiliate/links', (_req, res) => {
 // ── Delete a link ─────────────────────────────────────────────────────────────
 app.delete('/api/affiliate/links/:id', (req, res) => {
   affiliateLinks.delete(req.params.id);
+  deleteAffiliateLinkFromSupabase(req.params.id);
   res.json({ deleted: true });
 });
 
@@ -3752,6 +3805,7 @@ app.put('/api/affiliate/links/:id', (req, res) => {
     isPending:   url && (url.includes('hop.clickbank.net') || url.includes('amzn.to')) ? false : link.isPending,
   };
   affiliateLinks.set(req.params.id, updated);
+  saveAffiliateLinkToSupabase(updated);
   res.json(updated);
 });
 
@@ -5372,6 +5426,7 @@ app.post('/api/affiliate/shorten', async (req, res) => {
 });
 app.listen(PORT, () => {
   console.log(`✅ ContentForge Video Engine running on port ${PORT}`);
+  loadAffiliateLinksFromSupabase(); // Load persisted links on startup
 });
 
 setInterval(async () => {
