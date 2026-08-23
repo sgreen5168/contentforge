@@ -4858,14 +4858,17 @@ CONTENT RULES:
 - If a product name is generic (e.g. "ClickBank Product 1"), describe it by its benefit category instead — "this self-help program", "this home business course", "this productivity system"
 - Never write "buy now" — use "learn more", "check it out", "find out how", "explore it here", or similar
 - Posts must feel like authentic, valuable content a real person would write — not a template
-- The affiliate product (if any) is a natural recommendation at the end — not the main focus
+- The affiliate product (if any) is a natural recommendation — not the main focus
 - Lead with value: a tip, insight, relatable moment, or surprising fact
+- NEVER use first-person product claims like "I use this", "I tried this", "I bought this" — instead use second or third person: "You might want to try", "A lot of people use", "This could help make things go smoother for you", "Worth checking out if you want to"
+- NEVER use the phrase "cottage food laws" — instead say "in most states you can legally sell baked goods from your home kitchen" or "home kitchen food selling rules vary by state"
+- Avoid overly technical legal terms — keep language conversational and accessible
 
 COMPLIANCE RULES:
 - NEVER write first-person income claims: "I made $X", "I earned $X"
 - NEVER write guaranteed results: "you will earn", "guaranteed income"
 - Income topics must use educational framing: "here's how people are doing this", "this is what works for home entrepreneurs"
-- Write in second-person ("you/your") or third-person ("people/entrepreneurs") — not first-person income stories
+- Write in second-person ("you/your") or third-person ("people/entrepreneurs") — not first-person product usage or income stories
 - Posts must comply with Facebook, FTC, and platform advertising guidelines`,
       messages: [{ role: 'user', content: prompt }],
     });
