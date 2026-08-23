@@ -4629,6 +4629,24 @@ Suggest ${count} affiliate products total (mix of ClickBank and Amazon) that wou
   }
 });
 
+app.get('/api/affiliate/reload', async (_req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(400).json({ error: 'Supabase not configured' });
+    const { data, error } = await db.from('affiliate_links').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    affiliateLinks.clear();
+    (data || []).forEach(link => affiliateLinks.set(link.id, {
+      ...link,
+      keywords: Array.isArray(link.keywords) ? link.keywords : [],
+    }));
+    console.log('✅ Reloaded', affiliateLinks.size, 'affiliate links from Supabase');
+    res.json({ loaded: affiliateLinks.size, links: [...affiliateLinks.values()].map(l => ({ id:l.id, name:l.name, category:l.category })) });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
