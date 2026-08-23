@@ -4464,7 +4464,7 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
       const Anthropic = (await import('@anthropic-ai/sdk')).default;
       const landingClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const landingResponse = await landingClient.messages.create({
-        model: 'claude-opus-4-5', max_tokens: 600,
+        model: 'claude-sonnet-4-6', max_tokens: 600,
         system: `You write landing page body content that is DIFFERENT from the social media post that brought people here. 
 Your job: go deeper, provide more value, naturally connect to the affiliate product.
 Rules:
@@ -4538,7 +4538,7 @@ app.post('/api/affiliate/suggest', async (req, res) => {
     const Anthropic = (await import('@anthropic-ai/sdk')).default;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 800,
       system: `You are an affiliate marketing expert. Given a content topic, suggest the most relevant affiliate product categories and specific search terms that would perform well on ClickBank and Amazon.
 
