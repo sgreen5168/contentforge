@@ -516,7 +516,7 @@ export default function AffiliateLibrary() {
         {bulkMode && (
           <div>
             <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.6 }}>
-              Go to <strong style={{ color:TXT }}>marketplace.clickbank.com</strong> → find products → click Promote → Generate Hoplinks → copy each URL. Paste all of them below (one per line or mixed with other text).
+              Paste <strong style={{ color:TXT }}>ClickBank hoplinks</strong>, <strong style={{ color:'#FF9900' }}>Amazon amzn.to links</strong>, or <strong style={{ color:'#818CF8' }}>Awin links</strong> below — one per line or all mixed together. ContentForge detects each type automatically.
             </div>
             <textarea value={bulkText} onChange={function(e){setBulkText(e.target.value);}} rows={6}
               placeholder="Paste your ClickBank hoplinks here — one per line or mixed with text. ContentForge extracts all hop.clickbank.net URLs automatically." 
