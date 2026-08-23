@@ -4415,7 +4415,7 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
       title: topic,
       body: plainBody,
       niche: category || 'general',
-      affiliate_url: affiliateUrl || null,
+      affiliate_url: affiliateUrl || '',
       content_type: 'landing_page',
       created_at: new Date().toISOString(),
     }]).select('id, slug').single();
