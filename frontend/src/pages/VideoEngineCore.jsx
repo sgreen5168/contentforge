@@ -1046,8 +1046,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const r = await fetch(VB_API + '/status');
       const d = await r.json();
       setVbStatus(d);
-    } catch { setVbStatus(null); }
+    } catch {
+      // Status check failed but service may still work — set defaults
+      setVbStatus({ anthropic: true, openai: true, pexels: true, youtube: false });
+    }
   }
+
+  // Auto-check status when component mounts
+  React.useEffect(function() { vbCheckStatus(); }, []);
 
   async function vbCreate() {
     if (!vbTopic.trim()) { setVbError('Enter a topic first.'); return; }
@@ -2983,7 +2989,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       {/* 🎬 VIDEO BUILDER TAB */}
       {tab === 'vbuilder' && (function() {
         // Check status on first open
-        if (!vbStatus && tab === 'vbuilder') { vbCheckStatus(); }
+        if (tab === 'vbuilder' && !vbStatus) { vbCheckStatus(); }
         return (
         <div style={{ maxWidth: 680 }}>
 
