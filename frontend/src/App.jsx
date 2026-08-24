@@ -6,6 +6,8 @@ import VideoEngine from './pages/VideoEngine.jsx';
 import ContentCalendar from './pages/ContentCalendar.jsx';
 import AffiliateLibrary from './pages/AffiliateLibrary.jsx';
 import AmazonPicker from './pages/AmazonPicker.jsx';
+import FacebookStudio from './pages/FacebookStudio.jsx';
+import FacebookStudio from './pages/FacebookStudio.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
@@ -802,6 +804,8 @@ export default function App() {
           {page === 'calendar'   && <ContentCalendar />}
           {page === 'affiliate'  && <AffiliateLibrary />}
           {page === 'amazon'    && <AmazonPicker />}
+          {page === 'fbstudio'  && <FacebookStudio onNavigate={navigateTo} />}
+          {page === 'fbstudio'  && <FacebookStudio onNavigate={navigateTo} />}
           {page === 'nichroute'  && (
             <div style={{ padding:'32px 24px', maxWidth:700, margin:'0 auto', fontFamily:'inherit' }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
