@@ -1,0 +1,349 @@
+import { useState, useRef, useEffect } from 'react';
+
+const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
+
+const BG   = '#0B1829';
+const BG2  = '#0F2035';
+const BG3  = '#122545';
+const BORD = 'rgba(255,255,255,.08)';
+const TXT  = '#E8F4F0';
+const TXT2 = 'rgba(232,244,240,.7)';
+const TXT3 = 'rgba(232,244,240,.4)';
+const ACC  = '#1877F2'; // Facebook blue
+const ACCH = '#4FA3FF';
+const GRN  = '#1D9E75';
+
+function card() {
+  return { background:BG2, border:`1px solid ${BORD}`, borderRadius:12 };
+}
+function inp(extra) {
+  return { width:'100%', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:8,
+    padding:'10px 12px', fontSize:12, color:TXT, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...extra };
+}
+
+export default function FacebookStudio({ onNavigate }) {
+  const [videoFile, setVideoFile]       = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [title, setTitle]               = useState('');
+  const [description, setDescription]   = useState('');
+  const [tags, setTags]                 = useState('');
+  const [privacy, setPrivacy]           = useState('EVERYONE');
+  const [affLink, setAffLink]           = useState('');
+  const [affLinks, setAffLinks]         = useState([]);
+  const [generating, setGenerating]     = useState(false);
+  const [copied, setCopied]             = useState('');
+  const [step, setStep]                 = useState(1); // 1=upload, 2=details, 3=publish
+  const [topic, setTopic]               = useState('');
+  const fileRef = useRef(null);
+
+  // Load affiliate links on mount
+  useEffect(function() {
+    fetch(API + '/api/affiliate/links')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { setAffLinks(d.links || []); })
+      .catch(function() {});
+  }, []);
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('video/')) return;
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+    // Auto-detect topic from filename
+    const name = file.name.replace(/[_-]/g,' ').replace(/\.mp4|\.mov|\.avi/i,'').trim();
+    setTopic(name);
+    setStep(2);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+  }
+
+  async function autoFill() {
+    if (!topic.trim()) return;
+    setGenerating(true);
+    try {
+      const r = await fetch(API + '/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platforms: ['facebook'],
+          inputMode: 'topic',
+          topic: topic,
+          style: 'Educational',
+          generateFor: 'facebook_video_meta',
+        }),
+      });
+      const d = await r.json();
+      const post = d.facebook?.text || d.text || '';
+
+      // Auto-match affiliate link
+      const matchR = await fetch(API + '/api/affiliate/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, count: 1 }),
+      });
+      const matchD = await matchR.json();
+      const link = matchD.links?.[0];
+
+      // Build title from topic
+      const autoTitle = topic.split(' ').map(function(w) {
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      }).join(' ');
+
+      setTitle(autoTitle);
+      setDescription(post.slice(0, 500) + (link ? '\n\n🔗 ' + link.url + '\n#ad Affiliate link' : ''));
+      setTags(topic.toLowerCase().replace(/\s+/g, ',') + ',homebusiness,sidehustle,earnfromhome');
+      if (link) setAffLink(link.url);
+    } catch(e) {
+      console.error(e);
+    }
+    setGenerating(false);
+  }
+
+  function copy(text, id) {
+    navigator.clipboard.writeText(text).catch(function(){});
+    setCopied(id);
+    setTimeout(function(){ setCopied(''); }, 2000);
+  }
+
+  const fullDescription = description +
+    (affLink && !description.includes(affLink) ? '\n\n🔗 ' + affLink + '\n#ad This post contains an affiliate link. I may earn a small commission at no extra cost to you.' : '') +
+    (tags ? '\n\n' + tags.split(',').map(function(t){ return '#' + t.trim().replace(/\s+/g,''); }).join(' ') : '');
+
+  return (
+    <div style={{ minHeight:'100vh', background:BG, color:TXT, fontFamily:'system-ui,sans-serif', padding:'24px 20px' }}>
+      <div style={{ maxWidth:720, margin:'0 auto' }}>
+
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>
+          <div style={{ width:40, height:40, borderRadius:10, background:'rgba(24,119,242,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>📘</div>
+          <div>
+            <div style={{ fontSize:20, fontWeight:800 }}>Facebook Video Studio</div>
+            <div style={{ fontSize:12, color:TXT3 }}>Upload your video, auto-fill details, add affiliate link — post to Facebook</div>
+          </div>
+        </div>
+
+        {/* Progress steps */}
+        <div style={{ display:'flex', gap:0, marginBottom:24 }}>
+          {[['1','Upload Video'],['2','Add Details'],['3','Publish']].map(function(s,i) {
+            const active = step === i+1;
+            const done = step > i+1;
+            return (
+              <div key={i} style={{ flex:1, display:'flex', alignItems:'center' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8,
+                  background: active ? 'rgba(24,119,242,.15)' : done ? 'rgba(29,158,117,.1)' : 'transparent',
+                  border: `1px solid ${active ? 'rgba(24,119,242,.4)' : done ? 'rgba(29,158,117,.3)' : BORD}`,
+                  flex:1 }}>
+                  <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700,
+                    background: done ? GRN : active ? ACC : 'rgba(255,255,255,.08)',
+                    color: done||active ? 'white' : TXT3 }}>
+                    {done ? '✓' : s[0]}
+                  </div>
+                  <div style={{ fontSize:11, fontWeight:600, color: active ? ACCH : done ? GRN : TXT3 }}>{s[1]}</div>
+                </div>
+                {i < 2 && <div style={{ width:16, height:1, background:BORD, flexShrink:0 }} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Step 1 — Upload */}
+        {step === 1 && (
+          <div style={{ ...card(), padding:32, textAlign:'center' }}
+            onDragOver={function(e){e.preventDefault();}}
+            onDrop={handleDrop}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🎬</div>
+            <div style={{ fontSize:16, fontWeight:700, marginBottom:6 }}>Drop your video here</div>
+            <div style={{ fontSize:12, color:TXT3, marginBottom:20 }}>MP4, MOV, or AVI — up to 4GB for Facebook</div>
+            <button onClick={function(){fileRef.current?.click();}}
+              style={{ padding:'12px 32px', borderRadius:9, border:'none', background:ACC, color:'white', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              Browse Files
+            </button>
+            <input ref={fileRef} type="file" accept="video/*" style={{ display:'none' }}
+              onChange={function(e){ handleFile(e.target.files[0]); }} />
+            <div style={{ marginTop:20, padding:'12px 16px', background:'rgba(24,119,242,.06)', border:`1px solid rgba(24,119,242,.15)`, borderRadius:8, fontSize:11, color:TXT3, textAlign:'left' }}>
+              💡 Videos downloaded from Command Center auto-fill title, description, and affiliate link based on the topic
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 — Details */}
+        {step === 2 && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+
+            {/* Video preview */}
+            {videoPreview && (
+              <div style={{ ...card(), padding:12 }}>
+                <video src={videoPreview} controls style={{ width:'100%', borderRadius:8, maxHeight:200, background:'#000' }} />
+                <div style={{ fontSize:11, color:TXT3, marginTop:6 }}>{videoFile?.name} — {(videoFile?.size/1024/1024).toFixed(1)} MB</div>
+              </div>
+            )}
+
+            {/* Topic + Auto-fill */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>🎯 Topic — used to auto-fill everything</div>
+              <div style={{ display:'flex', gap:8 }}>
+                <input value={topic} onChange={function(e){setTopic(e.target.value);}}
+                  placeholder="e.g. Home Bakery Business, Meal Prep Tips, Side Hustle Ideas"
+                  style={inp({ flex:1 })} />
+                <button onClick={autoFill} disabled={generating || !topic.trim()}
+                  style={{ padding:'8px 16px', borderRadius:8, border:'none',
+                    background: generating||!topic.trim() ? 'rgba(24,119,242,.3)' : ACC,
+                    color:'white', fontSize:12, fontWeight:700, cursor: generating||!topic.trim()?'default':'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                  {generating ? '⚡ Filling…' : '⚡ Auto-Fill'}
+                </button>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>📝 Video Title</div>
+              <input value={title} onChange={function(e){setTitle(e.target.value);}}
+                placeholder="Enter a compelling video title"
+                style={inp()} />
+              <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>{title.length}/100 characters</div>
+            </div>
+
+            {/* Description */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>📄 Description</div>
+              <textarea value={description} onChange={function(e){setDescription(e.target.value);}}
+                placeholder="What is this video about? Include key points and a call to action."
+                rows={5}
+                style={{ ...inp(), resize:'vertical', lineHeight:1.6 }} />
+            </div>
+
+            {/* Affiliate Link */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>🔗 Affiliate Link (added to description)</div>
+              <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+                <input value={affLink} onChange={function(e){setAffLink(e.target.value);}}
+                  placeholder="Paste affiliate link or select from library below"
+                  style={inp({ flex:1 })} />
+              </div>
+              {affLinks.length > 0 && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {affLinks.slice(0,8).map(function(l) {
+                    return (
+                      <button key={l.id} onClick={function(){setAffLink(l.url);}}
+                        style={{ padding:'4px 10px', borderRadius:6,
+                          border:`1px solid ${affLink===l.url?'rgba(29,158,117,.5)':BORD}`,
+                          background: affLink===l.url?'rgba(29,158,117,.1)':'transparent',
+                          color: affLink===l.url?GRN:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                        {l.name.slice(0,30)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Tags */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>🏷️ Tags (comma separated)</div>
+              <input value={tags} onChange={function(e){setTags(e.target.value);}}
+                placeholder="homebusiness, sidehustle, earnfromhome, bakery"
+                style={inp()} />
+            </div>
+
+            {/* Privacy */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>👥 Privacy Setting</div>
+              <div style={{ display:'flex', gap:8 }}>
+                {[['EVERYONE','🌍 Public'],['FRIENDS','👥 Friends'],['ONLY_ME','🔒 Only Me']].map(function(p) {
+                  return (
+                    <button key={p[0]} onClick={function(){setPrivacy(p[0]);}}
+                      style={{ flex:1, padding:'8px', borderRadius:8,
+                        border:`1px solid ${privacy===p[0]?'rgba(24,119,242,.5)':BORD}`,
+                        background: privacy===p[0]?'rgba(24,119,242,.12)':'transparent',
+                        color: privacy===p[0]?ACCH:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                      {p[1]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button onClick={function(){setStep(3);}}
+              style={{ padding:'14px', borderRadius:10, border:'none', background:ACC, color:'white', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              Continue to Publish →
+            </button>
+          </div>
+        )}
+
+        {/* Step 3 — Publish */}
+        {step === 3 && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+
+            {/* Preview card */}
+            <div style={{ ...card(), padding:16, border:'1px solid rgba(24,119,242,.25)' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:ACCH, marginBottom:12 }}>📋 Post Preview</div>
+              <div style={{ fontSize:13, fontWeight:700, marginBottom:6 }}>{title || 'No title set'}</div>
+              <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', maxHeight:150, overflow:'auto', marginBottom:10 }}>
+                {fullDescription || 'No description set'}
+              </div>
+              {tags && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+                  {tags.split(',').map(function(t,i) {
+                    return <span key={i} style={{ fontSize:10, color:ACCH, padding:'2px 6px', background:'rgba(24,119,242,.1)', borderRadius:4 }}>#{t.trim()}</span>;
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Step by step instructions */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:12 }}>📤 How to post on Facebook — follow in order</div>
+              {[
+                ['1', 'Copy the full description', 'Click the button below to copy your complete description with affiliate link and hashtags.', null],
+                ['2', 'Go to Facebook', 'Open facebook.com or the Facebook app → click "Photo/Video" → select your video file from your computer.', 'https://www.facebook.com'],
+                ['3', 'Paste title and description', 'Enter your title in the title field, then paste your copied description into the description box.', null],
+                ['4', 'Set privacy and post', 'Choose your audience (Public recommended for maximum reach) → click Post.', null],
+                ['5', 'Add first comment', 'Right after posting, add a comment with your engagement question and landing page URL to boost reach.', null],
+              ].map(function(s,i) {
+                return (
+                  <div key={i} style={{ display:'flex', gap:12, marginBottom:12, padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:8, border:`1px solid ${BORD}` }}>
+                    <div style={{ width:24, height:24, borderRadius:'50%', background:'rgba(24,119,242,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:ACCH, flexShrink:0 }}>{s[0]}</div>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:700, marginBottom:2 }}>{s[1]}</div>
+                      <div style={{ fontSize:11, color:TXT3, lineHeight:1.5 }}>{s[2]}</div>
+                      {s[3] && <a href={s[3]} target="_blank" rel="noreferrer" style={{ fontSize:10, color:ACCH, textDecoration:'none', marginTop:4, display:'inline-block' }}>Open Facebook ↗</a>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              <button onClick={function(){copy(title,'title');}}
+                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='title'?'✓ Copied!':'📋 Copy Title'}
+              </button>
+              <button onClick={function(){copy(fullDescription,'desc');}}
+                style={{ padding:'12px', borderRadius:9, border:'none', background:ACC, color:'white', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='desc'?'✓ Copied!':'📋 Copy Full Description'}
+              </button>
+              <button onClick={function(){copy(tags.split(',').map(function(t){return '#'+t.trim();}).join(' '),'tags');}}
+                style={{ padding:'12px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT2, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                {copied==='tags'?'✓ Copied!':'🏷️ Copy Hashtags'}
+              </button>
+              <a href="https://www.facebook.com" target="_blank" rel="noreferrer"
+                style={{ padding:'12px', borderRadius:9, border:'none', background:'#1877F2', color:'white', fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                📘 Open Facebook
+              </a>
+            </div>
+
+            <button onClick={function(){setStep(2);}}
+              style={{ padding:'10px', borderRadius:9, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+              ← Back to Edit
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
