@@ -4465,17 +4465,18 @@ h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height
       const landingClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const landingResponse = await landingClient.messages.create({
         model: 'claude-sonnet-4-6', max_tokens: 600,
-        system: `You write landing page body content that is DIFFERENT from the social media post that brought people here. 
+        system: `You write landing page body content that is DIFFERENT from the social media post that brought people here.
 Your job: go deeper, provide more value, naturally connect to the affiliate product.
 Rules:
 - Write 150-250 words of helpful, specific content on the topic
 - Different angle from the post — more detailed, more actionable
 - Naturally mention the product as a helpful tool (not a hard sell)
-- Use second person (you/your) 
+- Use second person (you/your)
 - End with a gentle call to action: "Check it out below" or "Worth exploring if you want to go deeper"
-- NEVER use "cottage food laws" — say "home kitchen food selling rules" instead
-- NEVER use first-person product claims
-- Tone: warm, knowledgeable friend giving real advice`,
+- NEVER use these phrases: "cottage food laws", "cottage-style sales", "annual revenue limit", "cottage food exemption" — instead say "selling homemade baked goods is legal in most states" or "home baking rules vary by state — check what applies to you"
+- NEVER use first-person product claims like "I use" or "I tried"
+- NEVER use salesy language like "limited time", "act now", "buy now"
+- Tone: warm, knowledgeable friend giving real practical advice`,
         messages: [{ role: 'user', content: `Topic: "${topic}"
 Affiliate product: "${affiliateName || 'a helpful resource'}"
 Write landing page body content that goes deeper than this social post and naturally connects to the product:
