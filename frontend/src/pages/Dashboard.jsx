@@ -173,6 +173,8 @@ export default function Dashboard({ onNavigate }) {
       if (!script) throw new Error('Script generation failed — check Anthropic credits');
       out.script = script;
       out.hook = scriptObj?.hook || '';
+      out.youtubeDescription = scriptObj?.youtubeDescription || '';
+      out.youtubeTitle = scriptObj?.title || topic.label;
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
@@ -740,10 +742,18 @@ export default function Dashboard({ onNavigate }) {
               <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
                 Click YouTube Studio below. Upload your downloaded MP4. The AI will write your title, description, and tags — your affiliate link goes directly in the YouTube description (allowed on YouTube).
               </div>
-              <button onClick={()=>onNavigate&&onNavigate('video')}
-                style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                📺 Open YouTube Studio
-              </button>
+              <div style={{ display:'flex', gap:6, flexDirection:'column' }}>
+                <button onClick={()=>onNavigate&&onNavigate('video')}
+                  style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  📺 Open YouTube Studio
+                </button>
+                {results.youtubeDescription && (
+                  <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
+                    style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube Description (with affiliate link)'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Step 3 */}
