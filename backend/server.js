@@ -4675,6 +4675,36 @@ app.get('/api/affiliate/reload', async (_req, res) => {
   }
 });
 
+
+// ── Generate content for Facebook Studio descriptions ─────────────────────
+app.post('/api/nichroute/generate-content', async (req, res) => {
+  const { topic, type, affiliateName, affiliateUrl } = req.body;
+  if (!topic) return res.status(400).json({ error: 'topic required' });
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 400,
+      system: `You write engaging Facebook video descriptions for content creators.
+Rules:
+- Write 80-120 words — punchy and engaging
+- Second person (you/your) — speak directly to the viewer
+- Start with what the video covers
+- Include a specific insight or tip
+- End with an engagement question like "Have you tried this? Drop a comment below 👇"
+- If an affiliate product is provided, mention it naturally in one sentence
+- NEVER use "cottage food laws" — say "selling baked goods from home is legal in most states"
+- NEVER use first-person product claims
+- No hashtags — those go separately`,
+      messages: [{ role: 'user', content: `Write a Facebook video description for a video about: "${topic}"${affiliateName ? '. The video mentions: ' + affiliateName : ''}` }],
+    });
+    res.json({ content: response.content[0].text.trim() });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
