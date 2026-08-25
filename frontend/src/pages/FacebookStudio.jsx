@@ -93,11 +93,7 @@ export default function FacebookStudio({ onNavigate }) {
 
       // Fallback description if API fails
       if (!description) {
-        description = 'Check out this video about ' + topic + '.
-
-If you found this helpful, share it with someone who needs to see it!
-
-Drop a comment below with your thoughts 👇';
+        description = 'Check out this video about ' + topic + '.\n\nIf you found this helpful, share it with someone who needs to see it!\n\nDrop a comment below with your thoughts 👇';
       }
 
       // Build title from topic
