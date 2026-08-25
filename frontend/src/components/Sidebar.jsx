@@ -2,25 +2,24 @@ import React from 'react';
 import styles from './Sidebar.module.css';
 
 const NAV = [
-  { id:'dashboard', label:'Command Center',    icon:'🚀', section:'Content', badge:'Home' },
-  { id:'composer',  label:'AI Composer',        icon:'✦',  section:'Content' },
-  { id:'video',     label:'AI Video Engine',     icon:'▶',  section:'Content', badge:'New' },
-  { id:'bulk',      label:'Bulk Generator',      icon:'⚡',  section:'Content', badge:'New' },
-  { id:'scheduler', label:'Video Scheduler',     icon:'📅', section:'Content' },
-  { id:'brand',     label:'Brand Voice',         icon:'◈',  section:'Content' },
-  { id:'analytics', label:'Analytics',           icon:'◎',  section:'Insights' },
-  { id:'compliance',label:'Compliance',          icon:'◉',  section:'Insights' },
-  { id:'calendar',     label:'Content Calendar', icon:'📅', section:'Insights' },
-  { id:'affiliate',    label:'Affiliate Library', icon:'🔗', section:'Insights' },
-  { id:'amazon',       label:'Amazon Picker',     icon:'📦', section:'Insights', badge:'New' },
-  { id:'nichroute',    label:'NichRoute',         icon:'🎯', section:'Insights', badge:'v9.19' },
-  { id:'scriptwriter', label:'Script Writer',    icon:'✦',  section:'Content' },
-  { id:'landing',   label:'Landing Page Builder', icon:'🚀', section:'Content' },
-  { id:'images',    label:'AI Image Generator',    icon:'🖼', section:'Content' },
-  { id:'media',     label:'Media Library',           icon:'📁', section:'Content' },
-  { id:'submitter', label:'Post Submitter',           icon:'📤', section:'Content' },
-  { id:'email',     label:'Email Notifications', icon:'📧', section:'Settings' },
-  { id:'tutorial',  label:'Tutorial',            icon:'📖', section:'Settings' },
+  // Content
+  { id:'dashboard',  label:'Command Center',    icon:'🚀', section:'Content', badge:'Home' },
+  { id:'video',      label:'AI Video Engine',   icon:'▶',  section:'Content' },
+  { id:'images',     label:'AI Image Generator',icon:'🖼', section:'Content' },
+  { id:'media',      label:'Media Library',     icon:'📁', section:'Content' },
+  { id:'submitter',  label:'Post Submitter',    icon:'📤', section:'Content' },
+  { id:'fbstudio',   label:'Facebook Studio',   icon:'📘', section:'Content', badge:'New' },
+  // Insights
+  { id:'analytics',  label:'Analytics',         icon:'◎',  section:'Insights' },
+  { id:'calendar',   label:'Content Calendar',  icon:'📅', section:'Insights' },
+  { id:'affiliate',  label:'Affiliate Library', icon:'🔗', section:'Insights' },
+  { id:'amazon',     label:'Amazon Picker',     icon:'📦', section:'Insights' },
+  { id:'nichroute',  label:'NichRoute',         icon:'🎯', section:'Insights' },
+  // Settings
+  { id:'brand',      label:'Brand Voice',       icon:'◈',  section:'Settings' },
+  { id:'compliance', label:'Compliance',        icon:'◉',  section:'Settings' },
+  { id:'email',      label:'Email Notifications',icon:'📧',section:'Settings' },
+  { id:'tutorial',   label:'Tutorial',          icon:'📖', section:'Settings' },
 ];
 
 const SECTIONS = ['Content', 'Insights', 'Settings'];
