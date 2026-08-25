@@ -22,19 +22,35 @@ function inp(extra) {
 }
 
 export default function FacebookStudio({ onNavigate }) {
-  const [videoFile, setVideoFile]       = useState(null);
-  const [videoPreview, setVideoPreview] = useState(null);
-  const [title, setTitle]               = useState('');
-  const [description, setDescription]   = useState('');
-  const [tags, setTags]                 = useState('');
-  const [privacy, setPrivacy]           = useState('EVERYONE');
-  const [affLink, setAffLink]           = useState('');
+  // Restore saved session if available
+  const saved = (function() {
+    try { return JSON.parse(localStorage.getItem('cf_fbstudio') || '{}'); } catch { return {}; }
+  })();
+
+  const [videoFile, setVideoFile]       = useState(null); // can't persist File objects
+  const [videoPreview, setVideoPreview] = useState(saved.videoPreview || null);
+  const [title, setTitle]               = useState(saved.title || '');
+  const [description, setDescription]   = useState(saved.description || '');
+  const [tags, setTags]                 = useState(saved.tags || '');
+  const [privacy, setPrivacy]           = useState(saved.privacy || 'EVERYONE');
+  const [affLink, setAffLink]           = useState(saved.affLink || '');
   const [affLinks, setAffLinks]         = useState([]);
   const [generating, setGenerating]     = useState(false);
   const [copied, setCopied]             = useState('');
-  const [step, setStep]                 = useState(1); // 1=upload, 2=details, 3=publish
-  const [topic, setTopic]               = useState('');
+  const [step, setStep]                 = useState(saved.step || 1);
+  const [topic, setTopic]               = useState(saved.topic || '');
+  const [videoName, setVideoName]       = useState(saved.videoName || '');
   const fileRef = useRef(null);
+
+  // Save session whenever key fields change
+  useEffect(function() {
+    try {
+      localStorage.setItem('cf_fbstudio', JSON.stringify({
+        title, description, tags, privacy, affLink, step, topic,
+        videoName, videoPreview: null, // can't store blob URLs
+      }));
+    } catch(e) {}
+  }, [title, description, tags, privacy, affLink, step, topic, videoName]);
 
   // Load affiliate links on mount
   useEffect(function() {
@@ -47,9 +63,11 @@ export default function FacebookStudio({ onNavigate }) {
   function handleFile(file) {
     if (!file || !file.type.startsWith('video/')) return;
     setVideoFile(file);
-    setVideoPreview(URL.createObjectURL(file));
+    const blobUrl = URL.createObjectURL(file);
+    setVideoPreview(blobUrl);
+    setVideoName(file.name);
     // Auto-detect topic from filename
-    const name = file.name.replace(/[_-]/g,' ').replace(/\.mp4|\.mov|\.avi/i,'').trim();
+    const name = file.name.replace(/[_\-]/g,' ').replace(/\.mp4|\.mov|\.avi/gi,'').trim();
     setTopic(name);
     setStep(2);
   }
@@ -137,12 +155,26 @@ export default function FacebookStudio({ onNavigate }) {
       <div style={{ maxWidth:720, margin:'0 auto' }}>
 
         {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>
-          <div style={{ width:40, height:40, borderRadius:10, background:'rgba(24,119,242,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>📘</div>
-          <div>
-            <div style={{ fontSize:20, fontWeight:800 }}>Facebook Video Studio</div>
-            <div style={{ fontSize:12, color:TXT3 }}>Upload your video, auto-fill details, add affiliate link — post to Facebook</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:'rgba(24,119,242,.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>📘</div>
+            <div>
+              <div style={{ fontSize:20, fontWeight:800 }}>Facebook Video Studio</div>
+              <div style={{ fontSize:12, color:TXT3 }}>Upload your video, auto-fill details, add affiliate link — post to Facebook</div>
+            </div>
           </div>
+          {(title || description || topic) && (
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:10, color:GRN }}>✅ Session saved</span>
+              <button onClick={function(){
+                localStorage.removeItem('cf_fbstudio');
+                setTitle(''); setDescription(''); setTags(''); setAffLink('');
+                setTopic(''); setVideoName(''); setVideoFile(null); setVideoPreview(null); setStep(1);
+              }} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid rgba(226,75,74,.3)', background:'transparent', color:'#F09595', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                🗑 Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Progress steps */}
@@ -193,11 +225,23 @@ export default function FacebookStudio({ onNavigate }) {
         {step === 2 && (
           <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
 
-            {/* Video preview */}
-            {videoPreview && (
+            {/* Video preview or saved name */}
+            {videoPreview && videoFile && (
               <div style={{ ...card(), padding:12 }}>
                 <video src={videoPreview} controls style={{ width:'100%', borderRadius:8, maxHeight:200, background:'#000' }} />
-                <div style={{ fontSize:11, color:TXT3, marginTop:6 }}>{videoFile?.name} — {(videoFile?.size/1024/1024).toFixed(1)} MB</div>
+                <div style={{ fontSize:11, color:TXT3, marginTop:6 }}>{videoFile.name} — {(videoFile.size/1024/1024).toFixed(1)} MB</div>
+              </div>
+            )}
+            {!videoFile && videoName && (
+              <div style={{ ...card(), padding:12, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:24 }}>🎬</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600 }}>{videoName}</div>
+                  <div style={{ fontSize:10, color:TXT3 }}>Session restored — re-upload file to preview or post directly to Facebook</div>
+                </div>
+                <button onClick={function(){fileRef.current?.click();}} style={{ marginLeft:'auto', padding:'6px 12px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                  Re-upload
+                </button>
               </div>
             )}
 
