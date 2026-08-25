@@ -145,13 +145,7 @@ export default function FacebookStudio({ onNavigate }) {
       } catch(e) { console.warn('Landing page failed:', e.message); }
 
       // Add landing page URL to description — not raw affiliate link
-      const finalDesc = description +
-        (landingUrl ? '
-
-Full details: ' + landingUrl : '') +
-        '
-
-Drop a comment with your thoughts below! 👇';
+      const finalDesc = description + (landingUrl ? '\n\nFull details: ' + landingUrl : '') + '\n\nDrop a comment with your thoughts below! 👇';
 
       setTitle(autoTitle);
       setDescription(finalDesc);
