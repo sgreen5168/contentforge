@@ -126,13 +126,40 @@ export default function FacebookStudio({ onNavigate }) {
         .filter(function(w) { return w.length > 2; })
         .join(',');
 
+      // Create NichRoute landing page and use that URL instead of raw affiliate link
+      let landingUrl = '';
+      try {
+        const landingR = await fetch(API + '/api/nichroute/create-page', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic,
+            postContent: description,
+            affiliateUrl: link?.url || '',
+            affiliateName: link?.name || '',
+            category: 'general',
+          }),
+        });
+        const landingD = await landingR.json();
+        if (landingD.url) landingUrl = landingD.url;
+      } catch(e) { console.warn('Landing page failed:', e.message); }
+
+      // Add landing page URL to description — not raw affiliate link
+      const finalDesc = description +
+        (landingUrl ? '
+
+Full details: ' + landingUrl : '') +
+        '
+
+Drop a comment with your thoughts below! 👇';
+
       setTitle(autoTitle);
-      setDescription(description);
+      setDescription(finalDesc);
       setTags(topicTags + ',homebusiness,sidehustle,earnfromhome,contentcreator');
-      if (link) setAffLink(link.url);
+      if (landingUrl) setAffLink(landingUrl); // show landing page URL not raw affiliate
+      else if (link) setAffLink(link.url);
     } catch(e) {
       console.error('AutoFill error:', e);
-      // Basic fallback
       setTitle(topic);
       setDescription('Watch this video about ' + topic + '. Drop a comment with your thoughts below! 👇');
       setTags(topic.toLowerCase().replace(/\s+/g,',') + ',video,content');
@@ -147,7 +174,9 @@ export default function FacebookStudio({ onNavigate }) {
   }
 
   const fullDescription = description +
-    (affLink && !description.includes(affLink) ? '\n\n🔗 ' + affLink + '\n#ad This post contains an affiliate link. I may earn a small commission at no extra cost to you.' : '') +
+    (affLink && !description.includes(affLink) && affLink.includes('nichroute.com')
+      ? '\n\nFull details: ' + affLink + '\n#ad This post contains an affiliate link. I may earn a small commission at no extra cost to you.'
+      : '') +
     (tags ? '\n\n' + tags.split(',').map(function(t){ return '#' + t.trim().replace(/\s+/g,''); }).join(' ') : '');
 
   return (
