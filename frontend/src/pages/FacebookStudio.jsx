@@ -64,21 +64,7 @@ export default function FacebookStudio({ onNavigate }) {
     if (!topic.trim()) return;
     setGenerating(true);
     try {
-      const r = await fetch(API + '/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platforms: ['facebook'],
-          inputMode: 'topic',
-          topic: topic,
-          style: 'Educational',
-          generateFor: 'facebook_video_meta',
-        }),
-      });
-      const d = await r.json();
-      const post = d.facebook?.text || d.text || '';
-
-      // Auto-match affiliate link
+      // Auto-match affiliate link first
       const matchR = await fetch(API + '/api/affiliate/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,17 +73,55 @@ export default function FacebookStudio({ onNavigate }) {
       const matchD = await matchR.json();
       const link = matchD.links?.[0];
 
+      // Generate description using Claude
+      const genR = await fetch(API + '/api/nichroute/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          type: 'facebook_video_description',
+          affiliateName: link?.name || '',
+          affiliateUrl: link?.url || '',
+        }),
+      });
+
+      let description = '';
+      if (genR.ok) {
+        const genD = await genR.json();
+        description = genD.content || genD.text || '';
+      }
+
+      // Fallback description if API fails
+      if (!description) {
+        description = 'Check out this video about ' + topic + '.
+
+If you found this helpful, share it with someone who needs to see it!
+
+Drop a comment below with your thoughts 👇';
+      }
+
       // Build title from topic
       const autoTitle = topic.split(' ').map(function(w) {
         return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
       }).join(' ');
 
+      // Auto-generate tags from topic
+      const topicTags = topic.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(' ')
+        .filter(function(w) { return w.length > 2; })
+        .join(',');
+
       setTitle(autoTitle);
-      setDescription(post.slice(0, 500) + (link ? '\n\n🔗 ' + link.url + '\n#ad Affiliate link' : ''));
-      setTags(topic.toLowerCase().replace(/\s+/g, ',') + ',homebusiness,sidehustle,earnfromhome');
+      setDescription(description);
+      setTags(topicTags + ',homebusiness,sidehustle,earnfromhome,contentcreator');
       if (link) setAffLink(link.url);
     } catch(e) {
-      console.error(e);
+      console.error('AutoFill error:', e);
+      // Basic fallback
+      setTitle(topic);
+      setDescription('Watch this video about ' + topic + '. Drop a comment with your thoughts below! 👇');
+      setTags(topic.toLowerCase().replace(/\s+/g,',') + ',video,content');
     }
     setGenerating(false);
   }
