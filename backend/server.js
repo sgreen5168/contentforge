@@ -4690,10 +4690,12 @@ app.post('/api/nichroute/generate-content', async (req, res) => {
 Rules:
 - Write 80-120 words — punchy and engaging
 - Second person (you/your) — speak directly to the viewer
-- Start with what the video covers
-- Include a specific insight or tip
+- Describe ONLY what the topic is about — do NOT invent specific details like pricing, revenue amounts, or steps that may not be in the video
+- Stay general and inspiring — tease the value without inventing specifics
+- Include one relatable insight about why this topic matters to the viewer
 - End with an engagement question like "Have you tried this? Drop a comment below 👇"
-- If an affiliate product is provided, mention it naturally in one sentence
+- If an affiliate product is provided, mention it naturally in one sentence as a helpful tool
+- NEVER mention pricing, revenue figures, or specific business steps unless explicitly provided
 - NEVER use "cottage food laws" — say "selling baked goods from home is legal in most states"
 - NEVER use first-person product claims
 - No hashtags — those go separately`,
