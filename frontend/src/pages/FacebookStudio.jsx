@@ -40,6 +40,9 @@ export default function FacebookStudio({ onNavigate }) {
   const [step, setStep]                 = useState(saved.step || 1);
   const [topic, setTopic]               = useState(saved.topic || '');
   const [videoName, setVideoName]       = useState(saved.videoName || '');
+  const [editing, setEditing]           = useState(false);
+  const [reading, setReading]           = useState(false);
+  const [readSpeed, setReadSpeed]       = useState(1.0);
   const fileRef = useRef(null);
 
   // Save session whenever key fields change
@@ -173,6 +176,29 @@ export default function FacebookStudio({ onNavigate }) {
       : '') +
     (tags ? '\n\n' + tags.split(',').map(function(t){ return '#' + t.trim().replace(/\s+/g,''); }).join(' ') : '');
 
+  function readAloud(text) {
+    if (!text) return;
+    if (!window.speechSynthesis) { alert('Read Aloud requires Chrome or Edge.'); return; }
+    window.speechSynthesis.cancel();
+    const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[#*_`]/g, '').trim();
+    const utterance = new SpeechSynthesisUtterance(clean);
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(function(v){ return v.lang==='en-US' && v.name.includes('Natural'); })
+      || voices.find(function(v){ return v.lang==='en-US'; }) || voices[0];
+    if (preferred) utterance.voice = preferred;
+    utterance.rate = readSpeed;
+    utterance.pitch = 1.05;
+    utterance.onend = function(){ setReading(false); };
+    utterance.onerror = function(){ setReading(false); };
+    setReading(true);
+    setTimeout(function(){ window.speechSynthesis.speak(utterance); }, 100);
+  }
+
+  function stopReading() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setReading(false);
+  }
+
   return (
     <div style={{ minHeight:'100vh', background:BG, color:TXT, fontFamily:'system-ui,sans-serif', padding:'24px 20px' }}>
       <div style={{ maxWidth:720, margin:'0 auto' }}>
@@ -293,13 +319,44 @@ export default function FacebookStudio({ onNavigate }) {
               <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>{title.length}/100 characters</div>
             </div>
 
-            {/* Description */}
+            {/* Description with editor and reader */}
             <div style={{ ...card(), padding:16 }}>
-              <div style={{ fontSize:12, fontWeight:700, marginBottom:8 }}>📄 Description</div>
-              <textarea value={description} onChange={function(e){setDescription(e.target.value);}}
-                placeholder="What is this video about? Include key points and a call to action."
-                rows={5}
-                style={{ ...inp(), resize:'vertical', lineHeight:1.6 }} />
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontSize:12, fontWeight:700 }}>📄 Description</div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={function(){ setEditing(!editing); }}
+                    style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${editing?'rgba(99,102,241,.4)':BORD}`, background:editing?'rgba(99,102,241,.1)':'transparent', color:editing?'#818CF8':TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {editing ? '✅ Done' : '✏️ Edit'}
+                  </button>
+                  <button onClick={function(){ if(reading){ stopReading(); } else { readAloud(description); } }}
+                    style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${reading?'rgba(29,158,117,.4)':BORD}`, background:reading?'rgba(29,158,117,.1)':'transparent', color:reading?GRN:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {reading ? '⏹ Stop' : '🔊 Read'}
+                  </button>
+                  {reading && (
+                    <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                      {[0.75, 1.0, 1.25, 1.5].map(function(s) {
+                        return (
+                          <button key={s} onClick={function(){ setReadSpeed(s); stopReading(); setTimeout(function(){ readAloud(description); }, 200); }}
+                            style={{ padding:'3px 6px', borderRadius:4, border:`1px solid ${readSpeed===s?GRN:BORD}`, background:readSpeed===s?'rgba(29,158,117,.15)':'transparent', color:readSpeed===s?GRN:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                            {s}x
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {editing ? (
+                <textarea value={description} onChange={function(e){setDescription(e.target.value);}}
+                  rows={8} autoFocus
+                  style={{ ...inp(), resize:'vertical', lineHeight:1.7, borderColor:'rgba(99,102,241,.4)' }} />
+              ) : (
+                <div style={{ fontSize:12, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:7, border:`1px solid ${BORD}`, minHeight:80, cursor:'text' }}
+                  onClick={function(){ setEditing(true); }}>
+                  {description || <span style={{ color:TXT3, fontStyle:'italic' }}>Click to edit description or use ⚡ Auto-Fill above</span>}
+                </div>
+              )}
+              <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>{description.length} characters</div>
             </div>
 
             {/* Affiliate Link */}
