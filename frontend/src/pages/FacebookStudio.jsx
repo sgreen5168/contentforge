@@ -155,7 +155,19 @@ export default function FacebookStudio({ onNavigate }) {
 
       setTitle(autoTitle);
       setDescription(finalDesc);
-      setTags(topicTags + ',homebusiness,sidehustle,earnfromhome,contentcreator');
+      // Smart topic-based tags
+      const topicTag = topic.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const t = topic.toLowerCase();
+      let extraTags = 'homebusiness,contentcreator,sidehustle';
+      if (t.includes('bak')) extraTags = 'homebakery,bakingtips,bakingbusiness,foodbusiness,homecook';
+      else if (t.includes('meal')) extraTags = 'mealprep,mealprepideas,healthyeating,foodprep,cookingideas';
+      else if (t.includes('health') || t.includes('fitness')) extraTags = 'healthtips,wellnesstips,healthyhabits,selfcare,fitnesstips';
+      else if (t.includes('mindset') || t.includes('habit')) extraTags = 'mindset,personaldevelopment,selfimprovement,successmindset,motivation';
+      else if (t.includes('remote') || t.includes('office')) extraTags = 'remotework,workfromhome,wfhlife,homeoffice,digitalnomad';
+      else if (t.includes('hustle') || t.includes('income')) extraTags = 'sidehustle,sidehustleideas,extramoney,makemoney,passiveincome';
+      else if (t.includes('financ') || t.includes('budget')) extraTags = 'personalfinance,budgeting,moneytips,financialfreedom,savingmoney';
+      else if (t.includes('live') || t.includes('sell')) extraTags = 'liveselling,facebooklive,socialselling,onlineselling,ecommerce';
+      setTags(topicTag + ',' + extraTags);
       if (landingUrl) setAffLink(landingUrl); // show landing page URL not raw affiliate
       else if (link) setAffLink(link.url);
     } catch(e) {
