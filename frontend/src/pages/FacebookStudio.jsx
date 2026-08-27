@@ -41,6 +41,9 @@ export default function FacebookStudio({ onNavigate }) {
   const [topic, setTopic]               = useState(saved.topic || '');
   const [videoName, setVideoName]       = useState(saved.videoName || '');
   const [editing, setEditing]           = useState(false);
+  const [captions, setCaptions]         = useState(saved.captions || {});
+  const [genCaptions, setGenCaptions]   = useState(false);
+  const [activeCaption, setActiveCaption] = useState('facebook');
   const [reading, setReading]           = useState(false);
   const [readSpeed, setReadSpeed]       = useState(1.0);
   const fileRef = useRef(null);
@@ -49,7 +52,7 @@ export default function FacebookStudio({ onNavigate }) {
   useEffect(function() {
     try {
       localStorage.setItem('cf_fbstudio', JSON.stringify({
-        title, description, tags, privacy, affLink, step, topic,
+        title, description, tags, privacy, affLink, step, topic, captions,
         videoName, videoPreview: null, // can't store blob URLs
       }));
     } catch(e) {}
@@ -192,6 +195,29 @@ export default function FacebookStudio({ onNavigate }) {
     utterance.onerror = function(){ setReading(false); };
     setReading(true);
     setTimeout(function(){ window.speechSynthesis.speak(utterance); }, 100);
+  }
+
+  async function generateCaptions() {
+    if (!topic.trim() || !description.trim()) return;
+    setGenCaptions(true);
+    try {
+      const r = await fetch(API + '/api/studio/captions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          description,
+          affiliateUrl: affLink,
+          title,
+        }),
+      });
+      const d = await r.json();
+      if (d.captions) {
+        setCaptions(d.captions);
+        setActiveCaption('instagram');
+      }
+    } catch(e) { console.error('Caption gen failed:', e); }
+    setGenCaptions(false);
   }
 
   function stopReading() {
@@ -357,6 +383,86 @@ export default function FacebookStudio({ onNavigate }) {
                 </div>
               )}
               <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>{description.length} characters</div>
+            </div>
+
+            {/* Platform Captions */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                <div style={{ fontSize:12, fontWeight:700 }}>📱 Platform Captions</div>
+                <button onClick={generateCaptions} disabled={genCaptions || !description.trim()}
+                  style={{ padding:'5px 12px', borderRadius:7, border:'none', background:genCaptions||!description.trim()?'rgba(29,158,117,.3)':GRN, color:'white', fontSize:11, fontWeight:700, cursor:genCaptions||!description.trim()?'default':'pointer', fontFamily:'inherit' }}>
+                  {genCaptions ? '✨ Generating…' : '✨ Generate All Captions'}
+                </button>
+              </div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:10 }}>
+                One click generates optimized captions for every platform — each with the right length, tone, and hashtags.
+              </div>
+
+              {/* Platform tabs */}
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
+                {[
+                  { id:'facebook', icon:'📘', label:'Facebook' },
+                  { id:'instagram', icon:'📸', label:'Instagram' },
+                  { id:'tiktok', icon:'🎵', label:'TikTok' },
+                  { id:'youtube', icon:'▶', label:'YouTube' },
+                  { id:'pinterest', icon:'📌', label:'Pinterest' },
+                  { id:'twitter', icon:'𝕏', label:'X / Twitter' },
+                ].map(function(p) {
+                  const hasCap = p.id === 'facebook' ? !!description : !!captions[p.id];
+                  return (
+                    <button key={p.id} onClick={function(){ setActiveCaption(p.id); }}
+                      style={{ padding:'5px 12px', borderRadius:7,
+                        border:`1px solid ${activeCaption===p.id?'rgba(29,158,117,.5)':BORD}`,
+                        background:activeCaption===p.id?'rgba(29,158,117,.1)':'transparent',
+                        color:activeCaption===p.id?GRN:hasCap?TXT2:TXT3,
+                        fontSize:10, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                        display:'flex', alignItems:'center', gap:4 }}>
+                      {p.icon} {p.label}
+                      {hasCap && <span style={{ width:5, height:5, borderRadius:'50%', background:GRN, display:'inline-block' }} />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active caption display */}
+              {activeCaption === 'facebook' ? (
+                <div>
+                  <div style={{ fontSize:10, color:TXT3, marginBottom:6 }}>Your Facebook description (from above)</div>
+                  <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:7, border:`1px solid ${BORD}`, maxHeight:120, overflow:'auto' }}>
+                    {description || 'Fill in the description above first'}
+                  </div>
+                  <button onClick={function(){ copy(description,'fb_cap'); }} style={{ marginTop:6, padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='fb_cap'?'✓ Copied!':'📋 Copy'}
+                  </button>
+                </div>
+              ) : captions[activeCaption] ? (
+                <div>
+                  <div style={{ fontSize:10, color:TXT3, marginBottom:6 }}>
+                    {activeCaption==='instagram' && '📸 Instagram Reels — short, punchy, hashtags at end'}
+                    {activeCaption==='tiktok' && '🎵 TikTok — hook first, trending sounds, CTA to bio link'}
+                    {activeCaption==='youtube' && '▶ YouTube — detailed description with affiliate link allowed directly'}
+                    {activeCaption==='pinterest' && '📌 Pinterest — keyword-rich, searchable, evergreen'}
+                    {activeCaption==='twitter' && '𝕏 X/Twitter — concise, punchy, link at end'}
+                  </div>
+                  <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:7, border:`1px solid ${BORD}`, maxHeight:160, overflow:'auto' }}>
+                    {captions[activeCaption]}
+                  </div>
+                  <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                    <button onClick={function(){ copy(captions[activeCaption], activeCaption+'_cap'); }}
+                      style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied===activeCaption+'_cap'?'✓ Copied!':'📋 Copy'}
+                    </button>
+                    <button onClick={function(){ readAloud(captions[activeCaption]); }}
+                      style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      🔊 Read
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding:'16px', textAlign:'center', color:TXT3, fontSize:11 }}>
+                  {genCaptions ? '✨ Generating captions…' : 'Click ✨ Generate All Captions to create platform-specific versions'}
+                </div>
+              )}
             </div>
 
             {/* Affiliate Link */}
