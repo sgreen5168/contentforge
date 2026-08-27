@@ -11,6 +11,7 @@ const NAV = [
   { id:'fbstudio',   label:'Facebook Studio',   icon:'📘', section:'Content', badge:'New' },
   // Insights
   { id:'analytics',  label:'Analytics',         icon:'◎',  section:'Insights' },
+  { id:'strategy',   label:'Strategy Hub',      icon:'📊', section:'Insights', badge:'New' },
   { id:'calendar',   label:'Content Calendar',  icon:'📅', section:'Insights' },
   { id:'affiliate',  label:'Affiliate Library', icon:'🔗', section:'Insights' },
   { id:'amazon',     label:'Amazon Picker',     icon:'📦', section:'Insights' },
