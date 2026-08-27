@@ -41,10 +41,10 @@ const STRATEGY = {
     { niche:'Financial Tips', icon:'💵', titles:['Money habits that changed my finances','How to save $1000 fast starting now','Budgeting tips that actually work 2026','Financial freedom habits nobody teaches'] },
   ],
   actionPlan: [
-    { week:'Week 1', actions:['Upload existing Command Center MP4s to YouTube Shorts','Post 1 Short per day — use trending titles from this page','Don't overthink it — consistency beats perfection'] },
+    { week:'Week 1', actions:['Upload existing Command Center MP4s to YouTube Shorts','Post 1 Short per day — use trending titles from this page','Don\'t overthink it — consistency beats perfection'] },
     { week:'Week 2', actions:['Start TikTok with same videos — same content, different platform','Post daily — TikTok rewards new creators with organic reach','Add NichRoute landing page URL to bio on both platforms'] },
     { week:'Week 3', actions:['Create Pinterest boards: Home Bakery, Meal Prep, Side Hustle, Health','Pin each NichRoute landing page URL to relevant board','Each Pin drives evergreen affiliate traffic for months'] },
-    { week:'Week 4', actions:['Check which videos got most views — generate more on those topics','Double down on what's working — ignore what isn't','Apply to Awin programs that match your top-performing topics'] },
+    { week:'Week 4', actions:['Check which videos got most views — generate more on those topics','Double down on what\'s working — ignore what isn\'t','Apply to Awin programs that match your top-performing topics'] },
   ],
   whyFacebook: [
     'Facebook organic reach dropped to 1-3% of followers in 2026',
@@ -226,9 +226,9 @@ export default function StrategyHub({ onNavigate }) {
             <div style={{ ...card(), padding:'14px 16px' }}>
               <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>What to do with Facebook instead</div>
               {[
-                ['Post quickly via Facebook Studio', 'Generate content → copy description → post in under 5 minutes. Don't spend more time than that.'],
+                ['Post quickly via Facebook Studio', 'Generate content → copy description → post in under 5 minutes. Don\'t spend more time than that.'],
                 ['Use Facebook Groups for reach', 'Join Home Bakery, Side Hustle, and Meal Prep groups. Share your NichRoute landing page as helpful content — not as an ad.'],
-                ['Boost selectively', 'If a post gets good organic engagement, boost it with $5-10. Only pay to amplify what's already working.'],
+                ['Boost selectively', 'If a post gets good organic engagement, boost it with $5-10. Only pay to amplify what\'s already working.'],
                 ['Facebook is your archive', 'Your Facebook page becomes a content library. New followers can browse your history. It's not your primary traffic source.'],
               ].map(function(item, i) {
                 return (
