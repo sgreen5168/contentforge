@@ -12,36 +12,80 @@ const ACC  = '#1D9E75';
 const ACCH = '#5DCAA5';
 
 const TOPICS = [
-  { id:'mindset',        cat:'mindset',      label:'Success Mindset',        icon:'💡', hook:"The difference between people who reach their goals and those who give up is smaller than you think.", videoType:'motivational',
-    cbSearch:'manifestation self help', amzSearch:'mindset books journal planner' },
-  { id:'wfh-income',     cat:'home-income',  label:'Earning from Home',      icon:'🏠', hook:"People are quietly building real income from their home offices and spare rooms.", videoType:'educational',
-    cbSearch:'work from home home business', amzSearch:'home office desk setup ergonomic chair' },
-  { id:'side-hustle',    cat:'side-hustle',  label:'Side Hustle Ideas',      icon:'💰', hook:"The gap between your current income and what you want is smaller than you think.", videoType:'educational',
-    cbSearch:'affiliate marketing passive income', amzSearch:'side hustle books budget planner' },
-  { id:'health-wellness',cat:'health',       label:'Health & Wellness',      icon:'💪', hook:"Small daily habits that actually move the needle on your health.", videoType:'educational',
-    cbSearch:'weight loss keto diet intermittent fasting', amzSearch:'fitness tracker resistance bands water bottle' },
-  { id:'meal-prep',      cat:'meal-prep',    label:'Meal Prep & Food',       icon:'🥗', hook:"Two hours on Sunday saves five hours of stress during the week.", videoType:'educational',
-    cbSearch:'meal planning nutrition guide smoothie', amzSearch:'meal prep containers food scale instant pot' },
-  { id:'home-bakery',    cat:'baking',       label:'Home Bakery Business',   icon:'🧁', hook:"Your baking skills are probably worth more than you realize.", videoType:'educational',
-    cbSearch:'home business blueprint food business', amzSearch:'stand mixer baking pans bakery packaging' },
-  { id:'financial-tips', cat:'finance',      label:'Financial Freedom',      icon:'💵', hook:"The money habits nobody teaches you in school.", videoType:'educational',
-    cbSearch:'stock market investing wealth building', amzSearch:'personal finance books budget planner' },
-  { id:'remote-work',    cat:'remote-work',  label:'Remote Work Tips',       icon:'💻', hook:"Working from home changed everything — but only after getting the setup right.", videoType:'educational',
-    cbSearch:'freelance writing virtual assistant remote', amzSearch:'standing desk ring light blue light glasses' },
-  { id:'live-commerce',  cat:'live-commerce',label:'Live Selling on Facebook',icon:'📱', hook:"Live selling is the fastest growing income stream most people overlook.", videoType:'educational',
-    cbSearch:'ecommerce selling online dropshipping', amzSearch:'ring light for streaming phone tripod microphone' },
-  { id:'entrepreneur',   cat:'entrepreneur', label:'Entrepreneur Tips',      icon:'🚀', hook:"The truth about starting a business that nobody tells you upfront.", videoType:'motivational',
-    cbSearch:'online business startup digital marketing', amzSearch:'business books bestsellers whiteboard planner' },
-  { id:'product-demo',   cat:'product-demo', label:'Product Demo & Review',  icon:'🎁', hook:"Here is exactly why this product is worth your attention.", videoType:'product-demo',
-    cbSearch:'affiliate marketing training product review', amzSearch:'any Amazon product use SiteStripe' },
-  { id:'niche',          cat:'niche',        label:'Finding Your Niche',     icon:'🎯', hook:"Most people try to reach everyone — and end up reaching no one.", videoType:'educational',
-    cbSearch:'niche profit blogging content marketing', amzSearch:'camera microphone lighting kit content creator' },
-  { id:'cooking-biz',    cat:'cooking-biz',  label:'Cooking as a Business',  icon:'🍳', hook:"Skills you take for granted are worth real money to other people.", videoType:'educational',
-    cbSearch:'food business secrets recipe ebook catering', amzSearch:'chef knife set food containers vacuum sealer' },
-  { id:'amazon-finds',   cat:'amazon',       label:'Amazon Product Finds',   icon:'📦', hook:"These Amazon finds solve everyday problems in ways you would not expect.", videoType:'product-demo',
-    cbSearch:'', amzSearch:'top amazon products kitchen home office' },
-  { id:'clickbank-pick', cat:'clickbank',    label:'ClickBank Product Spotlight', icon:'💳', hook:"This digital product solved a real problem — here is how it works.", videoType:'product-demo',
-    cbSearch:'self help manifestation weight loss', amzSearch:'' },
+  { id:'mindset',        cat:'mindset',      label:'Success Mindset',              icon:'💡',
+    hook:"The habit that separates people who reach their goals from those who give up.",
+    videoType:'motivational', cbSearch:'manifestation self help', amzSearch:'mindset books journal planner',
+    trendingTitles:['Habits that changed my life in 30 days','The mindset shift nobody talks about','Why most people never reach their goals'] },
+
+  { id:'wfh-income',     cat:'home-income',  label:'Earning from Home',            icon:'🏠',
+    hook:"People are quietly building real income from their home offices — here is how.",
+    videoType:'educational', cbSearch:'work from home home business', amzSearch:'home office desk setup ergonomic chair',
+    trendingTitles:['How I make money from home (realistic)','Work from home jobs that actually pay well','Side income ideas that work in 2026'] },
+
+  { id:'side-hustle',    cat:'side-hustle',  label:'Side Hustle Ideas',            icon:'💰',
+    hook:"The gap between your current income and what you want is smaller than you think.",
+    videoType:'educational', cbSearch:'affiliate marketing passive income', amzSearch:'side hustle books budget planner',
+    trendingTitles:['Side hustles that made me quit my job','$500 a week from home — realistic breakdown','Side hustle ideas for beginners 2026'] },
+
+  { id:'health-wellness',cat:'health',       label:'Health & Wellness',            icon:'💪',
+    hook:"Small daily habits that actually move the needle — no gym membership required.",
+    videoType:'educational', cbSearch:'weight loss keto diet intermittent fasting', amzSearch:'fitness tracker resistance bands water bottle',
+    trendingTitles:['Lazy girl workout that actually works','Habits that changed my health in 30 days','Morning routine for energy without caffeine'] },
+
+  { id:'meal-prep',      cat:'meal-prep',    label:'Meal Prep Under $50',          icon:'🥗',
+    hook:"Two hours on Sunday saves five hours of stress — and your grocery bill.",
+    videoType:'educational', cbSearch:'meal planning nutrition guide smoothie', amzSearch:'meal prep containers food scale instant pot',
+    trendingTitles:['Full week meal prep under $50','High protein meal prep for beginners','5 ingredient meal prep that lasts all week'] },
+
+  { id:'home-bakery',    cat:'baking',       label:'Home Bakery Business',         icon:'🧁',
+    hook:"Your baking skills are probably worth more than you realize.",
+    videoType:'educational', cbSearch:'home business blueprint food business', amzSearch:'stand mixer baking pans bakery packaging',
+    trendingTitles:['How to start selling baked goods from home','Home bakery income — realistic numbers','What you need to legally sell baked goods'] },
+
+  { id:'financial-tips', cat:'finance',      label:'Financial Freedom Tips',       icon:'💵',
+    hook:"The money habits nobody teaches you in school — but everyone wishes they knew.",
+    videoType:'educational', cbSearch:'stock market investing wealth building', amzSearch:'personal finance books budget planner',
+    trendingTitles:['Money habits that changed my finances','How to save $1000 fast starting now','Budgeting tips that actually work 2026'] },
+
+  { id:'remote-work',    cat:'remote-work',  label:'Remote Work Setup',            icon:'💻',
+    hook:"The home office setup that doubled productivity — under $200.",
+    videoType:'educational', cbSearch:'freelance writing virtual assistant remote', amzSearch:'standing desk ring light blue light glasses',
+    trendingTitles:['Home office setup that changed everything','Work from home setup under $200','Remote work tips nobody tells you'] },
+
+  { id:'live-commerce',  cat:'live-commerce',label:'Live Selling on Facebook',     icon:'📱',
+    hook:"Live selling is the fastest growing income stream most people overlook.",
+    videoType:'educational', cbSearch:'ecommerce selling online dropshipping', amzSearch:'ring light for streaming phone tripod microphone',
+    trendingTitles:['How to start live selling on Facebook','Live selling tips for beginners','Make money live streaming in 2026'] },
+
+  { id:'entrepreneur',   cat:'entrepreneur', label:'Entrepreneur Tips',            icon:'🚀',
+    hook:"The truth about starting a business that nobody tells you upfront.",
+    videoType:'motivational', cbSearch:'online business startup digital marketing', amzSearch:'business books bestsellers whiteboard planner',
+    trendingTitles:['What I wish I knew before starting a business','Entrepreneur habits that actually work','How to start a business with no money'] },
+
+  { id:'lazy-workout',   cat:'health',       label:'Lazy Girl Workout',            icon:'🏋️',
+    hook:"You do not need a gym, equipment, or motivation — just 10 minutes.",
+    videoType:'educational', cbSearch:'weight loss workout program', amzSearch:'resistance bands yoga mat fitness tracker',
+    trendingTitles:['Lazy girl workout routine that works','10 minute workout you can do anywhere','No motivation workout — do this instead'] },
+
+  { id:'morning-routine',cat:'mindset',      label:'Morning Routine for Energy',   icon:'☀️',
+    hook:"The 15-minute morning routine that changes how the whole day feels.",
+    videoType:'educational', cbSearch:'morning routine productivity', amzSearch:'journal planner water bottle blue light glasses',
+    trendingTitles:['Morning routine that changed my energy','15 minute morning routine for busy people','Stop scrolling in the morning — do this instead'] },
+
+  { id:'amazon-finds',   cat:'amazon',       label:'Amazon Product Finds',         icon:'📦',
+    hook:"These Amazon finds solve everyday problems in ways you would not expect.",
+    videoType:'product-demo', cbSearch:'', amzSearch:'top amazon products kitchen home office',
+    trendingTitles:['Amazon finds that changed my daily routine','Products I wish I bought sooner','Amazon hidden gems under $30'] },
+
+  { id:'cooking-biz',    cat:'cooking-biz',  label:'Cooking as a Business',        icon:'🍳',
+    hook:"Skills you take for granted are worth real money to other people.",
+    videoType:'educational', cbSearch:'food business secrets recipe ebook catering', amzSearch:'chef knife set food containers vacuum sealer',
+    trendingTitles:['How to turn cooking into income','Start a food business from your kitchen','Sell food from home — what you need to know'] },
+
+  { id:'niche',          cat:'niche',        label:'Finding Your Niche',           icon:'🎯',
+    hook:"Most people try to reach everyone — and end up reaching no one.",
+    videoType:'educational', cbSearch:'niche profit blogging content marketing', amzSearch:'camera microphone lighting kit content creator',
+    trendingTitles:['How to find your niche in 2026','Content creator tips for beginners','Grow on social media — what actually works'] },
 ];
 
 // High-view video strategies built into each topic type
@@ -461,6 +505,21 @@ export default function Dashboard({ onNavigate }) {
                   <div style={{ fontSize:11, color:TXT3, fontStyle:'italic' }}>"{selectedTopic.hook}"</div>
                 </div>
               </div>
+              {selectedTopic.trendingTitles && (
+                <div style={{ marginBottom:12, padding:'10px 12px', background:'rgba(255,153,0,.06)', border:'1px solid rgba(255,153,0,.2)', borderRadius:8 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#F59E0B', marginBottom:6 }}>🔥 Trending video titles for this topic — click to use</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    {selectedTopic.trendingTitles.map(function(title, i) {
+                      return (
+                        <button key={i} onClick={function(){ copy(title, 'trending_'+i); }}
+                          style={{ padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,153,0,.2)', background:'rgba(255,153,0,.05)', color:TXT2, fontSize:10, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                          {copied==='trending_'+i ? '✓ Copied!' : '📋 ' + title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, marginBottom:14, padding:'10px 12px', background:'rgba(29,158,117,.06)', border:'1px solid rgba(29,158,117,.15)', borderRadius:8 }}>
                 <strong style={{ color:ACCH }}>What ContentForge will do automatically:</strong><br/>
                 📝 Write a Facebook post about this topic<br/>
