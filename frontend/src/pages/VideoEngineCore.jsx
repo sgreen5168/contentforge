@@ -990,6 +990,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   async function ytUploadToYouTube() {
     if (!ytFile || !ytEditMeta?.title) return;
     setYtUploading(true); setYtUpErr(''); setYtUpRes(null);
+    // Set a 3 minute timeout for large video uploads
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 180000);
     try {
       const formData = new FormData();
       formData.append('video', ytFile);
@@ -1003,12 +1006,27 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const res = await fetch(API + '/api/youtube/upload-from-file', {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed HTTP ' + res.status);
+      if (!res.ok) {
+        // If OAuth not connected, show manual upload instructions
+        if (data.error && data.error.includes('YOUTUBE_REFRESH_TOKEN')) {
+          setYtUpErr('YouTube not connected — use the manual upload instructions below instead.');
+        } else {
+          throw new Error(data.error || 'Upload failed HTTP ' + res.status);
+        }
+        return;
+      }
       setYtUpRes(data);
-    } catch(e) { setYtUpErr(e.message); }
-    finally { setYtUploading(false); }
+    } catch(e) {
+      if (e.name === 'AbortError') {
+        setYtUpErr('Upload timed out — your video file may be too large. Use manual YouTube upload instead.');
+      } else {
+        setYtUpErr(e.message + ' — Try manual upload below.');
+      }
+    }
+    finally { clearTimeout(timeout); setYtUploading(false); }
   }
 
   // ── Video Builder functions ──────────────────────────────────────────────
