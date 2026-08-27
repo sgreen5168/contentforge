@@ -1060,13 +1060,14 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   }
 
   async function vbCheckStatus() {
+    // Set defaults immediately so UI renders while checking
+    setVbStatus({ anthropic: true, openai: true, pexels: true, youtube: false });
     try {
-      const r = await fetch(VB_API + '/status');
+      const r = await fetch(VB_API + '/status', { signal: AbortSignal.timeout(5000) });
       const d = await r.json();
       setVbStatus(d);
     } catch {
-      // Status check failed but service may still work — set defaults
-      setVbStatus({ anthropic: true, openai: true, pexels: true, youtube: false });
+      // Keep defaults set above — service is running
     }
   }
 
@@ -3007,7 +3008,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       {/* 🎬 VIDEO BUILDER TAB */}
       {tab === 'vbuilder' && (function() {
         // Check status on first open
-        if (tab === 'vbuilder' && !vbStatus) { vbCheckStatus(); }
+        if (tab === 'vbuilder' && !vbStatus) { setTimeout(vbCheckStatus, 100); }
         return (
         <div style={{ maxWidth: 680 }}>
 
