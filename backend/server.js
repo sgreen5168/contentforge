@@ -4707,6 +4707,64 @@ Rules:
   }
 });
 
+
+// ── Multi-platform caption generator for Facebook Studio ──────────────────
+app.post('/api/studio/captions', async (req, res) => {
+  const { topic, description, affiliateUrl, title } = req.body;
+  if (!topic) return res.status(400).json({ error: 'topic required' });
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1200,
+      system: `You generate platform-optimized social media captions for video content.
+Return ONLY valid JSON with these exact keys: instagram, tiktok, youtube, pinterest, twitter.
+
+Platform rules:
+INSTAGRAM (125-150 words): Hook first line, 3-5 bullet points of value, CTA "Link in bio 👆", 15-20 hashtags at end, emoji-rich
+TIKTOK (50-80 words): Ultra punchy hook, 2-3 value points, "Link in bio for more" CTA, 5-8 trending hashtags, conversational Gen-Z adjacent tone
+YOUTUBE (150-200 words): SEO-friendly title line, detailed description of video content, mention affiliate product naturally if provided, direct affiliate link if provided, 10-15 hashtags, "Subscribe for more" CTA
+PINTEREST (80-100 words): Keyword-rich, searchable phrases, descriptive, evergreen language, 5-10 keyword hashtags, links to landing page
+TWITTER (under 280 chars including link): Punchy one-liner, key insight, landing page link, 2-3 hashtags max
+
+Rules for ALL platforms:
+- NEVER use first-person: not "I tried", "I use", "I made"
+- Use "you/your" or "most people/many find"  
+- NEVER say "cottage food laws" — say "selling from home is legal in most states"
+- Natural, conversational tone — not salesy
+- Include landing page URL where appropriate`,
+      messages: [{ role: 'user', content: `Topic: "${topic}"
+Title: "${title || topic}"
+Main description: "${(description||'').slice(0,400)}"
+Landing page URL: "${affiliateUrl || ''}"
+
+Generate optimized captions for all 5 platforms. Return only the JSON object.` }],
+    });
+
+    let captions;
+    try {
+      const text = response.content[0].text;
+      const clean = text.replace(/\`\`\`json|\`\`\`/g, '').trim();
+      captions = JSON.parse(clean);
+    } catch(e) {
+      // Fallback if JSON parse fails
+      captions = {
+        instagram: 'Check out this video about ' + topic + '! Link in bio 👆
+#' + topic.toLowerCase().replace(/\s+/g,'') + ' #homebusiness #sidehustle',
+        tiktok: topic + ' — watch this 👀 Link in bio! #' + topic.toLowerCase().replace(/\s+/g,'') + ' #fyp #sidehustle',
+        youtube: title + '\n\n' + (description||'').slice(0,200) + '\n\n' + (affiliateUrl||'') + '\n\n#' + topic.toLowerCase().replace(/\s+/g,''),
+        pinterest: topic + ' — ' + (description||'').slice(0,100) + ' ' + (affiliateUrl||''),
+        twitter: topic + ' — ' + (description||'').slice(0,150) + ' ' + (affiliateUrl||''),
+      };
+    }
+
+    res.json({ captions });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
