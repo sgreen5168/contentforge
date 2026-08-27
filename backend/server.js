@@ -4750,8 +4750,7 @@ Generate optimized captions for all 5 platforms. Return only the JSON object.` }
     } catch(e) {
       // Fallback if JSON parse fails
       captions = {
-        instagram: 'Check out this video about ' + topic + '! Link in bio 👆
-#' + topic.toLowerCase().replace(/\s+/g,'') + ' #homebusiness #sidehustle',
+        instagram: 'Check out this video about ' + topic + '! Link in bio 👆\n#' + topic.toLowerCase().replace(/\s+/g,'') + ' #homebusiness #sidehustle',
         tiktok: topic + ' — watch this 👀 Link in bio! #' + topic.toLowerCase().replace(/\s+/g,'') + ' #fyp #sidehustle',
         youtube: title + '\n\n' + (description||'').slice(0,200) + '\n\n' + (affiliateUrl||'') + '\n\n#' + topic.toLowerCase().replace(/\s+/g,''),
         pinterest: topic + ' — ' + (description||'').slice(0,100) + ' ' + (affiliateUrl||''),
