@@ -4772,28 +4772,19 @@ app.get('/api/trends/youtube', async (req, res) => {
   const apiKey = process.env.YOUTUBE_DATA_API_KEY;
   if (!apiKey) return res.status(400).json({ error: 'YOUTUBE_DATA_API_KEY not set' });
   try {
-    const https = require('https');
     const params = new URLSearchParams({
       part: 'snippet',
       q: q,
       type: 'video',
       order: 'viewCount',
-      maxResults: maxResults,
+      maxResults: String(maxResults),
       relevanceLanguage: 'en',
       regionCode: 'US',
       key: apiKey,
     });
     const url = 'https://www.googleapis.com/youtube/v3/search?' + params.toString();
-    const data = await new Promise((resolve, reject) => {
-      https.get(url, (r) => {
-        let d = '';
-        r.on('data', c => d += c);
-        r.on('end', () => {
-          try { resolve(JSON.parse(d)); }
-          catch(e) { reject(new Error('Parse error')); }
-        });
-      }).on('error', reject);
-    });
+    const response = await fetch(url);
+    const data = await response.json();
     if (data.error) return res.status(400).json({ error: data.error.message });
     const videos = (data.items || []).map(item => ({
       id: item.id?.videoId,
