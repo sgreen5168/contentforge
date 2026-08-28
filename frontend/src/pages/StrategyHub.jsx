@@ -8,6 +8,7 @@ const TXT  = '#E8F4F0';
 const TXT2 = 'rgba(232,244,240,.7)';
 const TXT3 = 'rgba(232,244,240,.4)';
 const ACC  = '#1D9E75';
+const API  = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 const ACCH = '#4FA3FF';
 const AMB  = '#F59E0B';
 
@@ -58,6 +59,10 @@ const STRATEGY = {
 export default function StrategyHub({ onNavigate }) {
   const [tab, setTab] = useState('platform');
   const [copied, setCopied] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchError, setSearchError] = useState('');
 
   function copy(text, id) {
     navigator.clipboard.writeText(text).catch(function(){});
@@ -69,9 +74,24 @@ export default function StrategyHub({ onNavigate }) {
     { id:'platform', label:'📱 Platform Guide' },
     { id:'monetize', label:'💰 Monetization Path' },
     { id:'trending', label:'🔥 Trending Topics' },
+    { id:'search', label:'🔍 Live YouTube Search' },
     { id:'plan', label:'📅 30-Day Plan' },
     { id:'facebook', label:'📘 Facebook Reality' },
   ];
+
+  async function searchYouTube() {
+    if (!searchQuery.trim()) return;
+    setSearching(true); setSearchError(''); setSearchResults(null);
+    try {
+      const r = await fetch(API + '/api/trends/youtube?q=' + encodeURIComponent(searchQuery) + '&maxResults=8');
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setSearchResults(d.videos || []);
+    } catch(e) {
+      setSearchError(e.message);
+    }
+    setSearching(false);
+  }
 
   return (
     <div style={{ minHeight:'100vh', background:BG, color:TXT, fontFamily:'system-ui,sans-serif', padding:'24px 20px' }}>
@@ -206,6 +226,71 @@ export default function StrategyHub({ onNavigate }) {
                 Upload to <strong style={{ color:TXT }}>YouTube Shorts first</strong> every day. It is the only platform that builds toward long-term monetization while also driving immediate affiliate traffic. TikTok and Instagram get you faster reach — YouTube gets you lasting income.
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Live YouTube Search */}
+        {tab === 'search' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontSize:13, color:TXT2, lineHeight:1.6 }}>
+              Search YouTube in real time to see what videos are performing on any topic. Use this before generating content to find the best titles and angles.
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <input value={searchQuery} onChange={function(e){ setSearchQuery(e.target.value); }}
+                onKeyDown={function(e){ if(e.key==='Enter') searchYouTube(); }}
+                placeholder="e.g. home bakery business, lazy girl workout, meal prep under $50"
+                style={{ flex:1, background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:8, padding:'10px 14px', fontSize:12, color:TXT, fontFamily:'inherit', outline:'none' }} />
+              <button onClick={searchYouTube} disabled={searching || !searchQuery.trim()}
+                style={{ padding:'10px 20px', borderRadius:8, border:'none', background:searching||!searchQuery.trim()?'rgba(29,158,117,.3)':ACC, color:'white', fontSize:12, fontWeight:700, cursor:searching||!searchQuery.trim()?'default':'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                {searching ? '⏳ Searching…' : '🔍 Search'}
+              </button>
+            </div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {['home bakery business','lazy girl workout','meal prep under $50','side hustle 2026','morning routine energy','work from home tips'].map(function(q) {
+                return (
+                  <button key={q} onClick={function(){ setSearchQuery(q); }}
+                    style={{ padding:'5px 12px', borderRadius:20, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {q}
+                  </button>
+                );
+              })}
+            </div>
+            {searchError && (
+              <div style={{ padding:'10px', background:'rgba(226,75,74,.08)', borderRadius:8, fontSize:11, color:'#F09595' }}>❌ {searchError}</div>
+            )}
+            {searchResults && searchResults.length > 0 && (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ fontSize:11, color:TXT3 }}>Top performing YouTube videos for "{searchQuery}" — click title to copy</div>
+                {searchResults.map(function(v, i) {
+                  return (
+                    <div key={i} style={{ ...card(), padding:'12px 14px', display:'flex', gap:12, alignItems:'flex-start' }}>
+                      {v.thumbnail && (
+                        <img src={v.thumbnail} alt="" style={{ width:80, height:45, borderRadius:6, objectFit:'cover', flexShrink:0 }} />
+                      )}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <button onClick={function(){ copy(v.title, 'yt_'+i); }}
+                          style={{ background:'none', border:'none', color:TXT, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', textAlign:'left', padding:0, marginBottom:4, lineHeight:1.4 }}>
+                          {copied==='yt_'+i ? '✓ Copied!' : v.title}
+                        </button>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:4 }}>{v.channel}</div>
+                        <div style={{ fontSize:10, color:TXT3, lineHeight:1.4 }}>{v.description}</div>
+                        <a href={v.url} target="_blank" rel="noreferrer"
+                          style={{ fontSize:10, color:ACCH, textDecoration:'none', display:'inline-block', marginTop:4 }}>
+                          Watch on YouTube ↗
+                        </a>
+                      </div>
+                      <button onClick={function(){ copy(v.title, 'yt_'+i); }}
+                        style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                        📋 Copy Title
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {searchResults && searchResults.length === 0 && (
+              <div style={{ padding:'20px', textAlign:'center', color:TXT3, fontSize:12 }}>No results found — try a different search term</div>
+            )}
           </div>
         )}
 
