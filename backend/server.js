@@ -4764,6 +4764,52 @@ Generate optimized captions for all 5 platforms. Return only the JSON object.` }
   }
 });
 
+
+// ── YouTube Trend Search ───────────────────────────────────────────────────
+app.get('/api/trends/youtube', async (req, res) => {
+  const { q, maxResults = 8 } = req.query;
+  if (!q) return res.status(400).json({ error: 'query required' });
+  const apiKey = process.env.YOUTUBE_DATA_API_KEY;
+  if (!apiKey) return res.status(400).json({ error: 'YOUTUBE_DATA_API_KEY not set' });
+  try {
+    const https = require('https');
+    const params = new URLSearchParams({
+      part: 'snippet',
+      q: q,
+      type: 'video',
+      order: 'viewCount',
+      maxResults: maxResults,
+      relevanceLanguage: 'en',
+      regionCode: 'US',
+      key: apiKey,
+    });
+    const url = 'https://www.googleapis.com/youtube/v3/search?' + params.toString();
+    const data = await new Promise((resolve, reject) => {
+      https.get(url, (r) => {
+        let d = '';
+        r.on('data', c => d += c);
+        r.on('end', () => {
+          try { resolve(JSON.parse(d)); }
+          catch(e) { reject(new Error('Parse error')); }
+        });
+      }).on('error', reject);
+    });
+    if (data.error) return res.status(400).json({ error: data.error.message });
+    const videos = (data.items || []).map(item => ({
+      id: item.id?.videoId,
+      title: item.snippet?.title,
+      channel: item.snippet?.channelTitle,
+      description: item.snippet?.description?.slice(0, 120),
+      thumbnail: item.snippet?.thumbnails?.medium?.url,
+      published: item.snippet?.publishedAt,
+      url: 'https://www.youtube.com/watch?v=' + item.id?.videoId,
+    }));
+    res.json({ videos, query: q, total: data.pageInfo?.totalResults });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
