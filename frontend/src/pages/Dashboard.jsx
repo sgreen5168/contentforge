@@ -86,6 +86,21 @@ const TOPICS = [
     hook:"Most people try to reach everyone — and end up reaching no one.",
     videoType:'educational', cbSearch:'niche profit blogging content marketing', amzSearch:'camera microphone lighting kit content creator',
     trendingTitles:['How to find your niche in 2026','Content creator tips for beginners','Grow on social media — what actually works'] },
+
+  { id:'chipotle-bowl',  cat:'meal-prep',    label:'Chipotle Bowl Meal Prep',      icon:'🥩',
+    hook:"Five Chipotle-style steak bowls. Under fifty dollars. Made in your own kitchen.",
+    videoType:'product-demo', cbSearch:'meal planning nutrition', amzSearch:'glass meal prep containers food scale',
+    trendingTitles:['Homemade Chipotle bowl meal prep under $50','Chipotle steak bowl at home — full recipe','Meal prep that saves $80 a week'] },
+
+  { id:'high-protein',   cat:'meal-prep',    label:'High Protein Meal Prep',       icon:'💪',
+    hook:"Most people struggle to hit their protein goals. This fixes it in one Sunday session.",
+    videoType:'educational', cbSearch:'nutrition meal planning protein', amzSearch:'meal prep containers food scale instant pot',
+    trendingTitles:['High protein meal prep for the week','100g protein a day meal prep','Cheap high protein meal prep 2026'] },
+
+  { id:'budget-meals',   cat:'meal-prep',    label:'Budget Dinners Under $5',      icon:'💵',
+    hook:"A full week of dinners for less than you spend on one takeout order.",
+    videoType:'educational', cbSearch:'meal planning budget cooking', amzSearch:'instant pot budget meals cookbook',
+    trendingTitles:['Dinners under $5 per serving','Budget meal prep for the week','Cheap meals that actually taste good'] },
 ];
 
 // High-view video strategies built into each topic type
