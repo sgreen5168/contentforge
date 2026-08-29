@@ -37,6 +37,8 @@ export default function AffiliateLibrary() {
   const [searching, setSearching]   = useState(false);
   const [bulkMode, setBulkMode]       = useState(false);
   const [suggesting, setSuggesting]   = useState(false);
+  const [editingId, setEditingId]     = useState(null);
+  const [editForm, setEditForm]       = useState({ name:'', url:'', keywords:'', category:'' });
   const [showGuide, setShowGuide]     = useState(false);
   const [suggestTopic, setSuggestTopic] = useState('');
   const [suggestResult, setSuggestResult] = useState(null);
@@ -184,6 +186,34 @@ export default function AffiliateLibrary() {
       setSuggestResult({ error: e.message });
     }
     setSuggesting(false);
+  }
+
+  function startEdit(link) {
+    setEditingId(link.id);
+    setEditForm({
+      name: link.name || '',
+      url: link.url || '',
+      keywords: (link.keywords || []).join(', '),
+      category: link.category || 'general',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editingId) return;
+    try {
+      await fetch(API + '/api/affiliate/links/' + editingId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          url: editForm.url,
+          keywords: editForm.keywords.split(',').map(function(k){ return k.trim(); }).filter(Boolean),
+          category: editForm.category,
+        }),
+      });
+      setEditingId(null);
+      loadLinks();
+    } catch(e) { console.error('Save failed:', e); }
   }
 
   async function liveSearch() {
@@ -714,25 +744,11 @@ export default function AffiliateLibrary() {
                       style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${BORD}`, background: 'transparent', color: TXT3, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                       📋 Copy
                     </button>
-                    <button onClick={() => {
-                      const newName = prompt('Product name:', link.name);
-                      if (!newName) return;
-                      const newUrl = prompt('Affiliate URL (paste real hoplink):', link.url);
-                      if (!newUrl) return;
-                      const newKw = prompt('Keywords (comma separated):', (link.keywords||[]).join(', '));
-                      const newCat = prompt('Category:', link.category||'general');
-                      fetch(`${API}/api/affiliate/links/${link.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: newName, url: newUrl, keywords: (newKw||'').split(',').map(k=>k.trim()).filter(Boolean), category: newCat||'general' }),
-                      }).then(() => loadLinks()).catch(() => {
-                        deleteLink(link.id);
-                      });
-                    }}
-                      style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid rgba(99,102,241,.3)`, background: 'transparent', color: '#818CF8', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={function(){ startEdit(link); }}
+                      style={{ padding:'4px 10px', borderRadius:6, border:'1px solid rgba(99,102,241,.3)', background:'transparent', color:'#818CF8', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
                       ✏️ Edit
                     </button>
-                    <button onClick={() => deleteLink(link.id)}
+                    <button onClick={function(){ deleteLink(link.id); }}
                       style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(226,75,74,.3)', background: 'transparent', color: '#F09595', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
                       🗑 Remove
                     </button>
