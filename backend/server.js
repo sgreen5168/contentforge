@@ -3662,7 +3662,8 @@ app.post('/api/youtube/upload-from-file', async (req, res) => {
             title,
             description,
             tags,
-            categoryId: category,
+            // YouTube requires numeric category IDs — 22=People & Blogs, 26=Howto & Style
+          categoryId: ({'People & Blogs':'22','Howto & Style':'26','Entertainment':'24','Education':'27','Food':'26','Health':'26','Business':'22'})[category] || '22',
           },
           status: {
             privacyStatus: privacy,
