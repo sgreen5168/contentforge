@@ -173,8 +173,14 @@ CRITICAL for sceneDescriptions — these search a stock video library (Pexels) f
 - Format: [person type] + [location] + [physical action] e.g. "woman kitchen baking bread" or "man laptop home office smiling"
 - NEVER use metaphors or idioms as scene descriptions. "Get off the fence" → use "person standing crossroads deciding" or "woman laptop making choice". "Hit the ground running" → use "person jogging morning neighborhood". Always translate to what is literally visible.
 - Each scene must match what is PHYSICALLY HAPPENING in that part of the script — not the overall theme.
-- Good examples: "woman mixer baking cookies", "man phone small business", "family dining table eating", "person laptop coffee shop working"
-- Bad examples: "determination success journey", "lifestyle transformation moment", "fence decision metaphor" `;
+- BE SPECIFIC to the topic — if the topic is meal prep, describe the EXACT food being prepped. If it is baking, describe the EXACT baked item. If it is fitness, describe the EXACT exercise movement.
+- FOOD TOPICS: describe the specific ingredient, cooking action, and vessel. "steak sizzling cast iron skillet" not "food cooking pan". "hands slicing flank steak cutting board" not "person cutting food". "glass meal prep containers rice beans assembled" not "containers food".
+- FITNESS TOPICS: describe the exact movement. "woman resistance bands squat living room" not "woman exercising home". "person yoga mat morning stretch sunlight" not "person stretching floor".
+- HOME/KITCHEN TOPICS: describe exact tools and actions. "KitchenAid mixer dough bowl spinning" not "kitchen appliance mixing". "hands rolling bread dough marble counter" not "person baking kitchen".
+- CLOSE-UP DETAILS: include texture and action shots. "steam rising rice pot close-up", "lime being squeezed steak marinade", "cheese melting bowl overhead shot".
+- VISUAL DRAMA: pick the most visually interesting moment in each scene. The sizzle, the steam, the slice, the pour, the reveal. These make videos compelling.
+- Good examples: "flank steak searing cast iron skillet smoke", "woman slicing steak thin against grain", "five meal prep bowls overhead assembly complete", "resistance bands woman living room squat", "hands kneading bread dough flour counter"
+- Bad examples: "determination success journey", "lifestyle transformation moment", "cooking food kitchen general" `;
 
   const msg = await client.messages.create({
     model: 'claude-opus-4-5',
