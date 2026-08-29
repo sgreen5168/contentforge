@@ -757,6 +757,48 @@ export default function AffiliateLibrary() {
                     )}
                   </div>
                 </div>
+                {editingId === link.id && (
+                  <div style={{ padding:'14px 16px', borderTop:`1px solid ${BORD}`, background:'rgba(99,102,241,.06)', borderRadius:'0 0 12px 12px' }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#818CF8', marginBottom:10 }}>✏️ Edit Link</div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      <div>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Product Name</div>
+                        <input value={editForm.name} onChange={function(e){ setEditForm(function(p){ return {...p, name:e.target.value}; }); }}
+                          style={{ width:'100%', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, padding:'7px 10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Affiliate URL</div>
+                        <input value={editForm.url} onChange={function(e){ setEditForm(function(p){ return {...p, url:e.target.value}; }); }}
+                          style={{ width:'100%', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, padding:'7px 10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Keywords (comma separated)</div>
+                        <input value={editForm.keywords} onChange={function(e){ setEditForm(function(p){ return {...p, keywords:e.target.value}; }); }}
+                          placeholder="health, wellness, fitness"
+                          style={{ width:'100%', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, padding:'7px 10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Category</div>
+                        <select value={editForm.category} onChange={function(e){ setEditForm(function(p){ return {...p, category:e.target.value}; }); }}
+                          style={{ width:'100%', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, padding:'7px 10px', fontSize:11, color:TXT, fontFamily:'inherit', outline:'none' }}>
+                          {['general','health','mindset','meal-prep','baking','side-hustle','remote-work','live-commerce','finance','entrepreneur'].map(function(c){
+                            return <option key={c} value={c} style={{ background:'#0B1829' }}>{c}</option>;
+                          })}
+                        </select>
+                      </div>
+                      <div style={{ display:'flex', gap:8, marginTop:4 }}>
+                        <button onClick={saveEdit}
+                          style={{ flex:1, padding:'8px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                          💾 Save Changes
+                        </button>
+                        <button onClick={function(){ setEditingId(null); }}
+                          style={{ padding:'8px 16px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
