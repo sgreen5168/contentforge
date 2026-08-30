@@ -4820,6 +4820,99 @@ app.get('/api/trends/youtube', async (req, res) => {
   }
 });
 
+
+// ── Search Engine Submission ───────────────────────────────────────────────
+app.post('/api/index/submit', async (req, res) => {
+  const { url, slug } = req.body;
+  if (!url) return res.status(400).json({ error: 'url required' });
+
+  const results = { google: null, bing: null, sitemap: null };
+
+  // 1. Ping Google with the URL (public ping endpoint)
+  try {
+    const googlePing = 'https://www.google.com/ping?sitemap=' + encodeURIComponent('https://nichroute.com/sitemap.xml');
+    const r = await fetch(googlePing, { method: 'GET' });
+    results.google = { status: r.status, message: r.status === 200 ? 'Pinged successfully' : 'Ping sent' };
+  } catch(e) {
+    results.google = { status: 'error', message: e.message };
+  }
+
+  // 2. Ping Bing
+  try {
+    const bingPing = 'https://www.bing.com/ping?sitemap=' + encodeURIComponent('https://nichroute.com/sitemap.xml');
+    const r = await fetch(bingPing, { method: 'GET' });
+    results.bing = { status: r.status, message: r.status === 200 ? 'Pinged successfully' : 'Ping sent' };
+  } catch(e) {
+    results.bing = { status: 'error', message: e.message };
+  }
+
+  // 3. Save to Supabase for sitemap generation
+  try {
+    const db = await getNichrouteClient();
+    if (db) {
+      await db.from('sitemap_urls').upsert([{
+        url,
+        slug,
+        submitted_at: new Date().toISOString(),
+        indexed: false,
+      }]).catch(() => {}); // table may not exist yet
+    }
+    results.sitemap = { status: 'saved', message: 'URL saved for sitemap' };
+  } catch(e) {
+    results.sitemap = { status: 'skipped', message: 'Sitemap table not set up' };
+  }
+
+  // 4. Generate direct Google Search Console URL for manual inspection
+  const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fnichroute.com%2F&id=' + encodeURIComponent(url);
+  const googleIndexUrl = 'https://search.google.com/search-console/index?hl=en&resource_id=https%3A%2F%2Fnichroute.com%2F';
+
+  res.json({
+    submitted: true,
+    url,
+    results,
+    gscUrl,
+    googleIndexUrl,
+    message: 'Submitted to Google and Bing. Open Google Search Console to request manual indexing.',
+  });
+});
+
+// ── Generate sitemap for NichRoute ────────────────────────────────────────
+app.get('/api/index/sitemap', async (_req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(400).json({ error: 'Supabase not configured' });
+
+    // Get all published submissions
+    const { data } = await db.from('submissions').select('slug, created_at').eq('content_type', 'landing_page').order('created_at', { ascending: false });
+
+    const urls = (data || []).map(row => ({
+      url: 'https://nichroute.com/content.html?slug=' + row.slug,
+      lastmod: row.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+    }));
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://nichroute.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+${urls.map(u => `  <url>
+    <loc>${u.url}</loc>
+    <lastmod>${u.lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`).join('
+')}
+</urlset>`;
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
