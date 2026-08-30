@@ -4897,13 +4897,7 @@ app.get('/api/index/sitemap', async (_req, res) => {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
-${urls.map(u => `  <url>
-    <loc>${u.url}</loc>
-    <lastmod>${u.lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`).join('
-')}
+${urls.map(u => '<url><loc>' + u.url + '</loc><lastmod>' + u.lastmod + '</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>').join('\n')}
 </urlset>`;
 
     res.setHeader('Content-Type', 'application/xml');
