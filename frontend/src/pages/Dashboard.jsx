@@ -137,6 +137,8 @@ export default function Dashboard({ onNavigate }) {
   const [readSpeed, setReadSpeed]         = useState(1.0);
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
+  const [indexing, setIndexing] = useState(false);
+  const [indexResult, setIndexResult] = useState(null);
   const [showTopicGuide, setShowTopicGuide] = useState(null); // topic id or null
   const abortRef                    = useRef(false);
 
@@ -366,6 +368,23 @@ export default function Dashboard({ onNavigate }) {
   }
 
   // Placeholder to avoid duplicate
+
+  async function submitToSearchEngines(url) {
+    if (!url || !url.includes('nichroute.com')) return;
+    setIndexing(true); setIndexResult(null);
+    try {
+      const r = await fetch(API + '/api/index/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, slug: url.split('slug=')[1] || '' }),
+      });
+      const d = await r.json();
+      setIndexResult(d);
+    } catch(e) {
+      setIndexResult({ error: e.message });
+    }
+    setIndexing(false);
+  }
 
   function readAloud(text, type) {
     if (!text) return;
@@ -837,7 +856,7 @@ export default function Dashboard({ onNavigate }) {
                 <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
                   This is your live NichRoute page. Share it in Facebook groups, put it in your bio link, or post it in NichRoute communities. It has your affiliate CTA button already embedded.
                 </div>
-                <div style={{ display:'flex', gap:6 }}>
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                   <button onClick={()=>copy(results.landingUrl,'landingfinal')}
                     style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(139,92,246,.3)', background:'transparent', color:'#A78BFA', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
                     {copied==='landingfinal'?'✓ Copied!':'📋 Copy Landing Page URL'}
@@ -846,11 +865,35 @@ export default function Dashboard({ onNavigate }) {
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, textDecoration:'none' }}>
                     ↗ View Live Page
                   </a>
+                  <button onClick={()=>submitToSearchEngines(results.landingUrl)}
+                    disabled={indexing}
+                    style={{ padding:'8px 14px', borderRadius:7, border:'none', background:indexing?'rgba(16,185,129,.3)':'#059669', color:'white', fontSize:11, fontWeight:700, cursor:indexing?'default':'pointer', fontFamily:'inherit' }}>
+                    {indexing ? '⏳ Submitting…' : '🔍 Submit to Google & Bing'}
+                  </button>
                   <button onClick={()=>onNavigate&&onNavigate('nichroute')}
                     style={{ padding:'8px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
                     🎯 Share in NichRoute Groups
                   </button>
                 </div>
+                {indexResult && !indexResult.error && (
+                  <div style={{ marginTop:8, padding:'10px 12px', background:'rgba(5,150,105,.08)', border:'1px solid rgba(5,150,105,.2)', borderRadius:8 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:'#34D399', marginBottom:6 }}>✅ Submitted to search engines</div>
+                    <div style={{ fontSize:10, color:TXT3, marginBottom:6 }}>Google and Bing have been notified. For faster indexing, open Google Search Console and request manual indexing.</div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <a href={indexResult.gscUrl} target="_blank" rel="noreferrer"
+                        style={{ padding:'5px 12px', borderRadius:6, border:'none', background:'#4285F4', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
+                        🔍 Open in Search Console
+                      </a>
+                      <a href={'https://search.google.com/search-console/index?hl=en&resource_id=https%3A%2F%2Fnichroute.com%2F'} target="_blank" rel="noreferrer"
+                        style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, textDecoration:'none' }}>
+                        View All Indexed Pages
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {indexResult?.error && (
+                  <div style={{ marginTop:8, fontSize:10, color:'#F09595' }}>❌ {indexResult.error}</div>
+                )}
               </div>
             )}
 
