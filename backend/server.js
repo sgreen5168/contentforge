@@ -3862,7 +3862,8 @@ app.post('/api/affiliate/match', async (req, res) => {
       // Avoid mismatches — penalize if category clearly doesn't match
       if (link.category === 'finance' && !topicLower.includes('financ') && !topicLower.includes('budget') && !topicLower.includes('money')) score -= 3;
       if (link.category === 'baking' && !topicLower.includes('bak') && !topicLower.includes('cook') && !topicLower.includes('food')) score -= 3;
-      if (link.category === 'remote-work' && !topicLower.includes('remote') && !topicLower.includes('office') && !topicLower.includes('work')) score -= 3;link, score };
+      if (link.category === 'remote-work' && !topicLower.includes('remote') && !topicLower.includes('office') && !topicLower.includes('work')) score -= 3;
+      return { ...link, score };
     });
 
     // Use Claude to pick the best match if we have API key
