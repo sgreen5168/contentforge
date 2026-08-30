@@ -63,6 +63,8 @@ export default function StrategyHub({ onNavigate }) {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
   const [searchError, setSearchError] = useState('');
+  const [amazonQuery, setAmazonQuery] = useState('');
+  const [amazonCopied, setAmazonCopied] = useState('');
 
   function copy(text, id) {
     navigator.clipboard.writeText(text).catch(function(){});
@@ -75,6 +77,7 @@ export default function StrategyHub({ onNavigate }) {
     { id:'monetize', label:'💰 Monetization Path' },
     { id:'trending', label:'🔥 Trending Topics' },
     { id:'search', label:'🔍 Live YouTube Search' },
+    { id:'amazon', label:'📦 Amazon Search' },
     { id:'plan', label:'📅 30-Day Plan' },
     { id:'facebook', label:'📘 Facebook Reality' },
   ];
@@ -291,6 +294,94 @@ export default function StrategyHub({ onNavigate }) {
             {searchResults && searchResults.length === 0 && (
               <div style={{ padding:'20px', textAlign:'center', color:TXT3, fontSize:12 }}>No results found — try a different search term</div>
             )}
+          </div>
+        )}
+
+        {/* Amazon Search */}
+        {tab === 'amazon' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+            <div style={{ fontSize:13, color:TXT2, lineHeight:1.6 }}>
+              Search Amazon and instantly generate affiliate links with your <strong style={{ color:'#FF9900' }}>nichroute-20</strong> tag. Copy the link directly into your Affiliate Library or use it in posts.
+            </div>
+
+            {/* Search bar */}
+            <div style={{ display:'flex', gap:8 }}>
+              <input value={amazonQuery} onChange={function(e){ setAmazonQuery(e.target.value); }}
+                onKeyDown={function(e){ if(e.key==='Enter' && amazonQuery.trim()) window.open('https://www.amazon.com/s?k='+encodeURIComponent(amazonQuery)+'&tag=nichroute-20','_blank'); }}
+                placeholder="e.g. meal prep containers, resistance bands, stand mixer..."
+                style={{ flex:1, background:'rgba(22,61,106,.4)', border:'1px solid rgba(255,153,0,.3)', borderRadius:8, padding:'10px 14px', fontSize:12, color:TXT, fontFamily:'inherit', outline:'none' }} />
+              <a href={amazonQuery.trim() ? 'https://www.amazon.com/s?k='+encodeURIComponent(amazonQuery)+'&tag=nichroute-20' : '#'}
+                target="_blank" rel="noreferrer"
+                style={{ padding:'10px 20px', borderRadius:8, border:'none', background:amazonQuery.trim()?'#FF9900':'rgba(255,153,0,.3)', color:'white', fontSize:12, fontWeight:700, textDecoration:'none', flexShrink:0, display:'flex', alignItems:'center' }}>
+                🔍 Search Amazon
+              </a>
+            </div>
+
+            {/* Quick copy affiliate links */}
+            <div style={{ ...card(), padding:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, marginBottom:4 }}>⚡ Quick Affiliate Links — click to copy</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:12 }}>Pre-built search URLs with your nichroute-20 tag — copy and paste directly into Affiliate Library</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {[
+                  { label:'🥗 Meal Prep Containers', q:'glass meal prep containers' },
+                  { label:'🧁 Stand Mixer', q:'KitchenAid stand mixer' },
+                  { label:'💪 Resistance Bands', q:'resistance bands workout set' },
+                  { label:'💡 Atomic Habits Book', q:'Atomic Habits James Clear' },
+                  { label:'💻 Standing Desk Converter', q:'standing desk converter adjustable' },
+                  { label:'📦 Ring Light Tripod', q:'ring light tripod stand 10 inch' },
+                  { label:'☀️ Morning Journal', q:'gratitude journal daily planner 2026' },
+                  { label:'🏋️ Yoga Mat', q:'yoga mat non slip thick exercise' },
+                  { label:'🍳 Chef Knife Set', q:'professional chef knife set kitchen' },
+                  { label:'🏠 Home Office Webcam', q:'webcam HD home office zoom' },
+                  { label:'💰 Budget Planner', q:'budget planner monthly bill organizer' },
+                  { label:'📱 Phone Tripod', q:'flexible phone tripod mount gorillapod' },
+                  { label:'🔵 Blue Light Glasses', q:'blue light blocking glasses computer' },
+                  { label:'🍳 Instant Pot', q:'instant pot duo 7 in 1 pressure cooker' },
+                  { label:'🧘 Foam Roller', q:'foam roller muscle recovery exercise' },
+                  { label:'☕ French Press', q:'french press coffee maker insulated' },
+                  { label:'📚 Rich Dad Poor Dad', q:'Rich Dad Poor Dad Robert Kiyosaki' },
+                  { label:'🎒 Laptop Backpack', q:'laptop backpack work from home bag' },
+                ].map(function(item, i) {
+                  const url = 'https://www.amazon.com/s?k=' + encodeURIComponent(item.q) + '&tag=nichroute-20';
+                  const id = 'amz_' + i;
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:7, border:'1px solid rgba(255,153,0,.1)' }}>
+                      <span style={{ fontSize:11, color:TXT2, flex:1 }}>{item.label}</span>
+                      <code style={{ fontSize:9, color:'rgba(255,153,0,.6)', flex:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{url.slice(0,50)}...</code>
+                      <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                        <button onClick={function(){ navigator.clipboard.writeText(url); setAmazonCopied(id); setTimeout(function(){ setAmazonCopied(''); }, 2000); }}
+                          style={{ padding:'4px 10px', borderRadius:5, border:'1px solid rgba(255,153,0,.3)', background:'transparent', color:'#FF9900', fontSize:9, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                          {amazonCopied===id ? '✓ Copied!' : '📋 Copy'}
+                        </button>
+                        <a href={url} target="_blank" rel="noreferrer"
+                          style={{ padding:'4px 10px', borderRadius:5, border:'none', background:'rgba(255,153,0,.15)', color:'#FF9900', fontSize:9, textDecoration:'none', whiteSpace:'nowrap' }}>
+                          View ↗
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div style={{ ...card(), padding:14, border:'1px solid rgba(255,153,0,.15)' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#FF9900', marginBottom:8 }}>How to use these links</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {[
+                  '1. Click 📋 Copy on any product above',
+                  '2. Go to 🔗 Affiliate Library → 📥 Bulk Import',
+                  '3. Paste the link → click Import All Links',
+                  '4. Click ✏️ Edit → add keywords matching your content topic',
+                  '5. The link now auto-matches to relevant posts automatically',
+                ].map(function(step, i) {
+                  return <div key={i} style={{ fontSize:11, color:TXT2 }}>{step}</div>;
+                })}
+              </div>
+              <div style={{ marginTop:10, fontSize:10, color:TXT3 }}>
+                All links include your nichroute-20 Associates tag. Amazon pays 1-10% commission on everything the customer buys within 24 hours of clicking.
+              </div>
+            </div>
           </div>
         )}
 
