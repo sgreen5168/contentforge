@@ -3851,7 +3851,18 @@ app.post('/api/affiliate/match', async (req, res) => {
           if (descLower.includes(word)) score += 1;
         }
       }
-      return { ...link, score };
+      // Commission bonus — prefer higher-paying products when relevance is similar
+      // ClickBank products with high commissions get a small boost
+      if (link.platform === 'clickbank') {
+        const desc = (link.description || '').toLowerCase();
+        // Extract commission hint from description if available
+        if (desc.includes('$60') || desc.includes('$70') || desc.includes('$80') || desc.includes('$100') || desc.includes('$150') || desc.includes('$160') || desc.includes('$170') || desc.includes('$180') || desc.includes('$190')) score += 2;
+        else if (desc.includes('$30') || desc.includes('$40') || desc.includes('$50')) score += 1;
+      }
+      // Avoid mismatches — penalize if category clearly doesn't match
+      if (link.category === 'finance' && !topicLower.includes('financ') && !topicLower.includes('budget') && !topicLower.includes('money')) score -= 3;
+      if (link.category === 'baking' && !topicLower.includes('bak') && !topicLower.includes('cook') && !topicLower.includes('food')) score -= 3;
+      if (link.category === 'remote-work' && !topicLower.includes('remote') && !topicLower.includes('office') && !topicLower.includes('work')) score -= 3;link, score };
     });
 
     // Use Claude to pick the best match if we have API key
