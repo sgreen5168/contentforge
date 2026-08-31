@@ -972,9 +972,10 @@ export default function Dashboard({ onNavigate }) {
                     {[
                       ['Title', results?.title||selectedTopic?.label||''],
                       ['Description', (results?.post||'').slice(0,300)],
-                      ['Link', results?.landingUrl||''],
-                      ['Hashtags', '#'+(selectedTopic?.id||'content')+' #homebusiness #sidehustle #contentcreator'],
-                    ].map(function(item,i){
+                      ['Link', results?.landingUrl || results?.link?.url || ''],
+                      ['Affiliate Link', results?.link?.url || ''],
+                      ['Hashtags', '#'+(selectedTopic?.id||'content').replace(/-/g,'')+' #homebusiness #sidehustle #contentcreator #'+( selectedTopic?.cat||'lifestyle').replace(/-/g,'')],
+                    ].filter(function(item){ return item[1]; }).map(function(item,i){
                       const id='pin_'+i;
                       return (
                         <div key={i} style={{ display:'flex', gap:6, alignItems:'center' }}>
