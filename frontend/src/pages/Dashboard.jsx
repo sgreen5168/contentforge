@@ -119,10 +119,17 @@ const PIPELINE_STEPS = [
 ];
 
 export default function Dashboard({ onNavigate }) {
-  const [selectedTopic, setTopic]   = useState(null);
+  const [selectedTopic, setTopic]   = useState(savedTopic || null);
   const [running, setRunning]       = useState(false);
   const [pipeline, setPipeline]     = useState({});   // stepId → { status, data, error }
-  const [results, setResults]       = useState(null);
+  // Restore results from session if available
+  const savedResults = (function() {
+    try { return JSON.parse(sessionStorage.getItem('cf_cc_results') || 'null'); } catch { return null; }
+  })();
+  const [results, setResults] = useState(savedResults);
+  const savedTopic = (function() {
+    try { return JSON.parse(sessionStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
+  })();
   const [copied, setCopied]         = useState('');
   const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
   const [history, setHistory]       = useState(() => {
@@ -138,6 +145,9 @@ export default function Dashboard({ onNavigate }) {
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
+  const [pinMedia, setPinMedia] = useState(null);
+  const [pinMediaPreview, setPinMediaPreview] = useState(null);
+  const [pinMediaType, setPinMediaType] = useState('');
   const [indexResult, setIndexResult] = useState(null);
   const [showTopicGuide, setShowTopicGuide] = useState(null); // topic id or null
   const abortRef                    = useRef(false);
@@ -364,6 +374,10 @@ export default function Dashboard({ onNavigate }) {
     }
 
     setResults(out);
+    try {
+      sessionStorage.setItem('cf_cc_results', JSON.stringify(out));
+      sessionStorage.setItem('cf_cc_topic', JSON.stringify(selectedTopic));
+    } catch(e) {}
     setRunning(false);
   }
 
@@ -620,7 +634,8 @@ export default function Dashboard({ onNavigate }) {
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:700, color:TXT }}>✅ Everything is ready — review and post</div>
-            <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); setViewing(null); }}
+            <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); setViewing(null);
+        try { sessionStorage.removeItem('cf_cc_results'); sessionStorage.removeItem('cf_cc_topic'); } catch(e) {} }}
               style={{ padding:'6px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
               ↺ Start over
             </button>
@@ -835,17 +850,32 @@ export default function Dashboard({ onNavigate }) {
               <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
                 Click YouTube Studio below. Upload your downloaded MP4. The AI will write your title, description, and tags — your affiliate link goes directly in the YouTube description (allowed on YouTube).
               </div>
-              <div style={{ display:'flex', gap:6, flexDirection:'column' }}>
-                <button onClick={()=>onNavigate&&onNavigate('video')}
-                  style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  📺 Open YouTube Studio
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
+                <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
+                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                  ▶ YouTube Shorts
+                </a>
+                <a href="https://www.tiktok.com/upload" target="_blank" rel="noreferrer"
+                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#010101', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                  🎵 TikTok Upload
+                </a>
+                <a href="https://www.instagram.com/reels" target="_blank" rel="noreferrer"
+                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#E1306C', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                  📸 Instagram Reels
+                </a>
+                <a href="https://pinterest.com/pin/creation/button" target="_blank" rel="noreferrer"
+                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#E60023', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                  📌 Pinterest Video
+                </a>
+              </div>
+              {results.youtubeDescription && (
+                <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
+                  style={{ width:'100%', padding:'7px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                  {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube/TikTok Description (with affiliate link)'}
                 </button>
-                {results.youtubeDescription && (
-                  <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
-                    style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                    {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube Description (with affiliate link)'}
-                  </button>
-                )}
+              )}
+              <div style={{ marginTop:6, fontSize:10, color:TXT3 }}>
+                💡 Upload to YouTube Shorts first — builds toward monetization. Same MP4 works on all platforms.
               </div>
             </div>
 
@@ -905,6 +935,40 @@ export default function Dashboard({ onNavigate }) {
               </div>
               {results.landingUrl && (
                 <div style={{ marginBottom:8, padding:'10px 12px', background:'rgba(226,0,35,.06)', borderRadius:8, border:'1px solid rgba(226,0,35,.15)' }}>
+                  {/* Media uploader */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'#E60023', marginBottom:5 }}>🖼 Attach Photo or Video</div>
+                    {pinMediaPreview ? (
+                      <div style={{ position:'relative', marginBottom:6 }}>
+                        {pinMediaType.startsWith('video') ? (
+                          <video src={pinMediaPreview} controls style={{ width:'100%', maxHeight:160, borderRadius:7, background:'#000' }} />
+                        ) : (
+                          <img src={pinMediaPreview} alt="Pin media" style={{ width:'100%', maxHeight:160, borderRadius:7, objectFit:'cover' }} />
+                        )}
+                        <button onClick={function(){ setPinMedia(null); setPinMediaPreview(null); setPinMediaType(''); }}
+                          style={{ position:'absolute', top:6, right:6, padding:'3px 8px', borderRadius:5, border:'none', background:'rgba(0,0,0,.6)', color:'white', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                          ✕ Remove
+                        </button>
+                        <div style={{ fontSize:10, color:'#E60023', marginTop:4 }}>✅ Media ready — upload this to Pinterest along with your Pin details below</div>
+                      </div>
+                    ) : (
+                      <label style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', background:'rgba(226,0,35,.04)', border:'1px dashed rgba(226,0,35,.3)', borderRadius:8, cursor:'pointer' }}>
+                        <span style={{ fontSize:18 }}>📁</span>
+                        <div>
+                          <div style={{ fontSize:11, color:TXT2, fontWeight:600 }}>Upload photo or video from your computer</div>
+                          <div style={{ fontSize:9, color:TXT3 }}>JPG, PNG, GIF, MP4 — recommended size 1000×1500px for images</div>
+                        </div>
+                        <input type="file" accept="image/*,video/*" style={{ display:'none' }}
+                          onChange={function(e){
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            setPinMedia(file);
+                            setPinMediaType(file.type);
+                            setPinMediaPreview(URL.createObjectURL(file));
+                          }} />
+                      </label>
+                    )}
+                  </div>
                   <div style={{ fontSize:10, fontWeight:700, color:'#E60023', marginBottom:6 }}>📌 Copy each field into Pinterest</div>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                     {[
