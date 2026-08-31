@@ -897,9 +897,46 @@ export default function Dashboard({ onNavigate }) {
               </div>
             )}
 
-            {/* Step 4 */}
+            {/* Step 4 — Pinterest */}
+            <div style={{ padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:'1px solid rgba(226,0,35,.2)' }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#E60023', marginBottom:6 }}>Step 4 — Create a Pinterest Pin</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
+                Pinterest drives evergreen traffic for months. Pin your landing page so people searching your topic find it and click to your affiliate link.
+              </div>
+              {results.landingUrl && (
+                <div style={{ marginBottom:8, padding:'10px 12px', background:'rgba(226,0,35,.06)', borderRadius:8, border:'1px solid rgba(226,0,35,.15)' }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#E60023', marginBottom:6 }}>📌 Copy each field into Pinterest</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                    {[
+                      ['Title', results.title||selectedTopic?.label||''],
+                      ['Description', (results.post||'').slice(0,300)],
+                      ['Link', results.landingUrl],
+                      ['Hashtags', '#'+(selectedTopic?.id||'content')+' #homebusiness #sidehustle #contentcreator'],
+                    ].map(function(item,i){
+                      const id='pin_'+i;
+                      return (
+                        <div key={i} style={{ display:'flex', gap:6, alignItems:'center' }}>
+                          <div style={{ fontSize:9, color:TXT3, width:70, flexShrink:0 }}>{item[0]}</div>
+                          <div style={{ fontSize:10, color:TXT2, flex:1, padding:'4px 8px', background:'rgba(255,255,255,.04)', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item[1]}</div>
+                          <button onClick={()=>copy(item[1],id)} style={{ padding:'3px 8px', borderRadius:5, border:'1px solid rgba(226,0,35,.3)', background:'transparent', color:'#E60023', fontSize:9, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                            {copied===id?'✓':'📋'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <a href="https://pinterest.com/pin/creation/button" target="_blank" rel="noreferrer"
+                style={{ padding:'8px 16px', borderRadius:7, border:'none', background:'#E60023', color:'white', fontSize:11, fontWeight:700, textDecoration:'none', display:'inline-block', marginBottom:6 }}>
+                📌 Create Pin on Pinterest
+              </a>
+              <div style={{ fontSize:10, color:TXT3 }}>Copy each field above → open Pinterest → Create Pin → paste title, description and link → publish</div>
+            </div>
+
+            {/* Step 5 — Schedule */}
             <div style={{ padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'#4FA3FF', marginBottom:6 }}>Step 4 — Schedule for later (optional)</div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#4FA3FF', marginBottom:6 }}>Step 5 — Schedule for later (optional)</div>
               <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
                 Save the post to your scheduler to post at the best time — 9am or 7pm typically get the most reach on Facebook.
               </div>
