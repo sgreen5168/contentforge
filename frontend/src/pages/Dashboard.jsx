@@ -384,13 +384,18 @@ export default function Dashboard({ onNavigate }) {
   // Placeholder to avoid duplicate
 
   async function submitToSearchEngines(url) {
-    if (!url || !url.includes('nichroute.com')) return;
+    // Extract landing URL from post text if not directly available
+    const landingUrl = url || (function() {
+      const match = (results?.post || '').match(/https:\/\/nichroute\.com\/[^\s]+/);
+      return match ? match[0] : '';
+    })();
+    if (!landingUrl || !landingUrl.includes('nichroute.com')) return;
     setIndexing(true); setIndexResult(null);
     try {
       const r = await fetch(API + '/api/index/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, slug: url.split('slug=')[1] || '' }),
+        body: JSON.stringify({ url: landingUrl, slug: landingUrl.split('slug=')[1] || '' }),
       });
       const d = await r.json();
       setIndexResult(d);
@@ -936,8 +941,8 @@ export default function Dashboard({ onNavigate }) {
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, textDecoration:'none' }}>
                     ↗ View Live Page
                   </a>
-                  <button onClick={()=>submitToSearchEngines(results.landingUrl)}
-                    disabled={indexing}
+                  <button onClick={()=>submitToSearchEngines(results.landingUrl || results?.link?.url || '')}
+                    disabled={indexing || (!results?.landingUrl && !results?.link?.url)}
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:indexing?'rgba(16,185,129,.3)':'#059669', color:'white', fontSize:11, fontWeight:700, cursor:indexing?'default':'pointer', fontFamily:'inherit' }}>
                     {indexing ? '⏳ Submitting…' : '🔍 Submit to Google & Bing'}
                   </button>
