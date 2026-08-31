@@ -125,6 +125,9 @@ export default function Dashboard({ onNavigate }) {
   const [running, setRunning]       = useState(false);
   const [pipeline, setPipeline]     = useState({});   // stepId → { status, data, error }
   // Restore results from session if available
+  const [results, setResults] = useState(function() {
+    try { return JSON.parse(sessionStorage.getItem('cf_cc_results') || 'null'); } catch { return null; }
+  });
   const [copied, setCopied]         = useState('');
   const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
   const [history, setHistory]       = useState(() => {
