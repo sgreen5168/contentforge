@@ -878,7 +878,7 @@ export default function Dashboard({ onNavigate }) {
             </div>
 
             {/* Step 3 */}
-            {results.landingUrl && results.landingUrl !== 'downloaded' && (
+            {results && (results.landingUrl || results.post) && results.landingUrl !== 'downloaded' && (
               <div style={{ marginBottom:12, padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
                 <div style={{ fontSize:11, fontWeight:700, color:'#A78BFA', marginBottom:6 }}>Step 3 — Share the landing page link</div>
                 <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
@@ -931,7 +931,7 @@ export default function Dashboard({ onNavigate }) {
               <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
                 Pinterest drives evergreen traffic for months. Pin your landing page so people searching your topic find it and click to your affiliate link.
               </div>
-              {results.landingUrl && (
+              {(results?.landingUrl || results?.post) && (
                 <div style={{ marginBottom:8, padding:'10px 12px', background:'rgba(226,0,35,.06)', borderRadius:8, border:'1px solid rgba(226,0,35,.15)' }}>
                   {/* Media uploader */}
                   <div style={{ marginBottom:10 }}>
@@ -970,9 +970,9 @@ export default function Dashboard({ onNavigate }) {
                   <div style={{ fontSize:10, fontWeight:700, color:'#E60023', marginBottom:6 }}>📌 Copy each field into Pinterest</div>
                   <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                     {[
-                      ['Title', results.title||selectedTopic?.label||''],
-                      ['Description', (results.post||'').slice(0,300)],
-                      ['Link', results.landingUrl],
+                      ['Title', results?.title||selectedTopic?.label||''],
+                      ['Description', (results?.post||'').slice(0,300)],
+                      ['Link', results?.landingUrl||''],
                       ['Hashtags', '#'+(selectedTopic?.id||'content')+' #homebusiness #sidehustle #contentcreator'],
                     ].map(function(item,i){
                       const id='pin_'+i;
