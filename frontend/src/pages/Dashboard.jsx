@@ -144,6 +144,8 @@ export default function Dashboard({ onNavigate }) {
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
   const [pinMedia, setPinMedia] = useState(null);
+  const [pinResized, setPinResized] = useState(null);
+  const [pinResizing, setPinResizing] = useState(false);
   const [pinMediaPreview, setPinMediaPreview] = useState(null);
   const [pinMediaType, setPinMediaType] = useState('');
   const [indexResult, setIndexResult] = useState(null);
@@ -450,6 +452,47 @@ export default function Dashboard({ onNavigate }) {
 
   const stepStatus = (id) => pipeline[id]?.status || 'waiting';
   const stepIcon   = (s) => ({ waiting:'○', running:'⟳', building:'⟳', done:'✅', warn:'⚠️', error:'❌' }[s]||'○');
+
+  function resizeForPinterest(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    setPinResizing(true);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const TARGET_W = 1000;
+      const TARGET_H = 1500;
+      canvas.width = TARGET_W;
+      canvas.height = TARGET_H;
+      const ctx = canvas.getContext('2d');
+      // Fill background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, TARGET_W, TARGET_H);
+      // Calculate cover crop
+      const imgRatio = img.width / img.height;
+      const targetRatio = TARGET_W / TARGET_H;
+      let sw, sh, sx, sy;
+      if (imgRatio > targetRatio) {
+        sh = img.height;
+        sw = sh * targetRatio;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+      } else {
+        sw = img.width;
+        sh = sw / targetRatio;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+      canvas.toBlob(function(blob) {
+        const resizedUrl = URL.createObjectURL(blob);
+        setPinResized(resizedUrl);
+        setPinResizing(false);
+      }, 'image/jpeg', 0.92);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
 
   return (
     <div style={{ padding:20, maxWidth:1000, fontFamily:'inherit', color:TXT }}>
@@ -941,13 +984,31 @@ export default function Dashboard({ onNavigate }) {
                         {pinMediaType.startsWith('video') ? (
                           <video src={pinMediaPreview} controls style={{ width:'100%', maxHeight:160, borderRadius:7, background:'#000' }} />
                         ) : (
-                          <img src={pinMediaPreview} alt="Pin media" style={{ width:'100%', maxHeight:160, borderRadius:7, objectFit:'cover' }} />
+                          <div>
+                            <img src={pinResized || pinMediaPreview} alt="Pin media" style={{ width:'100%', maxHeight:200, borderRadius:7, objectFit:'cover' }} />
+                            {!pinMediaType.startsWith('video') && (
+                              <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                                <button onClick={function(){ resizeForPinterest(pinMedia); }} disabled={pinResizing}
+                                  style={{ flex:1, padding:'6px 10px', borderRadius:6, border:'none', background:pinResizing?'rgba(226,0,35,.3)':'#E60023', color:'white', fontSize:10, fontWeight:700, cursor:pinResizing?'default':'pointer', fontFamily:'inherit' }}>
+                                  {pinResizing ? '⏳ Resizing…' : '📐 Resize to 1000×1500 (Pinterest ideal)'}
+                                </button>
+                                {pinResized && (
+                                  <a href={pinResized} download="pinterest-pin.jpg"
+                                    style={{ padding:'6px 12px', borderRadius:6, border:'1px solid rgba(226,0,35,.3)', background:'transparent', color:'#E60023', fontSize:10, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap' }}>
+                                    ⬇ Download Resized
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {pinResized && <div style={{ fontSize:10, color:'#34D399', marginTop:4 }}>✅ Resized to 1000×1500px — download and upload to Pinterest</div>}
+                          </div>
                         )}
-                        <button onClick={function(){ setPinMedia(null); setPinMediaPreview(null); setPinMediaType(''); }}
+                        <button onClick={function(){ setPinMedia(null); setPinMediaPreview(null); setPinMediaType(''); setPinResized(null); }}
                           style={{ position:'absolute', top:6, right:6, padding:'3px 8px', borderRadius:5, border:'none', background:'rgba(0,0,0,.6)', color:'white', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
                           ✕ Remove
                         </button>
-                        <div style={{ fontSize:10, color:'#E60023', marginTop:4 }}>✅ Media ready — upload this to Pinterest along with your Pin details below</div>
+                        {!pinResized && !pinMediaType.startsWith('video') && <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>Click Resize to optimize for Pinterest before uploading</div>}
+                        {pinMediaType.startsWith('video') && <div style={{ fontSize:10, color:'#E60023', marginTop:4 }}>✅ Video ready — upload directly to Pinterest</div>}
                       </div>
                     ) : (
                       <label style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', background:'rgba(226,0,35,.04)', border:'1px dashed rgba(226,0,35,.3)', borderRadius:8, cursor:'pointer' }}>
