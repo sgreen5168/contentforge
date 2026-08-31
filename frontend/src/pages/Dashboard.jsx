@@ -119,17 +119,12 @@ const PIPELINE_STEPS = [
 ];
 
 export default function Dashboard({ onNavigate }) {
-  const [selectedTopic, setTopic]   = useState(savedTopic || null);
+  const [selectedTopic, setTopic]   = useState(function() {
+    try { return JSON.parse(sessionStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
+  });
   const [running, setRunning]       = useState(false);
   const [pipeline, setPipeline]     = useState({});   // stepId → { status, data, error }
   // Restore results from session if available
-  const savedResults = (function() {
-    try { return JSON.parse(sessionStorage.getItem('cf_cc_results') || 'null'); } catch { return null; }
-  })();
-  const [results, setResults] = useState(savedResults);
-  const savedTopic = (function() {
-    try { return JSON.parse(sessionStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
-  })();
   const [copied, setCopied]         = useState('');
   const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
   const [history, setHistory]       = useState(() => {
