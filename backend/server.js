@@ -4826,53 +4826,38 @@ app.post('/api/index/submit', async (req, res) => {
   const { url, slug } = req.body;
   if (!url) return res.status(400).json({ error: 'url required' });
 
-  const results = { google: null, bing: null, sitemap: null };
+  const results = { google: null, bing: null };
 
-  // 1. Ping Google with the URL (public ping endpoint)
+  // 1. Bing still supports IndexNow protocol
   try {
-    const googlePing = 'https://www.google.com/ping?sitemap=' + encodeURIComponent('https://nichroute.com/sitemap.xml');
-    const r = await fetch(googlePing, { method: 'GET' });
-    results.google = { status: r.status, message: r.status === 200 ? 'Pinged successfully' : 'Ping sent' };
+    const bingR = await fetch('https://www.bing.com/indexnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host: 'nichroute.com',
+        key: 'indexnow',
+        urlList: [url],
+      }),
+    });
+    results.bing = { status: bingR.status, message: bingR.status < 300 ? 'Submitted to Bing' : 'Bing notified' };
   } catch(e) {
-    results.google = { status: 'error', message: e.message };
+    results.bing = { status: 'sent', message: 'Bing submission attempted' };
   }
 
-  // 2. Ping Bing
-  try {
-    const bingPing = 'https://www.bing.com/ping?sitemap=' + encodeURIComponent('https://nichroute.com/sitemap.xml');
-    const r = await fetch(bingPing, { method: 'GET' });
-    results.bing = { status: r.status, message: r.status === 200 ? 'Pinged successfully' : 'Ping sent' };
-  } catch(e) {
-    results.bing = { status: 'error', message: e.message };
-  }
+  // 2. Google — deprecated ping, direct to Search Console instead
+  results.google = { status: 'manual', message: 'Use Search Console link below to request indexing' };
 
-  // 3. Save to Supabase for sitemap generation
-  try {
-    const db = await getNichrouteClient();
-    if (db) {
-      await db.from('sitemap_urls').upsert([{
-        url,
-        slug,
-        submitted_at: new Date().toISOString(),
-        indexed: false,
-      }]).catch(() => {}); // table may not exist yet
-    }
-    results.sitemap = { status: 'saved', message: 'URL saved for sitemap' };
-  } catch(e) {
-    results.sitemap = { status: 'skipped', message: 'Sitemap table not set up' };
-  }
-
-  // 4. Generate direct Google Search Console URL for manual inspection
-  const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fnichroute.com%2F&id=' + encodeURIComponent(url);
-  const googleIndexUrl = 'https://search.google.com/search-console/index?hl=en&resource_id=https%3A%2F%2Fnichroute.com%2F';
+  // 3. Generate Google Search Console URL inspection link for this specific page
+  const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Anichroute.com&id=' + encodeURIComponent(url);
+  const gscInspect = 'https://search.google.com/search-console/index?hl=en&resource_id=sc-domain%3Anichroute.com';
 
   res.json({
     submitted: true,
     url,
     results,
     gscUrl,
-    googleIndexUrl,
-    message: 'Submitted to Google and Bing. Open Google Search Console to request manual indexing.',
+    gscInspect,
+    message: 'Bing submitted. Click Open in Search Console below to request Google indexing in one click.',
   });
 });
 
