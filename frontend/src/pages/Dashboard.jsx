@@ -87,6 +87,21 @@ const TOPICS = [
     videoType:'educational', cbSearch:'niche profit blogging content marketing', amzSearch:'camera microphone lighting kit content creator',
     trendingTitles:['How to find your niche in 2026','Content creator tips for beginners','Grow on social media — what actually works'] },
 
+  { id:'air-fryer',      cat:'cooking',      label:'Air Fryer Meals Under 30 Min',  icon:'🍳',
+    hook:"Most people think cooking healthy takes hours. An air fryer changes that completely.",
+    videoType:'product-demo', cbSearch:'', amzSearch:'air fryer under 100 dual basket',
+    trendingTitles:['Air fryer meals that changed how I cook','5 air fryer recipes ready in 15 minutes','Why everyone is buying an air fryer in 2026'] },
+
+  { id:'portable-blender', cat:'health',     label:'Portable Blender Protein Shakes', icon:'🥤',
+    hook:"You do not need a big blender or a gym membership to get your protein in every day.",
+    videoType:'product-demo', cbSearch:'', amzSearch:'portable blender mini smoothie protein shake',
+    trendingTitles:['This $25 blender changed my morning routine','Portable blender protein shake recipes','The mini blender that fits in your bag'] },
+
+  { id:'walking-pad',    cat:'health',       label:'Under Desk Treadmill Tips',      icon:'🚶',
+    hook:"Most remote workers sit for 8 hours straight. A walking pad fixes that without leaving your desk.",
+    videoType:'educational', cbSearch:'', amzSearch:'under desk treadmill walking pad foldable',
+    trendingTitles:['How I walk 10000 steps working from home','Under desk treadmill worth it honest review','Walking pad for home office 2026'] },
+
   { id:'chipotle-bowl',  cat:'meal-prep',    label:'Chipotle Bowl Meal Prep',      icon:'🥩',
     hook:"Five Chipotle-style steak bowls. Under fifty dollars. Made in your own kitchen.",
     videoType:'product-demo', cbSearch:'meal planning nutrition', amzSearch:'glass meal prep containers food scale',
@@ -964,6 +979,10 @@ export default function Dashboard({ onNavigate }) {
                       <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer"
                         style={{ padding:'6px 14px', borderRadius:6, border:'none', background:'#4285F4', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
                         🔍 Open Google Search Console
+                      </a>
+                      <a href="https://www.bing.com/webmasters" target="_blank" rel="noreferrer"
+                        style={{ padding:'6px 14px', borderRadius:6, border:'none', background:'#00809D', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
+                        🔵 Open Bing Webmaster
                       </a>
                       <button onClick={()=>copy(indexResult.url,'gsc_url')}
                         style={{ padding:'6px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
