@@ -4536,6 +4536,49 @@ ${(postContent||'').slice(0,500)}` }],
     console.log('✅ Landing page created:', pageUrl);
     res.json({ url: pageUrl, slug: data?.slug || slug, id: data?.id });
 
+    // Auto-update sitemap on GitHub after page creation
+    const finalSlug = data?.slug || slug;
+    const today = new Date().toISOString().split('T')[0];
+    setImmediate(async () => {
+      try {
+        // Get current sitemap from GitHub
+        const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+        const GITHUB_REPO = 'sgreen5168/nichroute';
+        if (!GITHUB_TOKEN) return;
+
+        const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/sitemap.xml`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+        });
+        const getD = await getRes.json();
+        if (!getD.content) return;
+
+        // Decode current sitemap
+        const current = Buffer.from(getD.content, 'base64').toString('utf8');
+        const sha = getD.sha;
+
+        // Add new URL if not already present
+        const newUrl = `https://nichroute.com/content.html?slug=${finalSlug}`;
+        if (current.includes(finalSlug)) return; // already in sitemap
+
+        const newEntry = `  <url>\n    <loc>${newUrl}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n</urlset>`;
+        const updated = current.replace('</urlset>', newEntry);
+
+        // Push updated sitemap to GitHub
+        await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/sitemap.xml`, {
+          method: 'PUT',
+          headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Add ${finalSlug} to sitemap`,
+            content: Buffer.from(updated).toString('base64'),
+            sha,
+          })
+        });
+        console.log('Sitemap updated with:', finalSlug);
+      } catch(e) {
+        console.warn('Sitemap update failed:', e.message);
+      }
+    });
+
   } catch(e) {
     console.error('Landing page error:', e.message);
     res.status(500).json({ error: e.message });
