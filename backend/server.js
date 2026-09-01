@@ -4781,7 +4781,7 @@ app.post('/api/studio/captions', async (req, res) => {
       model: 'claude-sonnet-4-6',
       max_tokens: 1200,
       system: `You generate platform-optimized social media captions for video content.
-Return ONLY valid JSON with these exact keys: instagram, tiktok, youtube, pinterest, twitter.
+Return ONLY valid JSON with these exact keys: instagram, tiktok, youtube, pinterest, twitter, reddit.
 
 Platform rules:
 INSTAGRAM (125-150 words): Hook first line, 3-5 bullet points of value, CTA "Link in bio 👆", 15-20 hashtags at end, emoji-rich
@@ -4789,6 +4789,7 @@ TIKTOK (50-80 words): Ultra punchy hook, 2-3 value points, "Link in bio for more
 YOUTUBE (150-200 words): SEO-friendly title line, detailed description of video content, mention affiliate product naturally if provided, direct affiliate link if provided, 10-15 hashtags, "Subscribe for more" CTA
 PINTEREST (80-100 words): Keyword-rich, searchable phrases, descriptive, evergreen language, 5-10 keyword hashtags, links to landing page
 TWITTER (under 280 chars including link): Punchy one-liner, key insight, landing page link, 2-3 hashtags max
+REDDIT (150-200 words): Conversational and genuinely helpful — NO hard selling, NO affiliate language. Write like a real community member sharing useful information. Start with a relatable observation, provide real value, mention the product naturally as something worth looking into. End with a question to spark discussion. No hashtags. Reddit bans promotional posts — write as education first.
 
 Rules for ALL platforms:
 - NEVER use first-person: not "I tried", "I use", "I made"
@@ -4817,6 +4818,7 @@ Generate optimized captions for all 5 platforms. Return only the JSON object.` }
         youtube: title + '\n\n' + (description||'').slice(0,200) + '\n\n' + (affiliateUrl||'') + '\n\n#' + topic.toLowerCase().replace(/\s+/g,''),
         pinterest: topic + ' — ' + (description||'').slice(0,100) + ' ' + (affiliateUrl||''),
         twitter: topic + ' — ' + (description||'').slice(0,150) + ' ' + (affiliateUrl||''),
+        reddit: 'Has anyone tried ' + topic + '? ' + (description||'').slice(0,200) + ' Would love to hear what others think.',
       };
     }
 
