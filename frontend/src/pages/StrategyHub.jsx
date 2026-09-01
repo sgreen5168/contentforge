@@ -317,37 +317,58 @@ export default function StrategyHub({ onNavigate }) {
               </a>
             </div>
 
+            {/* Buyer keyword tip */}
+            <div style={{ ...card(), padding:14, border:'1px solid rgba(255,153,0,.2)', background:'rgba(255,153,0,.04)' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:AMB, marginBottom:6 }}>🎯 How to use buyer keywords for content</div>
+              <div style={{ fontSize:11, color:TXT2, lineHeight:1.7 }}>
+                Each product below shows its top buyer-intent keyword — the exact phrase people type when they are ready to buy, not just browsing.
+                Use these keywords as your <strong style={{ color:TXT }}>video title, post hook, and landing page headline</strong> to capture high-intent traffic from YouTube and Google search.
+              </div>
+              <div style={{ marginTop:8, display:'flex', flexWrap:'wrap', gap:6 }}>
+                {["best air fryer for meal prep","portable blender worth it","walking pad for home office","best meal prep containers","Ninja Creami worth it review","monitor light bar eye strain"].map(function(kw,i){
+                  return (
+                    <button key={i} onClick={function(){ navigator.clipboard.writeText(kw); }}
+                      style={{ padding:'4px 10px', borderRadius:12, border:'1px solid rgba(255,153,0,.3)', background:'transparent', color:AMB, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+                      📋 {kw}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Quick copy affiliate links */}
             <div style={{ ...card(), padding:16 }}>
               <div style={{ fontSize:12, fontWeight:700, marginBottom:4 }}>⚡ Quick Affiliate Links — click to copy</div>
-              <div style={{ fontSize:11, color:TXT3, marginBottom:12 }}>Pre-built search URLs with your nichroute-20 tag — copy and paste directly into Affiliate Library</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:12 }}>Pre-built search URLs with your nichroute-20 tag — buyer keyword shown for each product</div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {[
-                  { label:'🥗 Meal Prep Containers', q:'glass meal prep containers' },
-                  { label:'🧁 Stand Mixer', q:'KitchenAid stand mixer' },
-                  { label:'💪 Resistance Bands', q:'resistance bands workout set' },
-                  { label:'💡 Atomic Habits Book', q:'Atomic Habits James Clear' },
-                  { label:'💻 Standing Desk Converter', q:'standing desk converter adjustable' },
-                  { label:'📦 Ring Light Tripod', q:'ring light tripod stand 10 inch' },
-                  { label:'☀️ Morning Journal', q:'gratitude journal daily planner 2026' },
-                  { label:'🏋️ Yoga Mat', q:'yoga mat non slip thick exercise' },
-                  { label:'🍳 Chef Knife Set', q:'professional chef knife set kitchen' },
-                  { label:'🏠 Home Office Webcam', q:'webcam HD home office zoom' },
-                  { label:'💰 Budget Planner', q:'budget planner monthly bill organizer' },
-                  { label:'📱 Phone Tripod', q:'flexible phone tripod mount gorillapod' },
-                  { label:'🔵 Blue Light Glasses', q:'blue light blocking glasses computer' },
-                  { label:'🍳 Instant Pot', q:'instant pot duo 7 in 1 pressure cooker' },
-                  { label:'🧘 Foam Roller', q:'foam roller muscle recovery exercise' },
-                  { label:'☕ French Press', q:'french press coffee maker insulated' },
-                  { label:'📚 Rich Dad Poor Dad', q:'Rich Dad Poor Dad Robert Kiyosaki' },
-                  { label:'🎒 Laptop Backpack', q:'laptop backpack work from home bag' },
+                  { label:'🍳 Air Fryer Dual Basket', q:'air fryer dual basket under 100', keyword:'best air fryer for meal prep', commission:'4.5%' },
+                  { label:'🥤 Portable Blender', q:'portable blender mini protein shake', keyword:'portable blender worth it', commission:'4.5%' },
+                  { label:'🚶 Under Desk Treadmill', q:'under desk treadmill walking pad foldable', keyword:'walking pad for home office', commission:'3%' },
+                  { label:'🥗 Meal Prep Containers', q:'glass meal prep containers leakproof', keyword:'best meal prep containers', commission:'4.5%' },
+                  { label:'🧁 Stand Mixer', q:'KitchenAid stand mixer 5 quart', keyword:'best stand mixer for baking', commission:'4.5%' },
+                  { label:'💪 Resistance Bands Set', q:'resistance bands with handles workout set', keyword:'resistance bands for home workout', commission:'3%' },
+                  { label:'💡 Atomic Habits Book', q:'Atomic Habits James Clear', keyword:'best self help books 2026', commission:'4.5%' },
+                  { label:'💻 Standing Desk Converter', q:'standing desk converter adjustable ergonomic', keyword:'standing desk converter worth it', commission:'3%' },
+                  { label:'🔆 Monitor Light Bar', q:'monitor light bar eye strain desk', keyword:'best monitor light bar', commission:'3%' },
+                  { label:'📦 Ring Light Tripod', q:'ring light tripod stand content creator', keyword:'ring light for youtube videos', commission:'4%' },
+                  { label:'☀️ Sunrise Alarm Clock', q:'sunrise alarm clock wake up light', keyword:'best wake up light', commission:'3%' },
+                  { label:'🏋️ Adjustable Dumbbells', q:'adjustable dumbbells home gym space saving', keyword:'adjustable dumbbells worth it', commission:'3%' },
+                  { label:'🔵 Blue Light Glasses', q:'blue light blocking glasses computer work', keyword:'blue light glasses for screens', commission:'3%' },
+                  { label:'🍳 Ninja Creami', q:'Ninja Creami protein ice cream maker', keyword:'Ninja Creami worth it review', commission:'4.5%' },
+                  { label:'🧘 Foam Roller', q:'foam roller deep tissue muscle recovery', keyword:'foam roller for back pain', commission:'3%' },
+                  { label:'☕ Handheld Milk Frother', q:'handheld milk frother electric latte', keyword:'best milk frother under 25', commission:'4.5%' },
+                  { label:'📚 Rich Dad Poor Dad', q:'Rich Dad Poor Dad Robert Kiyosaki', keyword:'best money books beginners', commission:'4.5%' },
+                  { label:'🌡️ Food Scale Digital', q:'digital food scale kitchen grams', keyword:'best food scale for meal prep', commission:'4.5%' },
                 ].map(function(item, i) {
                   const url = 'https://www.amazon.com/s?k=' + encodeURIComponent(item.q) + '&tag=nichroute-20';
                   const id = 'amz_' + i;
                   return (
                     <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:7, border:'1px solid rgba(255,153,0,.1)' }}>
-                      <span style={{ fontSize:11, color:TXT2, flex:1 }}>{item.label}</span>
-                      <code style={{ fontSize:9, color:'rgba(255,153,0,.6)', flex:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{url.slice(0,50)}...</code>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:11, color:TXT2 }}>{item.label}</div>
+                        <div style={{ fontSize:9, color:TXT3 }}>🔍 Buyer keyword: "{item.keyword}" · Commission: {item.commission}</div>
+                      </div>
                       <div style={{ display:'flex', gap:4, flexShrink:0 }}>
                         <button onClick={function(){ navigator.clipboard.writeText(url); setAmazonCopied(id); setTimeout(function(){ setAmazonCopied(''); }, 2000); }}
                           style={{ padding:'4px 10px', borderRadius:5, border:'1px solid rgba(255,153,0,.3)', background:'transparent', color:'#FF9900', fontSize:9, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
