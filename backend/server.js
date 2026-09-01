@@ -4828,20 +4828,18 @@ app.post('/api/index/submit', async (req, res) => {
 
   const results = { google: null, bing: null };
 
-  // 1. Bing still supports IndexNow protocol
+  // 1. Bing Webmaster URL submission
   try {
-    const bingR = await fetch('https://www.bing.com/indexnow', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host: 'nichroute.com',
-        key: 'indexnow',
-        urlList: [url],
-      }),
-    });
-    results.bing = { status: bingR.status, message: bingR.status < 300 ? 'Submitted to Bing' : 'Bing notified' };
+    const bingSubmit = 'https://www.bing.com/webmaster/api.svc/json/SubmitUrl?siteUrl=' + 
+      encodeURIComponent('https://nichroute.com/') + '&url=' + encodeURIComponent(url);
+    results.bing = { 
+      status: 'ready', 
+      message: 'Click Open Bing Webmaster to submit',
+      url: 'https://www.bing.com/webmaster/home/dashboard',
+      submitUrl: bingSubmit,
+    };
   } catch(e) {
-    results.bing = { status: 'sent', message: 'Bing submission attempted' };
+    results.bing = { status: 'ready', message: 'Open Bing Webmaster to submit manually' };
   }
 
   // 2. Google — deprecated ping, direct to Search Console instead
@@ -4890,6 +4888,56 @@ ${urls.map(u => '<url><loc>' + u.url + '</loc><lastmod>' + u.lastmod + '</lastmo
     res.send(sitemap);
   } catch(e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ── Pre-render NichRoute pages for search engine crawlers ─────────────────
+app.get('/api/prerender', async (req, res) => {
+  const { slug } = req.query;
+  if (!slug) return res.status(400).send('slug required');
+
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).send('DB not configured');
+
+    const { data, error } = await db.from('submissions').select('*').eq('slug', slug).single();
+    if (error || !data) return res.status(404).send('Page not found');
+
+    const title = (data.title || slug).replace(/\*\*/g,'').replace(/^#+\s*/,'').trim();
+    const body = (data.body || '').replace(/\*\*/g,'').replace(/#+\s/g,'').slice(0, 500);
+    const affUrl = data.affiliate_url || '';
+    const niche = data.niche || '';
+
+    // Serve fully rendered HTML for crawlers
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} — NichRoute</title>
+<meta name="description" content="${body.slice(0,160)}">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://nichroute.com/content.html?slug=${slug}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${body.slice(0,200)}">
+<meta property="og:url" content="https://nichroute.com/content.html?slug=${slug}">
+</head>
+<body>
+<article>
+<h1>${title}</h1>
+<p><strong>Category:</strong> ${niche}</p>
+${(data.body||'').split('\n\n').slice(0,5).map(p => '<p>'+p.replace(/\*\*/g,'').replace(/#+\s/g,'')+'</p>').join('\n')}
+${affUrl ? '<p><a href="'+affUrl+'">See full product details</a></p>' : ''}
+</article>
+<footer><p><a href="https://nichroute.com">NichRoute</a> — Research-based reviews</p></footer>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch(e) {
+    res.status(500).send('Error: ' + e.message);
   }
 });
 
