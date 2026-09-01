@@ -4847,9 +4847,9 @@ app.post('/api/index/submit', async (req, res) => {
   // 2. Google — deprecated ping, direct to Search Console instead
   results.google = { status: 'manual', message: 'Use Search Console link below to request indexing' };
 
-  // 3. Generate Google Search Console URL inspection link for this specific page
-  const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=sc-domain%3Anichroute.com&id=' + encodeURIComponent(url);
-  const gscInspect = 'https://search.google.com/search-console/index?hl=en&resource_id=sc-domain%3Anichroute.com';
+  // Generate correct Google Search Console URL
+  const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fnichroute.com%2F&id=' + encodeURIComponent(url);
+  const gscInspect = 'https://search.google.com/search-console/index?resource_id=https%3A%2F%2Fnichroute.com%2F';
 
   res.json({
     submitted: true,
