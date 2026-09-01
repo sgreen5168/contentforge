@@ -419,6 +419,7 @@ export default function FacebookStudio({ onNavigate }) {
                   { id:'youtube', icon:'▶', label:'YouTube' },
                   { id:'pinterest', icon:'📌', label:'Pinterest' },
                   { id:'twitter', icon:'𝕏', label:'X / Twitter' },
+                  { id:'reddit', icon:'🔴', label:'Reddit' },
                 ].map(function(p) {
                   const hasCap = p.id === 'facebook' ? !!description : !!captions[p.id];
                   return (
@@ -455,6 +456,7 @@ export default function FacebookStudio({ onNavigate }) {
                     {activeCaption==='youtube' && '▶ YouTube — detailed description with affiliate link allowed directly'}
                     {activeCaption==='pinterest' && '📌 Pinterest — keyword-rich, searchable, evergreen'}
                     {activeCaption==='twitter' && '𝕏 X/Twitter — concise, punchy, link at end'}
+                    {activeCaption==='reddit' && '🔴 Reddit — conversational, genuinely helpful, no hard selling, ends with question'}
                   </div>
                   <div style={{ fontSize:11, color:TXT2, lineHeight:1.7, whiteSpace:'pre-wrap', padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:7, border:`1px solid ${BORD}`, maxHeight:160, overflow:'auto' }}>
                     {captions[activeCaption]}
