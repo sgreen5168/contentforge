@@ -942,7 +942,7 @@ export default function Dashboard({ onNavigate }) {
                     ↗ View Live Page
                   </a>
                   <button onClick={()=>submitToSearchEngines(results.landingUrl || results?.link?.url || '')}
-                    disabled={indexing || (!results?.landingUrl && !results?.link?.url)}
+                    disabled={indexing || (!results?.landingUrl && !results?.link?.url && !(results?.post||'').includes('nichroute.com'))}
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:indexing?'rgba(16,185,129,.3)':'#059669', color:'white', fontSize:11, fontWeight:700, cursor:indexing?'default':'pointer', fontFamily:'inherit' }}>
                     {indexing ? '⏳ Submitting…' : '🔍 Submit to Google & Bing'}
                   </button>
