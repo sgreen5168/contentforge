@@ -4850,6 +4850,7 @@ app.post('/api/index/submit', async (req, res) => {
   // Generate correct Google Search Console URL
   const gscUrl = 'https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fnichroute.com%2F&id=' + encodeURIComponent(url);
   const gscInspect = 'https://search.google.com/search-console/index?resource_id=https%3A%2F%2Fnichroute.com%2F';
+  const gscDirect = 'https://search.google.com/search-console?resource_id=https%3A%2F%2Fnichroute.com%2F';
 
   res.json({
     submitted: true,
