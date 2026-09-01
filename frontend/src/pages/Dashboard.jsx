@@ -954,18 +954,21 @@ export default function Dashboard({ onNavigate }) {
                 {indexResult && !indexResult.error && (
                   <div style={{ marginTop:8, padding:'10px 12px', background:'rgba(5,150,105,.08)', border:'1px solid rgba(5,150,105,.2)', borderRadius:8 }}>
                     <div style={{ fontSize:11, fontWeight:700, color:'#34D399', marginBottom:4 }}>✅ Submitted to Bing</div>
-                    <div style={{ fontSize:10, color:TXT3, marginBottom:8 }}>
-                      For Google — click below to open Search Console and click <strong style={{ color:TXT2 }}>"Request Indexing"</strong> on that page. Takes 10 seconds.
+                    <div style={{ fontSize:10, color:TXT3, marginBottom:8, lineHeight:1.6 }}>
+                      For Google — open Search Console below → click <strong style={{ color:TXT2 }}>URL Inspection</strong> in the left sidebar → paste your landing page URL → click <strong style={{ color:TXT2 }}>Request Indexing</strong>.
+                    </div>
+                    <div style={{ fontSize:10, color:'rgba(79,163,255,.8)', marginBottom:8, padding:'6px 10px', background:'rgba(79,163,255,.06)', borderRadius:6, fontFamily:'monospace', wordBreak:'break-all' }}>
+                      {indexResult.url}
                     </div>
                     <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                      <a href={indexResult.gscUrl} target="_blank" rel="noreferrer"
+                      <a href="https://search.google.com/search-console" target="_blank" rel="noreferrer"
                         style={{ padding:'6px 14px', borderRadius:6, border:'none', background:'#4285F4', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
-                        🔍 Request Google Indexing
+                        🔍 Open Google Search Console
                       </a>
-                      <a href={indexResult.gscInspect} target="_blank" rel="noreferrer"
-                        style={{ padding:'6px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, textDecoration:'none' }}>
-                        View All Pages
-                      </a>
+                      <button onClick={()=>copy(indexResult.url,'gsc_url')}
+                        style={{ padding:'6px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                        {copied==='gsc_url'?'✓ Copied!':'📋 Copy URL to paste'}
+                      </button>
                     </div>
                   </div>
                 )}
