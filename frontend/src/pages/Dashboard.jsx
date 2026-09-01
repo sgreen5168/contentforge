@@ -159,6 +159,8 @@ export default function Dashboard({ onNavigate }) {
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
   const [pinMedia, setPinMedia] = useState(null);
+  const [platformMedia, setPlatformMedia] = useState({});
+  const [showMediaUploader, setShowMediaUploader] = useState(false);
   const [pinResized, setPinResized] = useState(null);
   const [pinResizing, setPinResizing] = useState(false);
   const [pinMediaPreview, setPinMediaPreview] = useState(null);
@@ -472,6 +474,37 @@ export default function Dashboard({ onNavigate }) {
 
   const stepStatus = (id) => pipeline[id]?.status || 'waiting';
   const stepIcon   = (s) => ({ waiting:'○', running:'⟳', building:'⟳', done:'✅', warn:'⚠️', error:'❌' }[s]||'○');
+
+  const PLATFORM_SPECS = [
+    { id:'facebook',   label:'📘 Facebook',   icon:'📘', color:'#1877F2',
+      image:'1200×630px (landscape) or 1080×1080px (square)',
+      video:'1280×720px min, MP4, under 4GB, 15 sec–240 min',
+      ratio:'16:9 or 1:1', url:'https://www.facebook.com' },
+    { id:'youtube',    label:'▶ YouTube',     icon:'▶',  color:'#EF4444',
+      image:'1280×720px thumbnail (16:9)',
+      video:'1920×1080px ideal, MP4/MOV, any length',
+      ratio:'16:9', url:'https://studio.youtube.com' },
+    { id:'tiktok',     label:'🎵 TikTok',     icon:'🎵', color:'#010101',
+      image:'1080×1920px (9:16 vertical)',
+      video:'1080×1920px, MP4, 15 sec–10 min, under 500MB',
+      ratio:'9:16 vertical', url:'https://www.tiktok.com/upload' },
+    { id:'instagram',  label:'📸 Instagram',  icon:'📸', color:'#E1306C',
+      image:'1080×1080px (square) or 1080×1350px (portrait)',
+      video:'1080×1920px Reels, MP4, 15 sec–90 sec',
+      ratio:'1:1 or 4:5 or 9:16', url:'https://www.instagram.com' },
+    { id:'pinterest',  label:'📌 Pinterest',  icon:'📌', color:'#E60023',
+      image:'1000×1500px (2:3 vertical) — ideal',
+      video:'1:1 or 9:16, MP4, 4 sec–15 min',
+      ratio:'2:3 vertical', url:'https://pinterest.com/pin/creation/button' },
+    { id:'reddit',     label:'🔴 Reddit',     icon:'🔴', color:'#FF4500',
+      image:'1200×628px (landscape) recommended',
+      video:'1920×1080px max, MP4, under 15 min, under 1GB',
+      ratio:'16:9', url:'https://www.reddit.com/submit' },
+    { id:'twitter',    label:'𝕏 X/Twitter',  icon:'𝕏',  color:'#000000',
+      image:'1200×675px (16:9) or 1200×1200px (1:1)',
+      video:'1280×720px, MP4, 2:20 min max, under 512MB',
+      ratio:'16:9 or 1:1', url:'https://twitter.com/compose/tweet' },
+  ];
 
   function resizeForPinterest(file) {
     if (!file || !file.type.startsWith('image/')) return;
@@ -928,7 +961,40 @@ export default function Dashboard({ onNavigate }) {
                   style={{ padding:'8px', borderRadius:7, border:'none', background:'#E60023', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
                   📌 Pinterest Video
                 </a>
+                <a href="https://www.reddit.com/submit" target="_blank" rel="noreferrer"
+                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#FF4500', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                  🔴 Reddit Post
+                </a>
+                <button onClick={()=>setShowMediaUploader(!showMediaUploader)}
+                  style={{ padding:'8px', borderRadius:7, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
+                  📁 Upload Media + Sizes
+                </button>
               </div>
+              {showMediaUploader && (
+                <div style={{ marginBottom:8, padding:'12px 14px', background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
+                  <div style={{ fontSize:11, fontWeight:700, marginBottom:10 }}>📐 Platform image & video size guide — click to open upload</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {PLATFORM_SPECS.map(function(p) {
+                      return (
+                        <div key={p.id} style={{ padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:8, border:`1px solid rgba(255,255,255,.06)` }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:'white' }}>{p.label}</div>
+                            <a href={p.url} target="_blank" rel="noreferrer"
+                              style={{ padding:'3px 10px', borderRadius:5, border:'none', background:p.color, color:'white', fontSize:9, fontWeight:700, textDecoration:'none' }}>
+                              Upload ↗
+                            </a>
+                          </div>
+                          <div style={{ fontSize:10, color:TXT3, lineHeight:1.6 }}>
+                            <div>🖼 <strong style={{ color:TXT2 }}>Image:</strong> {p.image}</div>
+                            <div>🎬 <strong style={{ color:TXT2 }}>Video:</strong> {p.video}</div>
+                            <div>📐 <strong style={{ color:TXT2 }}>Ratio:</strong> {p.ratio}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {results.youtubeDescription && (
                 <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
                   style={{ width:'100%', padding:'7px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
