@@ -9,6 +9,7 @@ const NAV = [
   { id:'media',      label:'Media Library',     icon:'📁', section:'Content' },
   { id:'submitter',  label:'Post Submitter',    icon:'📤', section:'Content' },
   { id:'fbstudio',   label:'Facebook Studio',   icon:'📘', section:'Content', badge:'New' },
+  { id:'socialhub',  label:'Social Media Hub',   icon:'📱', section:'Content', badge:'New' },
   // Insights
   { id:'analytics',  label:'Analytics',         icon:'◎',  section:'Insights' },
   { id:'strategy',   label:'Strategy Hub',      icon:'📊', section:'Insights', badge:'New' },
