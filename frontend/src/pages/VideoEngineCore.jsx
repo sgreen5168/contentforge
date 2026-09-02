@@ -208,6 +208,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [ytDescMode, setYtDescMode]   = useState('short'); // 'short' | 'long'
   const ytFileRef                     = React.useRef(null);
   const [vbYtPrivacy, setVbYtPriv]  = useState('public');
+  const [vbHistory, setVbHistory]   = useState([]);
   const [wfMusic, setWfMusic]         = useState('uplifting');
   const [wfAddMusic, setWfAddMusic]   = useState(true);  // default: scene-only (fast)
   const [wfJobId, setWfJobId]         = useState('');
@@ -332,6 +333,15 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const d = await r.json();
       setJobs(Array.isArray(d) ? d : []);
     } catch(e) { console.warn('loadJobs:', e.message); }
+  }
+
+  async function loadVbHistory() {
+    try {
+      const r = await fetch(VB_API + '/video/jobs');
+      if (!r.ok) return;
+      const d = await r.json();
+      setVbHistory(Array.isArray(d) ? d : []);
+    } catch(e) { console.warn('vbHistory fetch failed:', e.message); }
   }
 
   async function previewVoice(voiceId) {
