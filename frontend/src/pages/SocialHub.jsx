@@ -98,9 +98,34 @@ export default function SocialHub({ onNavigate }) {
     <div style={{ minHeight:'100vh', background:BG, color:TXT, fontFamily:'system-ui,sans-serif', padding:'24px 20px' }}>
       <div style={{ maxWidth:820, margin:'0 auto' }}>
 
-        <div style={{ marginBottom:20 }}>
+        <div style={{ marginBottom:16 }}>
           <div style={{ fontSize:22, fontWeight:800, marginBottom:4 }}>📱 Social Media Hub</div>
           <div style={{ fontSize:12, color:TXT3 }}>Upload media, get size guides, copy captions — all platforms in one place</div>
+        </div>
+
+        {/* Workflow Guide */}
+        <div style={{ ...card(), marginBottom:16, border:'1px solid rgba(29,158,117,.25)', background:'rgba(29,158,117,.04)' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:GRN, marginBottom:10 }}>📋 How to use this hub — where to get each piece of information</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            {[
+              { field:'📝 Title', source:'Copy a trending title from 📊 Strategy Hub → 🔥 Trending Topics, or use the title generated in 🚀 Command Center' },
+              { field:'📄 Description / Caption', source:'Copy from 📘 Facebook Studio → ✨ Generate All Captions — each platform tab has the right caption already written' },
+              { field:'🔗 NichRoute URL', source:'Copy from 🚀 Command Center → Step 3 → Copy Landing Page URL. This is the link that goes everywhere' },
+              { field:'🏷️ Hashtags', source:'Copy from 📘 Facebook Studio captions — each platform tab includes the right hashtags for that audience' },
+              { field:'🎬 Photo or Video', source:'Download your MP4 from 🚀 Command Center → click Download MP4. Same file uploads to all platforms' },
+              { field:'📐 Image resize', source:'Upload any photo here → click the Resize button to get the exact right size for that platform automatically' },
+            ].map(function(item, i){
+              return (
+                <div key={i} style={{ padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:8, border:`1px solid ${BORD}` }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:GRN, marginBottom:3 }}>{item.field}</div>
+                  <div style={{ fontSize:10, color:TXT3, lineHeight:1.5 }}>{item.source}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop:10, padding:'8px 12px', background:'rgba(79,163,255,.06)', borderRadius:8, border:'1px solid rgba(79,163,255,.15)', fontSize:11, color:'rgba(79,163,255,.9)', lineHeight:1.6 }}>
+            <strong>Recommended workflow:</strong> Generate content in Command Center → open Facebook Studio → click ✨ Generate All Captions → come here → pick your platform → paste the caption → paste the NichRoute URL → upload your MP4 → click Open Platform → post.
+          </div>
         </div>
 
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:20 }}>
