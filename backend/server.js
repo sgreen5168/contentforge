@@ -179,8 +179,11 @@ CRITICAL for sceneDescriptions — these search a stock video library (Pexels) f
 - HOME/KITCHEN TOPICS: describe exact tools and actions. "KitchenAid mixer dough bowl spinning" not "kitchen appliance mixing". "hands rolling bread dough marble counter" not "person baking kitchen".
 - CLOSE-UP DETAILS: include texture and action shots. "steam rising rice pot close-up", "lime being squeezed steak marinade", "cheese melting bowl overhead shot".
 - VISUAL DRAMA: pick the most visually interesting moment in each scene. The sizzle, the steam, the slice, the pour, the reveal. These make videos compelling.
-- Good examples: "flank steak searing cast iron skillet smoke", "woman slicing steak thin against grain", "five meal prep bowls overhead assembly complete", "resistance bands woman living room squat", "hands kneading bread dough flour counter"
-- Bad examples: "determination success journey", "lifestyle transformation moment", "cooking food kitchen general" `;
+- PEXELS SEARCH OPTIMIZATION: write keywords that will actually find matching stock footage. Lead with the main subject noun. Use 2-4 words maximum. Think like a stock footage librarian — what would this clip be tagged as?
+- MATTE/DEMO CLIPS: for product demos or explanations, use "overhead shot", "close-up", "slow motion", "time lapse" as modifiers to find more cinematic footage.
+- SCENE CONTINUITY: consecutive scenes should feel visually connected — vary between wide shots, close-ups, and action shots to create professional pacing.
+- Good examples: "flank steak searing cast iron skillet smoke", "woman slicing steak thin against grain", "five meal prep bowls overhead assembly complete", "resistance bands woman living room squat", "hands kneading bread dough flour counter", "portable blender protein shake kitchen counter", "air fryer basket food crispy close-up", "morning routine woman stretching sunlight bedroom"
+- Bad examples: "determination success journey", "lifestyle transformation moment", "cooking food kitchen general", "healthy living concept" `;
 
   const msg = await client.messages.create({
     model: 'claude-opus-4-5',
