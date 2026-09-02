@@ -261,17 +261,67 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
       try {
         const q = encodeURIComponent(keywords[i]);
         console.log('['+id+'] Clip '+(i+1)+': searching "'+keywords[i]+'"');
-        const pr = await fetch(`https://api.pexels.com/videos/search?query=${q}&per_page=5&orientation=${orient}`,
+
+        // Search with primary keyword AND a broader fallback
+        const primaryQ = encodeURIComponent(keywords[i]);
+        const fallbackQ = encodeURIComponent(keywords[i].split(' ').slice(0,2).join(' '));
+
+        const pr = await fetch('https://api.pexels.com/videos/search?query='+primaryQ+'&per_page=10&orientation='+orient+'&size=medium',
           { headers: { Authorization: pKey } });
         if (!pr.ok) { console.warn('['+id+'] Pexels HTTP '+pr.status+' for "'+keywords[i]+'"'); continue; }
         const pd = await pr.json();
-        console.log('['+id+'] Pexels returned '+(pd.videos||[]).length+' videos');
-        let url = null;
+        console.log('['+id+'] Pexels returned '+(pd.videos||[]).length+' videos for "'+keywords[i]+'"');
+
+        // Score each video for relevance — prefer videos where title/tags match the keyword
+        const keywordLower = keywords[i].toLowerCase();
+        const keywordWords = keywordLower.split(' ').filter(w=>w.length>2);
+
+        let bestUrl = null;
+        let bestScore = -1;
+
         for (const vid of (pd.videos||[])) {
           const files = (vid.video_files||[])
-            .filter(f=>f.link&&f.file_type==='video/mp4')
+            .filter(f=>f.link && f.file_type==='video/mp4' && (f.width||0)>=720)
             .sort((a,b)=>(b.width||0)-(a.width||0));
-          if (files[0]?.link) { url=files[0].link; break; }
+          if (!files[0]?.link) continue;
+
+          // Score based on relevance
+          let score = 0;
+          const title = (vid.url||'').toLowerCase() + ' ' + (vid.user?.name||'').toLowerCase();
+          const duration = vid.duration || 0;
+
+          // Prefer videos where URL/title contains keyword words
+          keywordWords.forEach(function(w) {
+            if (title.includes(w)) score += 3;
+          });
+
+          // Prefer shorter clips (5-15 seconds) for dynamic editing
+          if (duration >= 5 && duration <= 15) score += 2;
+          else if (duration > 15 && duration <= 30) score += 1;
+
+          // Prefer higher resolution
+          if ((files[0].width||0) >= 1920) score += 2;
+          else if ((files[0].width||0) >= 1280) score += 1;
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestUrl = files[0].link;
+          }
+        }
+
+        // Fallback to any available video if no scored match
+        let url = bestUrl;
+        if (!url) {
+          // Try fallback search with fewer keywords
+          const fr = await fetch('https://api.pexels.com/videos/search?query='+fallbackQ+'&per_page=5&orientation='+orient,
+            { headers: { Authorization: pKey } });
+          if (fr.ok) {
+            const fd = await fr.json();
+            for (const vid of (fd.videos||[])) {
+              const files = (vid.video_files||[]).filter(f=>f.link&&f.file_type==='video/mp4').sort((a,b)=>(b.width||0)-(a.width||0));
+              if (files[0]?.link) { url = files[0].link; break; }
+            }
+          }
         }
         if (!url) {
           for (const vid of (pd.videos||[])) {
