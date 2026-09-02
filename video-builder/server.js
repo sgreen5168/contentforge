@@ -186,59 +186,39 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
         }
       } catch(e) { console.warn('['+id+'] ⚠️ OpenAI TTS error:', e.message); }
     }
-    // HeyGen TTS fallback — uses HeyGen's text-to-speech API
-    if (!ttsBuf && process.env.HEYGEN_API_KEY) {
+    // Google TTS fallback — free tier 1M characters/month
+    if (!ttsBuf && process.env.YOUTUBE_DATA_API_KEY) {
       try {
-        // HeyGen voice IDs mapped to OpenAI voice names
-        const hgVoices = {
-          nova:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // warm female
-          shimmer: '2d5b0e6cf36f460aa7fc47e3eee4ba54', // warm female
-          alloy:   '2d5b0e6cf36f460aa7fc47e3eee4ba54', // neutral
-          echo:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // male
-          onyx:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // deep male
+        const gVoices = {
+          nova:    { name:'en-US-Neural2-F', gender:'FEMALE' },
+          shimmer: { name:'en-US-Neural2-G', gender:'FEMALE' },
+          alloy:   { name:'en-US-Neural2-A', gender:'MALE' },
+          echo:    { name:'en-US-Neural2-D', gender:'MALE' },
+          onyx:    { name:'en-US-Neural2-J', gender:'MALE' },
         };
-        const hgVoiceId = hgVoices[voice] || '2d5b0e6cf36f460aa7fc47e3eee4ba54';
-        // Step 1 — submit TTS job to HeyGen
-        const hgSubmit = await fetch('https://api.heygen.com/v1/streaming.tts', {
+        const gVoice = gVoices[voice] || gVoices.nova;
+        const gRes = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key='+process.env.YOUTUBE_DATA_API_KEY, {
           method: 'POST',
-          headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: scriptText.slice(0, 2000), voice_id: hgVoiceId, speed: 1.0 }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: { text: scriptText.slice(0, 5000) },
+            voice: { languageCode: 'en-US', name: gVoice.name, ssmlGender: gVoice.gender },
+            audioConfig: { audioEncoding: 'MP3', speakingRate: 0.95, pitch: 0 },
+          }),
         });
-        if (hgSubmit.ok) {
-          const hgData = await hgSubmit.json();
-          const audioUrl = hgData?.data?.audio_url || hgData?.audio_url;
-          if (audioUrl) {
-            const audioRes = await fetch(audioUrl);
-            if (audioRes.ok) {
-              ttsBuf = Buffer.from(await audioRes.arrayBuffer());
-              console.log('['+id+'] ✅ HeyGen TTS Voiceover:', ttsBuf.length, 'bytes');
-            }
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData.audioContent) {
+            ttsBuf = Buffer.from(gData.audioContent, 'base64');
+            console.log('['+id+'] ✅ Google TTS Voiceover:', ttsBuf.length, 'bytes');
           }
+        } else {
+          const errText = await gRes.text().catch(()=>'');
+          console.warn('['+id+'] ⚠️ Google TTS failed ('+gRes.status+'):', errText.slice(0,100));
         }
-        if (!ttsBuf) {
-          // Try HeyGen v2 TTS endpoint
-          const hgV2 = await fetch('https://api.heygen.com/v2/tts', {
-            method: 'POST',
-            headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: scriptText.slice(0, 2000), voice_id: hgVoiceId }),
-          });
-          if (hgV2.ok) {
-            const hgV2Data = await hgV2.json();
-            const audioUrl = hgV2Data?.data?.audio_url || hgV2Data?.audio_url;
-            if (audioUrl) {
-              const audioRes = await fetch(audioUrl);
-              if (audioRes.ok) {
-                ttsBuf = Buffer.from(await audioRes.arrayBuffer());
-                console.log('['+id+'] ✅ HeyGen v2 TTS Voiceover:', ttsBuf.length, 'bytes');
-              }
-            }
-          } else {
-            console.warn('['+id+'] ⚠️ HeyGen TTS failed:', hgV2.status);
-          }
-        }
-      } catch(e) { console.warn('['+id+'] ⚠️ HeyGen TTS error:', e.message); }
+      } catch(e) { console.warn('['+id+'] ⚠️ Google TTS error:', e.message); }
     }
-    if (!ttsBuf || ttsBuf.length < 500) throw new Error('TTS failed — add OpenAI credits at platform.openai.com/billing');
+    if (!ttsBuf || ttsBuf.length < 500) throw new Error('TTS failed — add OpenAI credits at platform.openai.com/billing or enable Google Text-to-Speech API');
     fs.writeFileSync(audioFile, ttsBuf);
     console.log('['+id+'] ✅ Voiceover ready:', ttsBuf.length, 'bytes');
     upd(id, { progress:30, step:'🔍 Planning scenes…' });
