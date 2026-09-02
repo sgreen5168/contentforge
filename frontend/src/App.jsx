@@ -8,6 +8,7 @@ import AffiliateLibrary from './pages/AffiliateLibrary.jsx';
 import AmazonPicker from './pages/AmazonPicker.jsx';
 import FacebookStudio from './pages/FacebookStudio.jsx';
 import StrategyHub from './pages/StrategyHub.jsx';
+import SocialHub from './pages/SocialHub.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
@@ -806,6 +807,7 @@ export default function App() {
           {page === 'amazon'    && <AmazonPicker />}
           {page === 'fbstudio'  && <FacebookStudio onNavigate={navigateTo} />}
           {page === 'strategy'  && <StrategyHub onNavigate={navigateTo} />}
+          {page === 'socialhub' && <SocialHub onNavigate={navigateTo} />}
           {page === 'fbstudio'  && <FacebookStudio onNavigate={navigateTo} />}
           {page === 'nichroute'  && (
             <div style={{ padding:'32px 24px', maxWidth:700, margin:'0 auto', fontFamily:'inherit' }}>
