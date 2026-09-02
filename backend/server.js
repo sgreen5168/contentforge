@@ -219,20 +219,28 @@ async function generateVoiceover(script, persona, jobId, voiceOverride) {
   const fs = (await import('fs')).default;
   const audioPath = `/tmp/voice_${jobId}.mp3`; // predictable path so /api/video/audio/:jobId can find it
 
+  // Try OpenAI TTS first — fall back to ElevenLabs on any error including 429
   if (process.env.OPENAI_API_KEY) {
-    const voices = { ugc: 'nova', testimonial: 'shimmer', demo: 'onyx', influencer: 'alloy', educator: 'echo' };
-    const voice = voiceOverride || voices[persona] || 'nova';
-    console.log(`🎙 Voice: ${voice} (${voiceOverride ? 'user selected' : 'persona default'})`);
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'tts-1-hd', input: script.slice(0, 4096), voice, speed: 0.95 }),
-    });
-    if (!res.ok) throw new Error(`OpenAI TTS: ${res.status}`);
-    const buffer = await res.buffer();
-    fs.writeFileSync(audioPath, buffer);
-    console.log('✅ OpenAI TTS voiceover ready');
-    return audioPath;
+    try {
+      const voices = { ugc: 'nova', testimonial: 'shimmer', demo: 'onyx', influencer: 'alloy', educator: 'echo' };
+      const voice = voiceOverride || voices[persona] || 'nova';
+      console.log('🎙 Voice: ' + voice + ' (' + (voiceOverride ? 'user selected' : 'persona default') + ')');
+      const res = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'tts-1-hd', input: script.slice(0, 4096), voice, speed: 0.95 }),
+      });
+      if (res.ok) {
+        const buffer = await res.buffer();
+        fs.writeFileSync(audioPath, buffer);
+        console.log('✅ OpenAI TTS voiceover ready');
+        return audioPath;
+      }
+      const errText = await res.text().catch(function(){ return ''; });
+      console.warn('⚠️ OpenAI TTS failed (' + res.status + ') — falling back to ElevenLabs. ' + errText.slice(0,100));
+    } catch(e) {
+      console.warn('⚠️ OpenAI TTS error — falling back to ElevenLabs:', e.message);
+    }
   }
 
   if (process.env.ELEVENLABS_API_KEY) {
