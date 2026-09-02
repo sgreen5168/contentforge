@@ -167,18 +167,43 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
     const tags = '#homebusiness #sidehustle #workfromhome #makemoneyonline #entrepreneur';
     upd(id, { progress:20, step:'🎙 Generating voiceover…', result:{ script:scriptText, hook, hashtags:tags } });
 
-    // ── Step 2: Voiceover via OpenAI TTS ───────────────────────────────────
+    // ── Step 2: Voiceover — OpenAI with ElevenLabs fallback ─────────────────
     const audioFile = path.join(tmp, 'voice.mp3');
-    const ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
-      method:'POST',
-      headers:{ Authorization:'Bearer '+process.env.OPENAI_API_KEY, 'Content-Type':'application/json' },
-      body: JSON.stringify({ model:'tts-1', voice, input:scriptText }),
-    });
-    if (!ttsRes.ok) throw new Error('TTS failed HTTP '+ttsRes.status+': '+(await ttsRes.text()).slice(0,100));
-    const ttsBuf = Buffer.from(await ttsRes.arrayBuffer());
-    if (!ttsBuf||ttsBuf.length<500) throw new Error('TTS returned empty audio');
+    let ttsBuf = null;
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
+          method:'POST',
+          headers:{ Authorization:'Bearer '+process.env.OPENAI_API_KEY, 'Content-Type':'application/json' },
+          body: JSON.stringify({ model:'tts-1', voice, input:scriptText }),
+        });
+        if (ttsRes.ok) {
+          ttsBuf = Buffer.from(await ttsRes.arrayBuffer());
+          if (!ttsBuf || ttsBuf.length < 500) ttsBuf = null;
+          else console.log('['+id+'] ✅ OpenAI Voiceover:', ttsBuf.length, 'bytes');
+        } else {
+          console.warn('['+id+'] ⚠️ OpenAI TTS '+ttsRes.status+' — trying ElevenLabs');
+        }
+      } catch(e) { console.warn('['+id+'] ⚠️ OpenAI TTS error:', e.message); }
+    }
+    if (!ttsBuf && process.env.ELEVENLABS_API_KEY) {
+      try {
+        const elVoices = { nova:'21m00Tcm4TlvDq8ikWAM', alloy:'ErXwobaYiN019PkySvjV', echo:'VR6AewLTigWG4xSOukaG', shimmer:'AZnzlk1XvdvUeBnXmlld', onyx:'EXAVITQu4vr4xnSDxMaL' };
+        const elId = elVoices[voice] || '21m00Tcm4TlvDq8ikWAM';
+        const elRes = await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+elId, {
+          method:'POST',
+          headers:{ 'xi-api-key':process.env.ELEVENLABS_API_KEY, 'Content-Type':'application/json', 'Accept':'audio/mpeg' },
+          body: JSON.stringify({ text:scriptText.slice(0,2500), model_id:'eleven_monolingual_v1', voice_settings:{ stability:0.5, similarity_boost:0.75 } }),
+        });
+        if (elRes.ok) {
+          ttsBuf = Buffer.from(await elRes.arrayBuffer());
+          console.log('['+id+'] ✅ ElevenLabs Voiceover:', ttsBuf.length, 'bytes');
+        } else console.warn('['+id+'] ⚠️ ElevenLabs failed:', elRes.status);
+      } catch(e) { console.warn('['+id+'] ⚠️ ElevenLabs error:', e.message); }
+    }
+    if (!ttsBuf || ttsBuf.length < 500) throw new Error('TTS failed — add OpenAI credits or check ELEVENLABS_API_KEY');
     fs.writeFileSync(audioFile, ttsBuf);
-    console.log('['+id+'] ✅ Voiceover:', ttsBuf.length, 'bytes');
+    console.log('['+id+'] ✅ Voiceover ready:', ttsBuf.length, 'bytes');
     upd(id, { progress:30, step:'🔍 Planning scenes…' });
 
     // ── Step 3: Keywords via Claude ─────────────────────────────────────────
