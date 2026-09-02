@@ -186,22 +186,59 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
         }
       } catch(e) { console.warn('['+id+'] ⚠️ OpenAI TTS error:', e.message); }
     }
-    if (!ttsBuf && process.env.ELEVENLABS_API_KEY) {
+    // HeyGen TTS fallback — uses HeyGen's text-to-speech API
+    if (!ttsBuf && process.env.HEYGEN_API_KEY) {
       try {
-        const elVoices = { nova:'21m00Tcm4TlvDq8ikWAM', alloy:'ErXwobaYiN019PkySvjV', echo:'VR6AewLTigWG4xSOukaG', shimmer:'AZnzlk1XvdvUeBnXmlld', onyx:'EXAVITQu4vr4xnSDxMaL' };
-        const elId = elVoices[voice] || '21m00Tcm4TlvDq8ikWAM';
-        const elRes = await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+elId, {
-          method:'POST',
-          headers:{ 'xi-api-key':process.env.ELEVENLABS_API_KEY, 'Content-Type':'application/json', 'Accept':'audio/mpeg' },
-          body: JSON.stringify({ text:scriptText.slice(0,2500), model_id:'eleven_turbo_v2_5', voice_settings:{ stability:0.5, similarity_boost:0.75 } }),
+        // HeyGen voice IDs mapped to OpenAI voice names
+        const hgVoices = {
+          nova:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // warm female
+          shimmer: '2d5b0e6cf36f460aa7fc47e3eee4ba54', // warm female
+          alloy:   '2d5b0e6cf36f460aa7fc47e3eee4ba54', // neutral
+          echo:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // male
+          onyx:    '2d5b0e6cf36f460aa7fc47e3eee4ba54', // deep male
+        };
+        const hgVoiceId = hgVoices[voice] || '2d5b0e6cf36f460aa7fc47e3eee4ba54';
+        // Step 1 — submit TTS job to HeyGen
+        const hgSubmit = await fetch('https://api.heygen.com/v1/streaming.tts', {
+          method: 'POST',
+          headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: scriptText.slice(0, 2000), voice_id: hgVoiceId, speed: 1.0 }),
         });
-        if (elRes.ok) {
-          ttsBuf = Buffer.from(await elRes.arrayBuffer());
-          console.log('['+id+'] ✅ ElevenLabs Voiceover:', ttsBuf.length, 'bytes');
-        } else console.warn('['+id+'] ⚠️ ElevenLabs failed:', elRes.status);
-      } catch(e) { console.warn('['+id+'] ⚠️ ElevenLabs error:', e.message); }
+        if (hgSubmit.ok) {
+          const hgData = await hgSubmit.json();
+          const audioUrl = hgData?.data?.audio_url || hgData?.audio_url;
+          if (audioUrl) {
+            const audioRes = await fetch(audioUrl);
+            if (audioRes.ok) {
+              ttsBuf = Buffer.from(await audioRes.arrayBuffer());
+              console.log('['+id+'] ✅ HeyGen TTS Voiceover:', ttsBuf.length, 'bytes');
+            }
+          }
+        }
+        if (!ttsBuf) {
+          // Try HeyGen v2 TTS endpoint
+          const hgV2 = await fetch('https://api.heygen.com/v2/tts', {
+            method: 'POST',
+            headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: scriptText.slice(0, 2000), voice_id: hgVoiceId }),
+          });
+          if (hgV2.ok) {
+            const hgV2Data = await hgV2.json();
+            const audioUrl = hgV2Data?.data?.audio_url || hgV2Data?.audio_url;
+            if (audioUrl) {
+              const audioRes = await fetch(audioUrl);
+              if (audioRes.ok) {
+                ttsBuf = Buffer.from(await audioRes.arrayBuffer());
+                console.log('['+id+'] ✅ HeyGen v2 TTS Voiceover:', ttsBuf.length, 'bytes');
+              }
+            }
+          } else {
+            console.warn('['+id+'] ⚠️ HeyGen TTS failed:', hgV2.status);
+          }
+        }
+      } catch(e) { console.warn('['+id+'] ⚠️ HeyGen TTS error:', e.message); }
     }
-    if (!ttsBuf || ttsBuf.length < 500) throw new Error('TTS failed — add OpenAI credits or check ELEVENLABS_API_KEY');
+    if (!ttsBuf || ttsBuf.length < 500) throw new Error('TTS failed — add OpenAI credits at platform.openai.com/billing');
     fs.writeFileSync(audioFile, ttsBuf);
     console.log('['+id+'] ✅ Voiceover ready:', ttsBuf.length, 'bytes');
     upd(id, { progress:30, step:'🔍 Planning scenes…' });
