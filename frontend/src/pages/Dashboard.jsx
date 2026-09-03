@@ -164,7 +164,7 @@ export default function Dashboard({ onNavigate }) {
   const [publishMediaType, setPublishMediaType] = useState('');
   const [publishResized, setPublishResized] = useState(null);
   const [publishResizing, setPublishResizing] = useState(false);
-  const publishFileRef = React.useRef(null);
+  const publishFileRef = useRef(null);
   const [pinMedia, setPinMedia] = useState(null);
   const [platformMedia, setPlatformMedia] = useState({});
   const [showMediaUploader, setShowMediaUploader] = useState(false);
