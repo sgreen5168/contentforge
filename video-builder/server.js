@@ -157,7 +157,16 @@ async function buildVideo(id, { topic, voice, duration, music, ratio }) {
     const words = Math.round(secs * 2.3);
     const scriptMsg = await claude.messages.create({
       model:'claude-sonnet-4-6', max_tokens:600,
-      system:`You write short social video scripts for Facebook and TikTok. Write a ${secs}-second script (~${words} words) on the topic given. Format: HOOK (first sentence, grabs attention), then 3-4 short punchy sentences, then a CTA. Return only the script text, no labels, no markdown.`,
+      system:`You write short social video scripts for Facebook and TikTok. Write a ${secs}-second video script (~${words} words) on the topic given.
+
+Follow this exact arc:
+1. HOOK: Open with the problem or surprising fact the topic solves. Stop-the-scroll format: "Most people [wrong thing]..." or "[Number] that changes [topic]..."
+2. PROBLEM: Why this matters — specific and relatable.
+3. SOLUTION: Reveal the answer/product. The money moment.
+4. BENEFITS: 2-3 concrete benefits — what does the viewer get?
+5. CTA: One clear action — "link in bio", "details below", "check description".
+
+Rules: Never use I/me/my. No filler. Every sentence earns its place. Return only script text, no labels, no markdown.`,
       messages:[{ role:'user', content:`Topic: ${topic}` }],
     });
     const scriptText = scriptMsg.content[0].text.trim();
