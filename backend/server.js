@@ -4803,7 +4803,7 @@ TWITTER (under 280 chars including link): Punchy one-liner, key insight, landing
 REDDIT (150-200 words): Conversational and genuinely helpful — NO hard selling, NO affiliate language. Write like a real community member sharing useful information. Start with a relatable observation, provide real value, mention the product naturally as something worth looking into. End with a question to spark discussion. No hashtags. Reddit bans promotional posts — write as education first.
 
 Rules for ALL platforms:
-- NEVER use first-person: not "I tried", "I use", "I made"
+- STRICTLY NO FIRST PERSON: never use "I", "me", "my", "mine", "I've", "I'm", "I found", "I tried", "I use", "I made" — write in second person ("you", "your") or third person ("people", "most folks") only
 - Use "you/your" or "most people/many find"  
 - NEVER say "cottage food laws" — say "selling from home is legal in most states"
 - Natural, conversational tone — not salesy
@@ -5320,10 +5320,12 @@ FACEBOOK VIDEO CAPTION:
 - The caption stops the scroll before the video plays
 
 COMPLIANCE RULES:
-- NEVER write first-person income claims: "I made $X", "I earned $X"
+- STRICTLY NO FIRST PERSON: Never use "I", "me", "my", "mine", "myself", "I've", "I'm", "I'll", "I'd", "I was", "I have", "I found", "I tried", "I use", "I made", "I earned" — not even once in the entire post
+- Write entirely in second person ("you", "your") or third person ("people", "most folks", "a lot of creators") — never first person
+- CORRECT: "Most people find that...", "Here's what works...", "A lot of creators swear by...", "Worth checking out if you..."
+- WRONG: "I found this works", "In my experience", "I've been using this", "My morning routine"
 - NEVER write guaranteed results: "you will earn", "guaranteed income"  
 - Income topics use educational framing: "here's how people are doing this"
-- Write in second or third person — not first-person income stories
 - Posts must comply with Facebook, FTC, and platform advertising guidelines`,
       messages: [{ role: 'user', content: prompt }],
     });
