@@ -158,6 +158,13 @@ export default function Dashboard({ onNavigate }) {
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
+  const [publishPlatform, setPublishPlatform] = useState(null);
+  const [publishMedia, setPublishMedia] = useState(null);
+  const [publishMediaPreview, setPublishMediaPreview] = useState(null);
+  const [publishMediaType, setPublishMediaType] = useState('');
+  const [publishResized, setPublishResized] = useState(null);
+  const [publishResizing, setPublishResizing] = useState(false);
+  const publishFileRef = React.useRef(null);
   const [pinMedia, setPinMedia] = useState(null);
   const [platformMedia, setPlatformMedia] = useState({});
   const [showMediaUploader, setShowMediaUploader] = useState(false);
@@ -526,6 +533,35 @@ export default function Dashboard({ onNavigate }) {
       image:'1200×675px (16:9) or 1200×1200px (1:1)',
       video:'1280×720px, MP4, 2:20 min max, under 512MB',
       ratio:'16:9 or 1:1', url:'https://twitter.com/compose/tweet' },
+  ];
+
+  function resizeForPlatform(file, targetW, targetH, callback) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW; canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetW, targetH);
+      const ir = img.width / img.height;
+      const tr = targetW / targetH;
+      let sw, sh, sx, sy;
+      if (ir > tr) { sh=img.height; sw=sh*tr; sx=(img.width-sw)/2; sy=0; }
+      else { sw=img.width; sh=sw/tr; sx=0; sy=(img.height-sh)/2; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+      canvas.toBlob(function(blob){ callback(URL.createObjectURL(blob)); }, 'image/jpeg', 0.92);
+    };
+    img.src = URL.createObjectURL(file);
+  }
+
+  const PUBLISH_PLATFORMS = [
+    { id:'youtube',   label:'YouTube Shorts', icon:'▶',  color:'#EF4444', url:'https://studio.youtube.com',        w:1280, h:720,  ratio:'16:9', videoMax:'60 sec for Shorts', imageSize:'1280×720px' },
+    { id:'tiktok',    label:'TikTok',         icon:'🎵', color:'#010101', url:'https://www.tiktok.com/upload',     w:1080, h:1920, ratio:'9:16', videoMax:'10 min',            imageSize:'1080×1920px' },
+    { id:'instagram', label:'Instagram Reels',icon:'📸', color:'#E1306C', url:'https://www.instagram.com',         w:1080, h:1920, ratio:'9:16', videoMax:'90 sec',            imageSize:'1080×1920px' },
+    { id:'pinterest', label:'Pinterest',      icon:'📌', color:'#E60023', url:'https://pinterest.com/pin-builder/', w:1000, h:1500, ratio:'2:3',  videoMax:'15 min',            imageSize:'1000×1500px' },
+    { id:'reddit',    label:'Reddit',         icon:'🔴', color:'#FF4500', url:'https://www.reddit.com/submit',     w:1200, h:628,  ratio:'16:9', videoMax:'15 min',            imageSize:'1200×628px' },
+    { id:'facebook',  label:'Facebook',       icon:'📘', color:'#1877F2', url:'https://www.facebook.com',          w:1200, h:630,  ratio:'16:9', videoMax:'240 min',           imageSize:'1200×630px' },
   ];
 
   function resizeForPinterest(file) {
@@ -960,102 +996,125 @@ export default function Dashboard({ onNavigate }) {
               </button>
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2 — Full Platform Publisher */}
             <div style={{ marginBottom:12, padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'#FC8F8F', marginBottom:6 }}>Step 2 — Upload the video to YouTube</div>
-              <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
-                Click YouTube Studio below. Upload your downloaded MP4. The AI will write your title, description, and tags — your affiliate link goes directly in the YouTube description (allowed on YouTube).
+              <div style={{ fontSize:11, fontWeight:700, color:'#FC8F8F', marginBottom:6 }}>Step 2 — Publish to any platform</div>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:10, lineHeight:1.5 }}>
+                Select a platform — title, description, tags and affiliate link are auto-filled. Upload media, resize to exact size, then open the platform to post.
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
-                <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
-                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#EF4444', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                  ▶ YouTube Shorts
-                </a>
-                <a href="https://www.tiktok.com/upload" target="_blank" rel="noreferrer"
-                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#010101', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                  🎵 TikTok Upload
-                </a>
-                <a href="https://www.instagram.com/reels" target="_blank" rel="noreferrer"
-                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#E1306C', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                  📸 Instagram Reels
-                </a>
-                <a href="https://pinterest.com/pin/creation/button" target="_blank" rel="noreferrer"
-                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#E60023', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                  📌 Pinterest Video
-                </a>
-                <a href="https://www.reddit.com/submit" target="_blank" rel="noreferrer"
-                  style={{ padding:'8px', borderRadius:7, border:'none', background:'#FF4500', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                  🔴 Reddit Post
-                </a>
-                <button onClick={()=>setShowMediaUploader(!showMediaUploader)}
-                  style={{ padding:'8px', borderRadius:7, border:'1px solid rgba(255,255,255,.15)', background:'rgba(255,255,255,.06)', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
-                  📁 Upload Media + Sizes
-                </button>
+
+              {/* Platform selector */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5, marginBottom:10 }}>
+                {PUBLISH_PLATFORMS.map(function(pp){
+                  return (
+                    <button key={pp.id} onClick={function(){ setPublishPlatform(pp.id===publishPlatform?null:pp.id); setPublishResized(null); }}
+                      style={{ padding:'7px 4px', borderRadius:7, border:`1px solid ${publishPlatform===pp.id?pp.color+'80':BORD}`, background:publishPlatform===pp.id?pp.color+'22':'transparent', color:publishPlatform===pp.id?pp.color:TXT3, fontSize:9, fontWeight:700, cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
+                      {pp.icon} {pp.label}
+                    </button>
+                  );
+                })}
               </div>
-              {showMediaUploader && (
-                <div style={{ marginBottom:8, padding:'12px 14px', background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
-                  <div style={{ fontSize:11, fontWeight:700, marginBottom:10 }}>📐 Platform image & video size guide — click to open upload</div>
-                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    {PLATFORM_SPECS.map(function(p) {
-                      return (
-                        <div key={p.id} style={{ padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:8, border:`1px solid rgba(255,255,255,.06)` }}>
-                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-                            <div style={{ fontSize:11, fontWeight:700, color:'white' }}>{p.label}</div>
-                            <a href={p.url} target="_blank" rel="noreferrer"
-                              style={{ padding:'3px 10px', borderRadius:5, border:'none', background:p.color, color:'white', fontSize:9, fontWeight:700, textDecoration:'none' }}>
-                              Upload ↗
+
+              {/* Platform panel */}
+              {publishPlatform && (function(){
+                const pp = PUBLISH_PLATFORMS.find(function(p){ return p.id===publishPlatform; });
+                if (!pp) return null;
+                const ptitle = results?.youtubeTitle || selectedTopic?.label || '';
+                const pdesc = (function(){
+                  if (pp.id==='youtube') return results?.youtubeDescription || '';
+                  if (pp.id==='tiktok') return results?.tikTokCaption || '';
+                  if (pp.id==='instagram') return results?.igCaption || '';
+                  if (pp.id==='pinterest') return (results?.post||'').slice(0,300)+'\n\nFull details at the link below 🔗 #ad';
+                  if (pp.id==='reddit') return (results?.post||'').slice(0,400)+'\n\nHas anyone else tried this? 👇';
+                  return results?.post || '';
+                })();
+                const ptags = results?.youtubeTags || '';
+                const affUrl = results?.link?.url || '';
+                const landUrl = results?.landingUrl || '';
+
+                return (
+                  <div style={{ padding:'12px', background:'rgba(255,255,255,.03)', borderRadius:9, border:`1px solid ${pp.color}33` }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:pp.color, marginBottom:8 }}>{pp.icon} {pp.label} Publisher</div>
+
+                    {/* Size guide */}
+                    <div style={{ fontSize:10, color:TXT3, marginBottom:8, padding:'6px 10px', background:'rgba(255,255,255,.03)', borderRadius:6 }}>
+                      📐 <strong style={{ color:TXT2 }}>Image:</strong> {pp.imageSize} &nbsp;|&nbsp; 🎬 <strong style={{ color:TXT2 }}>Video max:</strong> {pp.videoMax}
+                    </div>
+
+                    {/* Media uploader */}
+                    {publishMediaPreview ? (
+                      <div style={{ marginBottom:8 }}>
+                        {publishMediaType.startsWith('video') ? (
+                          <video src={publishResized||publishMediaPreview} controls style={{ width:'100%', maxHeight:120, borderRadius:7, background:'#000' }} />
+                        ) : (
+                          <img src={publishResized||publishMediaPreview} alt="" style={{ width:'100%', maxHeight:120, borderRadius:7, objectFit:'cover' }} />
+                        )}
+                        <div style={{ display:'flex', gap:5, marginTop:6 }}>
+                          {publishMediaType.startsWith('image/') && (
+                            <button onClick={function(){
+                              setPublishResizing(true);
+                              resizeForPlatform(publishMedia, pp.w, pp.h, function(url){ setPublishResized(url); setPublishResizing(false); });
+                            }} disabled={publishResizing}
+                              style={{ flex:1, padding:'5px', borderRadius:5, border:'none', background:publishResizing?'rgba(29,158,117,.3)':GRN, color:'white', fontSize:9, fontWeight:700, cursor:publishResizing?'default':'pointer', fontFamily:'inherit' }}>
+                              {publishResizing?'⏳ Resizing…':'📐 Resize to '+pp.w+'×'+pp.h}
+                            </button>
+                          )}
+                          {publishResized && (
+                            <a href={publishResized} download={pp.id+'-optimized.jpg'}
+                              style={{ padding:'5px 10px', borderRadius:5, border:`1px solid ${GRN}`, background:'transparent', color:GRN, fontSize:9, fontWeight:700, textDecoration:'none' }}>
+                              ⬇ Download
                             </a>
-                          </div>
-                          <div style={{ fontSize:10, color:TXT3, lineHeight:1.6 }}>
-                            <div>🖼 <strong style={{ color:TXT2 }}>Image:</strong> {p.image}</div>
-                            <div>🎬 <strong style={{ color:TXT2 }}>Video:</strong> {p.video}</div>
-                            <div>📐 <strong style={{ color:TXT2 }}>Ratio:</strong> {p.ratio}</div>
-                          </div>
+                          )}
+                          <button onClick={function(){ setPublishMedia(null); setPublishMediaPreview(null); setPublishResized(null); setPublishMediaType(''); }}
+                            style={{ padding:'5px 8px', borderRadius:5, border:'1px solid rgba(226,75,74,.3)', background:'transparent', color:'#F09595', fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ) : (
+                      <label style={{ display:'flex', alignItems:'center', gap:8, padding:'10px', background:'rgba(255,255,255,.02)', border:`1px dashed ${BORD}`, borderRadius:8, cursor:'pointer', marginBottom:8 }}>
+                        <span style={{ fontSize:20 }}>📁</span>
+                        <div style={{ fontSize:10, color:TXT2 }}>
+                          <div style={{ fontWeight:600 }}>Upload photo or video</div>
+                          <div style={{ color:TXT3, fontSize:9 }}>MP4, JPG, PNG — auto-resize available for images</div>
+                        </div>
+                        <input type="file" accept="image/*,video/*" style={{ display:'none' }}
+                          onChange={function(e){
+                            const f=e.target.files[0]; if(!f) return;
+                            setPublishMedia(f); setPublishMediaType(f.type);
+                            setPublishMediaPreview(URL.createObjectURL(f)); setPublishResized(null);
+                          }} />
+                      </label>
+                    )}
+
+                    {/* Auto-filled fields */}
+                    <div style={{ display:'flex', flexDirection:'column', gap:5, marginBottom:8 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:TXT3, marginBottom:2 }}>✨ Auto-filled — copy each field:</div>
+                      {[
+                        { label:'Title', value:ptitle, id:'pp_title' },
+                        { label:'Description', value:pdesc, id:'pp_desc' },
+                        pp.id==='youtube' ? { label:'Tags', value:ptags, id:'pp_tags' } : null,
+                        affUrl ? { label:'Affiliate Link', value:affUrl, id:'pp_aff' } : null,
+                        landUrl ? { label:'Landing URL', value:landUrl, id:'pp_land' } : null,
+                      ].filter(Boolean).map(function(field){
+                        return (
+                          <div key={field.id} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                            <div style={{ fontSize:9, color:TXT3, width:75, flexShrink:0 }}>{field.label}</div>
+                            <div style={{ fontSize:9, color:TXT2, flex:1, padding:'4px 8px', background:'rgba(255,255,255,.04)', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{field.value||'—'}</div>
+                            <button onClick={function(){ copy(field.value,field.id); }}
+                              style={{ padding:'3px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:8, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                              {copied===field.id?'✓':'📋'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <a href={pp.url} target="_blank" rel="noreferrer"
+                      style={{ display:'block', padding:'9px', borderRadius:8, border:'none', background:pp.color, color:'white', fontSize:11, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                      {pp.icon} Open {pp.label} — Upload Now
+                    </a>
                   </div>
-                </div>
-              )}
-              {results.youtubeDescription && (
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <button onClick={()=>copy(results.youtubeTitle||'','yttitle')}
-                    style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.2)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                    {copied==='yttitle'?'✓ Copied!':'📋 Copy YouTube Title'}
-                  </button>
-                  <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
-                    style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                    {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube Description (with affiliate link)'}
-                  </button>
-                  {results.youtubeTags && (
-                    <button onClick={()=>copy(results.youtubeTags,'yttags')}
-                      style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.2)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                      {copied==='yttags'?'✓ Copied!':'📋 Copy YouTube Tags'}
-                    </button>
-                  )}
-                  <div style={{ fontSize:9, color:TXT3, textAlign:'center' }}>Copy each field → paste into YouTube Studio instantly</div>
-                </div>
-              )}
-              <div style={{ marginTop:6, fontSize:10, color:TXT3 }}>
-                💡 Upload to YouTube Shorts first — builds toward monetization. Same MP4 works on all platforms.
-              </div>
-              {(results?.tikTokCaption || results?.igCaption) && (
-                <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:TXT3, marginBottom:2 }}>📋 Platform captions — ready to paste:</div>
-                  {results.tikTokCaption && (
-                    <button onClick={()=>copy(results.tikTokCaption,'tiktok')}
-                      style={{ padding:'6px', borderRadius:6, border:'1px solid rgba(1,1,1,.3)', background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                      {copied==='tiktok'?'✓ Copied!':'🎵 Copy TikTok Caption'}
-                    </button>
-                  )}
-                  {results.igCaption && (
-                    <button onClick={()=>copy(results.igCaption,'instagram')}
-                      style={{ padding:'6px', borderRadius:6, border:'1px solid rgba(225,48,108,.3)', background:'transparent', color:'#E1306C', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                      {copied==='instagram'?'✓ Copied!':'📸 Copy Instagram Caption'}
-                    </button>
-                  )}
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Step 3 */}
