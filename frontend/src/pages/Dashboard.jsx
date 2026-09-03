@@ -709,7 +709,7 @@ export default function Dashboard({ onNavigate }) {
                           if (match) { setTopic(match); setShowTrends(false); setTrendSearch(''); setTrendResults([]); }
                           else { setCustomTopic(t.label); setShowTrends(false); }
                         }}
-                        style={{ padding:'4px 10px', borderRadius:6, border:'none', background:GRN, color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        style={{ padding:'4px 10px', borderRadius:6, border:'none', background:'#1D9E75', color:'white', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                         ⚡ Use
                       </button>
                     </div>
@@ -1154,13 +1154,13 @@ export default function Dashboard({ onNavigate }) {
                               setPublishResizing(true);
                               resizeForPlatform(publishMedia, pp.w, pp.h, function(url){ setPublishResized(url); setPublishResizing(false); });
                             }} disabled={publishResizing}
-                              style={{ flex:1, padding:'5px', borderRadius:5, border:'none', background:publishResizing?'rgba(29,158,117,.3)':GRN, color:'white', fontSize:9, fontWeight:700, cursor:publishResizing?'default':'pointer', fontFamily:'inherit' }}>
+                              style={{ flex:1, padding:'5px', borderRadius:5, border:'none', background:publishResizing?'rgba(29,158,117,.3)':'#1D9E75', color:'white', fontSize:9, fontWeight:700, cursor:publishResizing?'default':'pointer', fontFamily:'inherit' }}>
                               {publishResizing?'⏳ Resizing…':'📐 Resize to '+pp.w+'×'+pp.h}
                             </button>
                           )}
                           {publishResized && (
                             <a href={publishResized} download={pp.id+'-optimized.jpg'}
-                              style={{ padding:'5px 10px', borderRadius:5, border:`1px solid ${GRN}`, background:'transparent', color:GRN, fontSize:9, fontWeight:700, textDecoration:'none' }}>
+                              style={{ padding:'5px 10px', borderRadius:5, border:`1px solid ${'#1D9E75'}`, background:'transparent', color:'#1D9E75', fontSize:9, fontWeight:700, textDecoration:'none' }}>
                               ⬇ Download
                             </a>
                           )}
