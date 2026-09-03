@@ -261,8 +261,30 @@ export default function Dashboard({ onNavigate }) {
       if (!script) throw new Error('Script generation failed — check Anthropic credits');
       out.script = script;
       out.hook = scriptObj?.hook || '';
-      out.youtubeDescription = scriptObj?.youtubeDescription || '';
       out.youtubeTitle = scriptObj?.title || topic.label;
+
+      // Auto-build YouTube description with affiliate link for instant publishing
+      const ytLink = out.link;
+      const ytLandingUrl = out.landingUrl || out.landing || '';
+      const ytAffLine = ytLink ? ('\n\n🔗 ' + (ytLink.name||'Product mentioned') + ': ' + (ytLink.url||'')) : '';
+      const ytDisclosure = ytLink ? '\n(Affiliate link — I may earn a small commission at no extra cost to you)' : '';
+      out.youtubeDescription = [
+        out.youtubeTitle || topic.label,
+        '',
+        (out.script || '').slice(0, 500),
+        ytAffLine + ytDisclosure,
+        '',
+        '━━━━━━━━━━━━━━━━━━━━',
+        ytLandingUrl ? ('📌 Full details: ' + ytLandingUrl) : '',
+        '━━━━━━━━━━━━━━━━━━━━',
+        '#' + (topic.id||'content').replace(/-/g,'') + ' #homebusiness #sidehustle #contentcreator',
+        '',
+        '✅ Subscribe for weekly tips on home business, meal prep, health and lifestyle.',
+      ].filter(Boolean).join('\n');
+
+      // Auto-build YouTube tags
+      const topicWords = (topic.label||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').split(' ').filter(function(w){ return w.length>2; });
+      out.youtubeTags = [...topicWords, 'home business', 'side hustle', 'how to', topic.cat||'lifestyle'].join(', ');
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
@@ -996,14 +1018,44 @@ export default function Dashboard({ onNavigate }) {
                 </div>
               )}
               {results.youtubeDescription && (
-                <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
-                  style={{ width:'100%', padding:'7px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                  {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube/TikTok Description (with affiliate link)'}
-                </button>
+                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                  <button onClick={()=>copy(results.youtubeTitle||'','yttitle')}
+                    style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.2)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='yttitle'?'✓ Copied!':'📋 Copy YouTube Title'}
+                  </button>
+                  <button onClick={()=>copy(results.youtubeDescription,'ytdesc')}
+                    style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='ytdesc'?'✓ Copied!':'📋 Copy YouTube Description (with affiliate link)'}
+                  </button>
+                  {results.youtubeTags && (
+                    <button onClick={()=>copy(results.youtubeTags,'yttags')}
+                      style={{ width:'100%', padding:'6px', borderRadius:7, border:'1px solid rgba(239,68,68,.2)', background:'transparent', color:'#FC8F8F', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied==='yttags'?'✓ Copied!':'📋 Copy YouTube Tags'}
+                    </button>
+                  )}
+                  <div style={{ fontSize:9, color:TXT3, textAlign:'center' }}>Copy each field → paste into YouTube Studio instantly</div>
+                </div>
               )}
               <div style={{ marginTop:6, fontSize:10, color:TXT3 }}>
                 💡 Upload to YouTube Shorts first — builds toward monetization. Same MP4 works on all platforms.
               </div>
+              {(results?.tikTokCaption || results?.igCaption) && (
+                <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:4 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:TXT3, marginBottom:2 }}>📋 Platform captions — ready to paste:</div>
+                  {results.tikTokCaption && (
+                    <button onClick={()=>copy(results.tikTokCaption,'tiktok')}
+                      style={{ padding:'6px', borderRadius:6, border:'1px solid rgba(1,1,1,.3)', background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied==='tiktok'?'✓ Copied!':'🎵 Copy TikTok Caption'}
+                    </button>
+                  )}
+                  {results.igCaption && (
+                    <button onClick={()=>copy(results.igCaption,'instagram')}
+                      style={{ padding:'6px', borderRadius:6, border:'1px solid rgba(225,48,108,.3)', background:'transparent', color:'#E1306C', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied==='instagram'?'✓ Copied!':'📸 Copy Instagram Caption'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Step 3 */}
