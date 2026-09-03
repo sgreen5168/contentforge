@@ -133,6 +133,29 @@ const PIPELINE_STEPS = [
   { id:'landing', icon:'🌐', label:'Landing page',     color:'#8B5CF6' },
 ];
 
+
+  // Buyer trends database — products people are actively searching for and buying
+const BUYER_TRENDS = [
+    { id:'air-fryer', label:'Air Fryer', volume:'320K', change:'+42%', status:'hot', cat:'cooking', commission:'4.5%', keys:['best air fryer under 100','air fryer dual basket','air fryer recipes'], hook:'5 air fryer meals ready in 15 minutes — no oil needed' },
+    { id:'portable-blender', label:'Portable Blender', volume:'89K', change:'+28%', status:'rising', cat:'health', commission:'4.5%', keys:['portable blender for smoothies','mini blender travel','protein shake blender'], hook:'This $25 blender changed the morning protein routine' },
+    { id:'walking-pad', label:'Under Desk Treadmill', volume:'145K', change:'+67%', status:'hot', cat:'health', commission:'3%', keys:['walking pad home office','under desk treadmill','foldable treadmill work from home'], hook:'How to walk 10,000 steps without leaving a desk' },
+    { id:'meal-prep-containers', label:'Meal Prep Containers', volume:'210K', change:'+8%', status:'steady', cat:'meal-prep', commission:'4.5%', keys:['best meal prep containers','glass meal prep containers','portion control containers'], hook:'5 lunches meal-prepped for $35 — exact breakdown' },
+    { id:'resistance-bands', label:'Resistance Bands', volume:'178K', change:'+12%', status:'steady', cat:'health', commission:'3%', keys:['resistance bands with handles','best resistance bands for women','resistance bands home workout'], hook:'Full body workout in 20 minutes — no gym needed' },
+    { id:'monitor-light', label:'Monitor Light Bar', volume:'62K', change:'+35%', status:'rising', cat:'remote-work', commission:'3%', keys:['best monitor light bar','screen bar for eye strain','monitor light bar review'], hook:'One desk upgrade that fixed eye strain and looked great' },
+    { id:'ninja-creami', label:'Ninja Creami', volume:'96K', change:'+88%', status:'hot', cat:'cooking', commission:'4.5%', keys:['Ninja Creami protein ice cream','Ninja Creami worth it','Ninja Creami recipes'], hook:'High protein ice cream that actually tastes good — 30g per serving' },
+    { id:'sunrise-alarm', label:'Sunrise Alarm Clock', volume:'54K', change:'+22%', status:'rising', cat:'health', commission:'3%', keys:['sunrise alarm clock wake up','best wake up light','light therapy alarm'], hook:'How to stop hitting snooze for good — no willpower needed' },
+    { id:'weighted-blanket', label:'Weighted Blanket', volume:'165K', change:'+6%', status:'steady', cat:'health', commission:'3%', keys:['best weighted blanket for anxiety','weighted blanket for adults','weighted blanket 15 lbs'], hook:'The one thing that actually helped with sleep anxiety' },
+    { id:'food-scale', label:'Digital Food Scale', volume:'73K', change:'+18%', status:'rising', cat:'meal-prep', commission:'4.5%', keys:['best food scale for meal prep','digital kitchen scale grams','food scale for weight loss'], hook:'The $12 kitchen tool that made meal prep actually accurate' },
+    { id:'adjustable-dumbbells', label:'Adjustable Dumbbells', volume:'134K', change:'+9%', status:'steady', cat:'health', commission:'3%', keys:['adjustable dumbbells space saving','best adjustable dumbbells home gym','adjustable dumbbells under 300'], hook:'15 dumbbells in the space of one — the only home gym buy worth it' },
+    { id:'standing-desk', label:'Standing Desk Converter', volume:'118K', change:'+5%', status:'steady', cat:'remote-work', commission:'3%', keys:['standing desk converter adjustable','best standing desk for home office','standing desk under 200'], hook:'How to fix back pain without leaving a home office' },
+    { id:'ring-light', label:'Ring Light with Tripod', volume:'98K', change:'+15%', status:'rising', cat:'side-hustle', commission:'4%', keys:['ring light for content creators','best ring light tripod','ring light for youtube'], hook:'Studio quality video for under $40 — the exact setup' },
+    { id:'label-printer', label:'Thermal Label Printer', volume:'44K', change:'+31%', status:'rising', cat:'side-hustle', commission:'4%', keys:['thermal label printer for small business','best label printer Etsy','label printer shipping'], hook:'How to cut shipping time in half with one $80 tool' },
+    { id:'milk-frother', label:'Handheld Milk Frother', volume:'67K', change:'+19%', status:'rising', cat:'cooking', commission:'4.5%', keys:['best handheld milk frother','electric frother latte','milk frother under 25'], hook:'A $12 frother that makes café lattes at home every morning' },
+    { id:'vegetable-chopper', label:'Vegetable Chopper', volume:'112K', change:'+24%', status:'rising', cat:'cooking', commission:'4.5%', keys:['best vegetable chopper dicer','onion chopper no tears','vegetable chopper for meal prep'], hook:'This $25 chopper cut meal prep time in half' },
+    { id:'foam-roller', label:'Foam Roller', volume:'89K', change:'+7%', status:'steady', cat:'health', commission:'3%', keys:['foam roller for back pain','deep tissue foam roller','foam roller for muscle recovery'], hook:'10 minutes of foam rolling that fixes sore muscles overnight' },
+    { id:'blue-light-glasses', label:'Blue Light Glasses', volume:'76K', change:'+11%', status:'steady', cat:'remote-work', commission:'3%', keys:['best blue light glasses for screens','blue light blocking glasses computer','blue light glasses for headaches'], hook:'Screen headaches stopped after one simple switch' },
+  ];
+
 export default function Dashboard({ onNavigate }) {
   const [selectedTopic, setTopic]   = useState(function() {
     try { return JSON.parse(sessionStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
@@ -557,41 +580,6 @@ export default function Dashboard({ onNavigate }) {
       canvas.toBlob(function(blob){ callback(URL.createObjectURL(blob)); }, 'image/jpeg', 0.92);
     };
     img.src = URL.createObjectURL(file);
-  }
-
-  // Buyer trends database — products people are actively searching for and buying
-  const BUYER_TRENDS = [
-    { id:'air-fryer', label:'Air Fryer', volume:'320K', change:'+42%', status:'hot', cat:'cooking', commission:'4.5%', keys:['best air fryer under 100','air fryer dual basket','air fryer recipes'], hook:'5 air fryer meals ready in 15 minutes — no oil needed' },
-    { id:'portable-blender', label:'Portable Blender', volume:'89K', change:'+28%', status:'rising', cat:'health', commission:'4.5%', keys:['portable blender for smoothies','mini blender travel','protein shake blender'], hook:'This $25 blender changed the morning protein routine' },
-    { id:'walking-pad', label:'Under Desk Treadmill', volume:'145K', change:'+67%', status:'hot', cat:'health', commission:'3%', keys:['walking pad home office','under desk treadmill','foldable treadmill work from home'], hook:'How to walk 10,000 steps without leaving a desk' },
-    { id:'meal-prep-containers', label:'Meal Prep Containers', volume:'210K', change:'+8%', status:'steady', cat:'meal-prep', commission:'4.5%', keys:['best meal prep containers','glass meal prep containers','portion control containers'], hook:'5 lunches meal-prepped for $35 — exact breakdown' },
-    { id:'resistance-bands', label:'Resistance Bands', volume:'178K', change:'+12%', status:'steady', cat:'health', commission:'3%', keys:['resistance bands with handles','best resistance bands for women','resistance bands home workout'], hook:'Full body workout in 20 minutes — no gym needed' },
-    { id:'monitor-light', label:'Monitor Light Bar', volume:'62K', change:'+35%', status:'rising', cat:'remote-work', commission:'3%', keys:['best monitor light bar','screen bar for eye strain','monitor light bar review'], hook:'One desk upgrade that fixed eye strain and looked great' },
-    { id:'ninja-creami', label:'Ninja Creami', volume:'96K', change:'+88%', status:'hot', cat:'cooking', commission:'4.5%', keys:['Ninja Creami protein ice cream','Ninja Creami worth it','Ninja Creami recipes'], hook:'High protein ice cream that actually tastes good — 30g per serving' },
-    { id:'sunrise-alarm', label:'Sunrise Alarm Clock', volume:'54K', change:'+22%', status:'rising', cat:'health', commission:'3%', keys:['sunrise alarm clock wake up','best wake up light','light therapy alarm'], hook:'How to stop hitting snooze for good — no willpower needed' },
-    { id:'weighted-blanket', label:'Weighted Blanket', volume:'165K', change:'+6%', status:'steady', cat:'health', commission:'3%', keys:['best weighted blanket for anxiety','weighted blanket for adults','weighted blanket 15 lbs'], hook:'The one thing that actually helped with sleep anxiety' },
-    { id:'food-scale', label:'Digital Food Scale', volume:'73K', change:'+18%', status:'rising', cat:'meal-prep', commission:'4.5%', keys:['best food scale for meal prep','digital kitchen scale grams','food scale for weight loss'], hook:'The $12 kitchen tool that made meal prep actually accurate' },
-    { id:'adjustable-dumbbells', label:'Adjustable Dumbbells', volume:'134K', change:'+9%', status:'steady', cat:'health', commission:'3%', keys:['adjustable dumbbells space saving','best adjustable dumbbells home gym','adjustable dumbbells under 300'], hook:'15 dumbbells in the space of one — the only home gym buy worth it' },
-    { id:'standing-desk', label:'Standing Desk Converter', volume:'118K', change:'+5%', status:'steady', cat:'remote-work', commission:'3%', keys:['standing desk converter adjustable','best standing desk for home office','standing desk under 200'], hook:'How to fix back pain without leaving a home office' },
-    { id:'ring-light', label:'Ring Light with Tripod', volume:'98K', change:'+15%', status:'rising', cat:'side-hustle', commission:'4%', keys:['ring light for content creators','best ring light tripod','ring light for youtube'], hook:'Studio quality video for under $40 — the exact setup' },
-    { id:'label-printer', label:'Thermal Label Printer', volume:'44K', change:'+31%', status:'rising', cat:'side-hustle', commission:'4%', keys:['thermal label printer for small business','best label printer Etsy','label printer shipping'], hook:'How to cut shipping time in half with one $80 tool' },
-    { id:'milk-frother', label:'Handheld Milk Frother', volume:'67K', change:'+19%', status:'rising', cat:'cooking', commission:'4.5%', keys:['best handheld milk frother','electric frother latte','milk frother under 25'], hook:'A $12 frother that makes café lattes at home every morning' },
-    { id:'vegetable-chopper', label:'Vegetable Chopper', volume:'112K', change:'+24%', status:'rising', cat:'cooking', commission:'4.5%', keys:['best vegetable chopper dicer','onion chopper no tears','vegetable chopper for meal prep'], hook:'This $25 chopper cut meal prep time in half' },
-    { id:'foam-roller', label:'Foam Roller', volume:'89K', change:'+7%', status:'steady', cat:'health', commission:'3%', keys:['foam roller for back pain','deep tissue foam roller','foam roller for muscle recovery'], hook:'10 minutes of foam rolling that fixes sore muscles overnight' },
-    { id:'blue-light-glasses', label:'Blue Light Glasses', volume:'76K', change:'+11%', status:'steady', cat:'remote-work', commission:'3%', keys:['best blue light glasses for screens','blue light blocking glasses computer','blue light glasses for headaches'], hook:'Screen headaches stopped after one simple switch' },
-  ];
-
-  function searchTrends(q) {
-    setTrendSearch(q);
-    if (!q || q.length < 2) { setTrendResults([]); return; }
-    const ql = q.toLowerCase();
-    const results = BUYER_TRENDS.filter(function(t) {
-      return t.label.toLowerCase().includes(ql) ||
-             t.cat.toLowerCase().includes(ql) ||
-             t.keys.some(function(k){ return k.toLowerCase().includes(ql); }) ||
-             t.hook.toLowerCase().includes(ql);
-    });
-    setTrendResults(results);
   }
 
   const PUBLISH_PLATFORMS = [
