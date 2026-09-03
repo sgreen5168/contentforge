@@ -152,19 +152,31 @@ Persona: ${persona || 'ugc'}
 Style: ${style || 'casual'}
 ${nicheBlock}${editedScript ? `Use this as the base script and improve it:\n${editedScript}` : ''}
 
+VIDEO STRUCTURE — follow this arc for maximum engagement and conversions:
+Scene 1 — HOOK (3-5 sec): Open with the PROBLEM or DESIRE the product solves. Show the pain point visually. Hook line must make someone stop scrolling — use a surprising number, bold statement, or relatable frustration. Example: "Most people waste 2 hours on meal prep every week — here's what changes that."
+Scene 2 — PROBLEM (5-7 sec): Expand on the problem. Show what life looks like WITHOUT the solution. Make it relatable.
+Scene 3 — SOLUTION REVEAL (5-7 sec): Introduce the product or approach as the answer. Show it in action — the sizzle, the pour, the click, the result. This is the money shot.
+Scene 4 — BENEFIT DEMO (5-7 sec): Show 2-3 specific benefits. What does the viewer GET from this? Time saved, money saved, result achieved.
+Scene 5 — SOCIAL PROOF (3-5 sec): "A lot of people are switching to this" or show the outcome/result visually.
+Scene 6 — CTA (3-5 sec): Clear single call to action — "Link in bio", "Check the description", "Full details below".
+
+${affiliateUrl ? `AFFILIATE PRODUCT CONTEXT: The product being promoted is linked at: ${affiliateUrl}. Build the script so the product is the NATURAL SOLUTION revealed in Scene 3. The hook should create the exact problem this product solves.` : ''}
+
 Return ONLY valid JSON with this exact structure:
 {
-  "hook": "opening line that grabs attention",
-  "fullScript": "complete word-for-word script",
+  "hook": "opening line that creates problem/desire — stops the scroll",
+  "fullScript": "complete word-for-word script following the 6-scene arc above",
+  "youtubeTitle": "SEO-optimized YouTube title with buyer keyword",
+  "youtubeDescription": "full YouTube description with affiliate link and hashtags",
   "cta": "call to action",
   "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"],
   "sceneDescriptions": [
-    {"scene": 1, "visual": "2-4 STOCK-FOOTAGE-SEARCHABLE keywords for the hook, e.g. 'woman frustrated laptop kitchen' — lead with the main subject noun, then setting, then action. No adjectives like quick/close/style.", "duration": 5},
-    {"scene": 2, "visual": "2-4 stock-footage-searchable keywords for the problem, same format: subject + setting + action", "duration": 5},
-    {"scene": 3, "visual": "2-4 stock-footage-searchable keywords for the solution, same format: subject + setting + action", "duration": 5},
-    {"scene": 4, "visual": "2-4 stock-footage-searchable keywords for the CTA, same format: subject + setting + action", "duration": 5},
-    {"scene": 5, "visual": "optional scene for longer videos — same keyword format", "duration": 5},
-    {"scene": 6, "visual": "optional scene for longer videos — same keyword format", "duration": 5}
+    {"scene": 1, "visual": "hook scene — show the PROBLEM visually. 2-4 stock keywords: subject + setting + action", "duration": 5},
+    {"scene": 2, "visual": "problem scene — life without the solution. 2-4 keywords", "duration": 6},
+    {"scene": 3, "visual": "PRODUCT IN ACTION — the money shot. 2-4 keywords showing the product working", "duration": 6},
+    {"scene": 4, "visual": "benefit demo — result or outcome. 2-4 keywords showing the payoff", "duration": 6},
+    {"scene": 5, "visual": "social proof or lifestyle result. 2-4 keywords", "duration": 5},
+    {"scene": 6, "visual": "CTA scene — person phone excited or product close-up. 2-4 keywords", "duration": 5}
   ]
 }
 
@@ -198,6 +210,9 @@ ABSOLUTE RULES — these override everything else and cannot be broken under any
 - Instead of "My experience" → write "The experience most people have"
 - Instead of "I'll show you" → write "Here's what to know" or "This is worth watching"
 - Tone must be casually conversational — like a knowledgeable friend sharing useful info, not a personal diary entry. Occasionally slightly professional when the topic calls for it.
+- PRODUCT-BENEFIT STRUCTURE: Every script must follow Hook → Problem → Solution (product) → Benefits → Social proof → CTA. The product is always the hero of Scene 3 — revealed as the answer to the problem established in Scene 1.
+- HOOKS that convert: Use one of these proven formats — "Most people [do wrong thing] — here's what actually works", "[Surprising number] that changes how you think about [topic]", "The [product type] that [specific benefit] in [timeframe]", "Why [common approach] fails — and what to do instead"
+- SCENE 3 IS THE MONEY SHOT: Write it so the product in action is the most visually compelling moment. The viewer should feel "I need that" watching this scene.
 - NEVER write first-person income claims. NEVER write "I made $X", "I earned $X", or any dollar amount as personal income.
 - NEVER write guaranteed result claims ("you will make", "guaranteed to earn").
 - If the topic involves earning or income, write ONLY in educational/informational framing: "people are earning", "here's how home entrepreneurs do it", "this is what's possible".
