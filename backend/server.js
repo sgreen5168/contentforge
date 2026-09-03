@@ -5264,9 +5264,21 @@ app.post('/api/generate', async (req, res) => {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const PM = { facebook: 'Facebook', instagram: 'Instagram', reddit: 'Reddit' };
     const active = (platforms || ['facebook','instagram','reddit']).filter(p => PM[p]);
-    const prompt = `Write ${style || 'Casual'} social media posts for: ${inputMode === 'topic' ? topic : url}
-${affiliate ? 'Include affiliate link naturally.' : ''}
+    // Build affiliate context for product-benefit driven content
+    const affiliateContext = affiliate
+      ? `\n\nAFFILIATE PRODUCT TO FEATURE:\nName: ${affiliate.name || ''}\nURL: ${affiliate.url || ''}\nBenefits to highlight: This product directly solves the problem the topic is about. Lead with the BENEFIT the reader gets, not just the topic. The product is the solution — make them feel the need before revealing it.`
+      : '';
+
+    const prompt = `Write ${style || 'Casual'} social media posts for: ${inputMode === 'topic' ? topic : url}${affiliateContext}
 Platforms: ${active.join(', ')}
+
+IMPORTANT: If an affiliate product is provided, structure the post as:
+1. Hook — the pain point or desire the product solves
+2. Body — 3-4 specific benefits or insights related to the topic
+3. Natural product mention — "A lot of people use [product name] for this" or "Worth checking out if you want [benefit]"
+4. Engagement question
+5. Landing page URL
+
 Return JSON: { ${active.map(p => `"${p}": {"text": "post content", "compliant": true, "note": ""}`).join(', ')} }`;
     const msg = await client.messages.create({
       model: 'claude-opus-4-5', max_tokens: 1000,
