@@ -158,13 +158,13 @@ const BUYER_TRENDS = [
 
 export default function Dashboard({ onNavigate }) {
   const [selectedTopic, setTopic]   = useState(function() {
-    try { return JSON.parse(sessionStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem('cf_cc_topic') || 'null'); } catch { return null; }
   });
   const [running, setRunning]       = useState(false);
   const [pipeline, setPipeline]     = useState({});   // stepId → { status, data, error }
   // Restore results from session if available
   const [results, setResults] = useState(function() {
-    try { return JSON.parse(sessionStorage.getItem('cf_cc_results') || 'null'); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem('cf_cc_results') || 'null'); } catch { return null; }
   });
   const [copied, setCopied]         = useState('');
   const [stats, setStats]           = useState({ posts:0, videos:0, links:0 });
@@ -432,6 +432,9 @@ export default function Dashboard({ onNavigate }) {
       time: new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }),
       post: out.post||null, script: out.script||null, link: out.link||null,
       landing: out.landing||null, landingUrl: out.landingUrl||null, videoUrl: out.videoUrl||null,
+      youtubeTitle: out.youtubeTitle||null, youtubeDescription: out.youtubeDescription||null,
+      youtubeTags: out.youtubeTags||null, tikTokCaption: out.tikTokCaption||null,
+      igCaption: out.igCaption||null, hook: out.hook||null, title: out.youtubeTitle||null,
     };
     const newHistory = [session, ...history].slice(0, 20);
     setHistory(newHistory);
@@ -449,8 +452,8 @@ export default function Dashboard({ onNavigate }) {
 
     setResults(out);
     try {
-      sessionStorage.setItem('cf_cc_results', JSON.stringify(out));
-      sessionStorage.setItem('cf_cc_topic', JSON.stringify(selectedTopic));
+      localStorage.setItem('cf_cc_results', JSON.stringify(out));
+      localStorage.setItem('cf_cc_topic', JSON.stringify(selectedTopic));
     } catch(e) {}
     setRunning(false);
   }
@@ -752,7 +755,29 @@ export default function Dashboard({ onNavigate }) {
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {history.slice(0,6).map((session, idx) => (
               <button key={session.id} onClick={()=>{
-                  setResults({ post:session.post, script:session.script, link:session.link, landing:session.landing, videoUrl:session.videoUrl });
+                  setResults({
+                    post: session.post,
+                    script: session.script,
+                    link: session.link,
+                    landing: session.landing,
+                    landingUrl: session.landingUrl || session.landing,
+                    videoUrl: session.videoUrl,
+                    youtubeTitle: session.youtubeTitle || session.title,
+                    youtubeDescription: session.youtubeDescription,
+                    youtubeTags: session.youtubeTags,
+                    tikTokCaption: session.tikTokCaption,
+                    igCaption: session.igCaption,
+                    hook: session.hook,
+                    title: session.youtubeTitle || session.title,
+                  });
+                  // Also save to localStorage so it persists
+                  try { localStorage.setItem('cf_cc_results', JSON.stringify({
+                    post:session.post, script:session.script, link:session.link,
+                    landingUrl:session.landingUrl||session.landing, landing:session.landing,
+                    youtubeTitle:session.youtubeTitle||session.title,
+                    youtubeDescription:session.youtubeDescription, youtubeTags:session.youtubeTags,
+                    tikTokCaption:session.tikTokCaption, igCaption:session.igCaption,
+                  })); localStorage.setItem('cf_cc_topic', JSON.stringify(session.topic)); } catch(e) {}
                   setTopic(session.topic);
                   setViewing(idx);
                 }}
@@ -887,7 +912,7 @@ export default function Dashboard({ onNavigate }) {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
             <div style={{ fontSize:14, fontWeight:700, color:TXT }}>✅ Everything is ready — review and post</div>
             <button onClick={()=>{ setResults(null); setTopic(null); setPipeline({}); setViewing(null);
-        try { sessionStorage.removeItem('cf_cc_results'); sessionStorage.removeItem('cf_cc_topic'); } catch(e) {} }}
+        try { localStorage.removeItem('cf_cc_results'); localStorage.removeItem('cf_cc_topic'); } catch(e) {} }}
               style={{ padding:'6px 14px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
               ↺ Start over
             </button>
