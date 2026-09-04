@@ -1052,13 +1052,16 @@ export default function Dashboard({ onNavigate }) {
                   ✏️ Edit Script
                 </button>
                 <button onClick={async function(){
-                    setShowHeygenOptions(!showHeygenOptions);
-                    if (!heygenAvatars.length) {
+                    const newShow = !showHeygenOptions;
+                    setShowHeygenOptions(newShow);
+                    if (newShow && !heygenAvatars.length) {
                       try {
                         const r = await fetch(API+'/api/heygen/avatars');
                         const d = await r.json();
-                        setHeygenAvatars(d.data?.avatars||[]);
-                      } catch(e){}
+                        const avatars = d.data?.avatars || [];
+                        setHeygenAvatars(avatars);
+                        console.log('Loaded avatars:', avatars.map(function(a){ return a.avatar_name; }));
+                      } catch(e){ console.warn('Avatar load failed:', e.message); }
                     }
                   }}
                   style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(99,102,241,.4)', background:'rgba(99,102,241,.1)', color:'#818CF8', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
