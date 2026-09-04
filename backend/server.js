@@ -5142,6 +5142,81 @@ app.get('/api/heygen/video/status/:videoId', async (req, res) => {
   }
 });
 
+
+// ── HeyGen Quick Generate — Command Center integration ────────────────────────
+// Generates a video directly using the script from Command Center
+// Uses a default avatar and voice — no template needed
+app.post('/api/heygen/quick-generate', async (req, res) => {
+  const { script, topic, affiliateUrl, aspectRatio = '9:16' } = req.body;
+  if (!script) return res.status(400).json({ error: 'script required' });
+  if (!process.env.HEYGEN_API_KEY) return res.status(400).json({ error: 'HEYGEN_API_KEY not configured' });
+
+  try {
+    // Get available avatars and pick a good default
+    let avatarId = null;
+    let voiceId = null;
+
+    try {
+      const avatarData = await heygenRequest('/v2/avatars');
+      const avatars = avatarData.data?.avatars || [];
+      // Prefer a casual/lifestyle avatar for content
+      const preferred = avatars.find(a =>
+        /casual|lifestyle|home|shirt|blouse/i.test(a.avatar_name || '')
+      ) || avatars[0];
+      avatarId = preferred?.avatar_id;
+    } catch(e) {
+      console.warn('Could not fetch avatars:', e.message);
+    }
+
+    try {
+      const voiceData = await heygenRequest('/v2/voices');
+      const voices = voiceData.data?.voices || [];
+      // Prefer an English female voice — warm and engaging
+      const preferred = voices.find(v =>
+        v.language === 'English' && v.gender === 'Female' &&
+        /warm|natural|casual|friendly/i.test(v.name || '')
+      ) || voices.find(v =>
+        v.language === 'English' && v.gender === 'Female'
+      ) || voices.find(v => v.language === 'English')
+        || voices[0];
+      voiceId = preferred?.voice_id;
+    } catch(e) {
+      console.warn('Could not fetch voices:', e.message);
+    }
+
+    if (!avatarId) return res.status(500).json({ error: 'No avatars found in your HeyGen account — add an avatar first at heygen.com' });
+    if (!voiceId) return res.status(500).json({ error: 'No voices found in your HeyGen account' });
+
+    console.log('HeyGen quick generate — avatar:', avatarId, 'voice:', voiceId);
+
+    // Build visual prompt from topic and script
+    const visualPrompt = topic
+      ? 'Tips and how-to video about ' + topic + '. ' + script.slice(0, 200)
+      : script.slice(0, 300);
+
+    const videoId = await generateHeyGenVideo({
+      avatarId,
+      voiceId,
+      script: script.slice(0, 1500),
+      aspectRatio,
+      backgroundType: 'color',
+      backgroundValue: '#1a2535',
+    });
+
+    res.json({
+      videoId,
+      status: 'processing',
+      avatarId,
+      voiceId,
+      message: 'HeyGen video is generating — check status in 2-5 minutes',
+      statusUrl: '/api/heygen/video/status/' + videoId,
+    });
+  } catch(e) {
+    console.error('HeyGen quick generate error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
