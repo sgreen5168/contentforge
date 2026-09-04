@@ -5018,17 +5018,29 @@ ${affUrl ? '<p><a href="'+affUrl+'">See full product details</a></p>' : ''}
 // Get template details — returns variables defined in the template
 app.get('/api/heygen/template/:templateId', async (req, res) => {
   try {
-    const data = await heygenRequest('/v2/template/' + req.params.templateId);
+    let data;
+    try {
+      data = await heygenRequest('/v3/templates/' + req.params.templateId);
+    } catch(e) {
+      data = await heygenRequest('/v2/template/' + req.params.templateId);
+    }
     res.json(data);
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// List all templates in the account
+// List all templates in the account — v3 API
 app.get('/api/heygen/templates', async (req, res) => {
   try {
-    const data = await heygenRequest('/v2/templates');
+    // Try v3 first
+    let data;
+    try {
+      data = await heygenRequest('/v3/templates');
+    } catch(e) {
+      // Fall back to v2 if v3 fails
+      data = await heygenRequest('/v2/templates');
+    }
     res.json(data);
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -5074,7 +5086,12 @@ app.post('/api/heygen/template/generate', async (req, res) => {
       dimension: aspectRatio === '16:9' ? { width: 1280, height: 720 } : { width: 720, height: 1280 },
     };
 
-    const data = await heygenRequest('/v2/template/generate', 'POST', payload);
+    let data;
+    try {
+      data = await heygenRequest('/v3/templates/' + templateId + '/generate', 'POST', payload);
+    } catch(e) {
+      data = await heygenRequest('/v2/template/generate', 'POST', payload);
+    }
     const videoId = data.data?.video_id || data.video_id;
 
     if (!videoId) {
