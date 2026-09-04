@@ -5156,16 +5156,29 @@ app.post('/api/heygen/quick-generate', async (req, res) => {
     let avatarId = null;
     let voiceId = null;
 
-    try {
-      const avatarData = await heygenRequest('/v2/avatars');
-      const avatars = avatarData.data?.avatars || [];
-      // Prefer a casual/lifestyle avatar for content
-      const preferred = avatars.find(a =>
-        /casual|lifestyle|home|shirt|blouse/i.test(a.avatar_name || '')
-      ) || avatars[0];
-      avatarId = preferred?.avatar_id;
-    } catch(e) {
-      console.warn('Could not fetch avatars:', e.message);
+    // Allow caller to specify avatarId, otherwise pick best female avatar
+    const requestedAvatarId = req.body.avatarId;
+    if (requestedAvatarId) {
+      avatarId = requestedAvatarId;
+    } else {
+      try {
+        const avatarData = await heygenRequest('/v2/avatars');
+        const avatars = avatarData.data?.avatars || [];
+        // Prefer female avatar in casual/lifestyle setting
+        const preferred = avatars.find(a =>
+          /female|woman|girl|she|sarah|anna|emma|lisa|jessica|emily|hannah|sophia/i.test(a.avatar_name || '')
+        ) || avatars.find(a =>
+          /casual|lifestyle|home|shirt|blouse|top|dress/i.test(a.avatar_name || '')
+        );
+        // If no clear female found — log all options and pick first
+        if (!preferred) {
+          console.log('Available avatars:', avatars.slice(0,5).map(a => a.avatar_name + ' | ' + a.avatar_id).join(', '));
+        }
+        avatarId = preferred?.avatar_id || avatars[0]?.avatar_id;
+        console.log('Selected avatar:', avatars.find(a => a.avatar_id === avatarId)?.avatar_name);
+      } catch(e) {
+        console.warn('Could not fetch avatars:', e.message);
+      }
     }
 
     try {
@@ -5184,23 +5197,56 @@ app.post('/api/heygen/quick-generate', async (req, res) => {
       console.warn('Could not fetch voices:', e.message);
     }
 
-    if (!avatarId) return res.status(500).json({ error: 'No avatars found in your HeyGen account — add an avatar first at heygen.com' });
+    const noAvatar = req.body.noAvatar === true;
+    if (!noAvatar && !avatarId) return res.status(500).json({ error: 'No avatars found in your HeyGen account — add an avatar first at heygen.com' });
     if (!voiceId) return res.status(500).json({ error: 'No voices found in your HeyGen account' });
 
     console.log('HeyGen quick generate — avatar:', avatarId, 'voice:', voiceId);
 
-    // Build visual prompt from topic and script
-    const visualPrompt = topic
-      ? 'Tips and how-to video about ' + topic + '. ' + script.slice(0, 200)
-      : script.slice(0, 300);
+    // Build topic-relevant background image URL using Pexels
+    let backgroundType = 'color';
+    let backgroundValue = '#1a2535';
+
+    if (process.env.PEXELS_API_KEY && topic) {
+      try {
+        const pexelsFetch = (await import('node-fetch')).default;
+        // Search for a relevant background image
+        const topicKeywords = topic.toLowerCase()
+          .replace(/under desk treadmill/i, 'home office desk workspace')
+          .replace(/air fryer/i, 'kitchen cooking food')
+          .replace(/meal prep/i, 'healthy food containers kitchen')
+          .replace(/morning routine/i, 'morning sunlight bedroom')
+          .replace(/portable blender/i, 'smoothie kitchen counter')
+          .replace(/side hustle/i, 'laptop home office working')
+          .replace(/home bakery/i, 'baking kitchen bread pastry')
+          .replace(/resistance bands/i, 'home workout fitness')
+          .slice(0, 50);
+
+        const pexelsRes = await pexelsFetch(
+          'https://api.pexels.com/v1/search?query=' + encodeURIComponent(topicKeywords) + '&per_page=3&orientation=portrait',
+          { headers: { Authorization: process.env.PEXELS_API_KEY } }
+        );
+        if (pexelsRes.ok) {
+          const pexelsData = await pexelsRes.json();
+          const photo = pexelsData.photos?.[0];
+          if (photo?.src?.large) {
+            backgroundType = 'image';
+            backgroundValue = photo.src.large;
+            console.log('HeyGen background image:', backgroundValue);
+          }
+        }
+      } catch(e) {
+        console.warn('Could not fetch background image:', e.message);
+      }
+    }
 
     const videoId = await generateHeyGenVideo({
       avatarId,
       voiceId,
       script: script.slice(0, 1500),
       aspectRatio,
-      backgroundType: 'color',
-      backgroundValue: '#1a2535',
+      backgroundType,
+      backgroundValue,
     });
 
     res.json({
