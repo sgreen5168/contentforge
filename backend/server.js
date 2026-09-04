@@ -5156,28 +5156,28 @@ app.post('/api/heygen/quick-generate', async (req, res) => {
     let avatarId = null;
     let voiceId = null;
 
-    // Allow caller to specify avatarId, otherwise pick best female avatar
+    // Default avatar — Abigail (home-business/lifestyle, female)
+    // Can be overridden by caller passing avatarId in request body
+    const DEFAULT_AVATAR_ID = 'Abigail_expressive_2024112501'; // Abigail Upper Body — female, lifestyle
     const requestedAvatarId = req.body.avatarId;
+
     if (requestedAvatarId) {
       avatarId = requestedAvatarId;
     } else {
+      // Try to find best avatar from account — prefer Abigail or any female lifestyle avatar
       try {
         const avatarData = await heygenRequest('/v2/avatars');
         const avatars = avatarData.data?.avatars || [];
-        // Prefer female avatar in casual/lifestyle setting
-        const preferred = avatars.find(a =>
-          /female|woman|girl|she|sarah|anna|emma|lisa|jessica|emily|hannah|sophia/i.test(a.avatar_name || '')
-        ) || avatars.find(a =>
-          /casual|lifestyle|home|shirt|blouse|top|dress/i.test(a.avatar_name || '')
-        );
-        // If no clear female found — log all options and pick first
-        if (!preferred) {
-          console.log('Available avatars:', avatars.slice(0,5).map(a => a.avatar_name + ' | ' + a.avatar_id).join(', '));
-        }
-        avatarId = preferred?.avatar_id || avatars[0]?.avatar_id;
-        console.log('Selected avatar:', avatars.find(a => a.avatar_id === avatarId)?.avatar_name);
+        const preferred = avatars.find(a => a.avatar_id === DEFAULT_AVATAR_ID)
+          || avatars.find(a => /abigail/i.test(a.avatar_name || ''))
+          || avatars.find(a => a.gender === 'female' && /home-business|lifestyle/i.test((a.niches||[]).join(' ')))
+          || avatars.find(a => a.gender === 'female')
+          || avatars[0];
+        avatarId = preferred?.avatar_id || DEFAULT_AVATAR_ID;
+        console.log('Selected avatar:', preferred?.avatar_name || 'Abigail (default)');
       } catch(e) {
-        console.warn('Could not fetch avatars:', e.message);
+        avatarId = DEFAULT_AVATAR_ID;
+        console.warn('Using default avatar Abigail — could not fetch list:', e.message);
       }
     }
 
