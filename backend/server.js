@@ -5030,21 +5030,44 @@ app.get('/api/heygen/template/:templateId', async (req, res) => {
   }
 });
 
-// List all templates in the account — v3 API
+// List all templates — try all known endpoints
 app.get('/api/heygen/templates', async (req, res) => {
-  try {
-    // Try v3 first
-    let data;
+  const results = {};
+  const endpoints = [
+    '/v3/templates',
+    '/v2/templates',
+    '/v1/template.list',
+    '/v2/video_template.list',
+  ];
+  for (const ep of endpoints) {
     try {
-      data = await heygenRequest('/v3/templates');
+      const data = await heygenRequest(ep);
+      results[ep] = data;
     } catch(e) {
-      // Fall back to v2 if v3 fails
-      data = await heygenRequest('/v2/templates');
+      results[ep] = { error: e.message };
     }
-    res.json(data);
-  } catch(e) {
-    res.status(500).json({ error: e.message });
   }
+  res.json(results);
+});
+
+// Direct template lookup by ID — try all endpoint patterns
+app.get('/api/heygen/template-lookup/:id', async (req, res) => {
+  const id = req.params.id;
+  const results = {};
+  const endpoints = [
+    '/v3/templates/' + id,
+    '/v2/template/' + id,
+    '/v1/template/' + id,
+  ];
+  for (const ep of endpoints) {
+    try {
+      const data = await heygenRequest(ep);
+      results[ep] = data;
+    } catch(e) {
+      results[ep] = { error: e.message };
+    }
+  }
+  res.json(results);
 });
 
 // Generate video from template — auto-fills script and topic variables
