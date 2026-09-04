@@ -5012,6 +5012,96 @@ ${affUrl ? '<p><a href="'+affUrl+'">See full product details</a></p>' : ''}
   }
 });
 
+
+// ── HeyGen Template Video Generation ─────────────────────────────────────────
+
+// Get template details — returns variables defined in the template
+app.get('/api/heygen/template/:templateId', async (req, res) => {
+  try {
+    const data = await heygenRequest('/v2/template/' + req.params.templateId);
+    res.json(data);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// List all templates in the account
+app.get('/api/heygen/templates', async (req, res) => {
+  try {
+    const data = await heygenRequest('/v2/templates');
+    res.json(data);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Generate video from template — auto-fills script and topic variables
+app.post('/api/heygen/template/generate', async (req, res) => {
+  const { templateId, script, topic, affiliateUrl, aspectRatio } = req.body;
+  if (!templateId) return res.status(400).json({ error: 'templateId required' });
+  if (!script) return res.status(400).json({ error: 'script required' });
+
+  try {
+    // First get template to discover variable names
+    const tmpl = await heygenRequest('/v2/template/' + templateId);
+    const variables = tmpl.data?.variables || tmpl.variables || {};
+
+    // Auto-map common variable names to our content
+    const variableValues = {};
+    Object.keys(variables).forEach(function(key) {
+      const k = key.toLowerCase();
+      if (k.includes('script') || k.includes('text') || k.includes('content') || k.includes('caption') || k.includes('body')) {
+        variableValues[key] = { name: key, type: 'text', properties: { content: script.slice(0, 1500) } };
+      } else if (k.includes('topic') || k.includes('title') || k.includes('heading') || k.includes('subject')) {
+        variableValues[key] = { name: key, type: 'text', properties: { content: topic || '' } };
+      } else if (k.includes('url') || k.includes('link')) {
+        variableValues[key] = { name: key, type: 'text', properties: { content: affiliateUrl || '' } };
+      }
+    });
+
+    // If no variables found, try common default names
+    if (Object.keys(variableValues).length === 0) {
+      variableValues['script'] = { name: 'script', type: 'text', properties: { content: script.slice(0, 1500) } };
+    }
+
+    console.log('HeyGen template variables mapped:', Object.keys(variableValues));
+
+    const payload = {
+      template_id: templateId,
+      title: 'ContentForge — ' + (topic || 'Generated Video'),
+      variables: variableValues,
+      caption: false,
+      dimension: aspectRatio === '16:9' ? { width: 1280, height: 720 } : { width: 720, height: 1280 },
+    };
+
+    const data = await heygenRequest('/v2/template/generate', 'POST', payload);
+    const videoId = data.data?.video_id || data.video_id;
+
+    if (!videoId) {
+      console.error('HeyGen template response:', JSON.stringify(data));
+      return res.status(500).json({ error: 'No video_id returned', raw: data });
+    }
+
+    res.json({ videoId, status: 'processing', message: 'HeyGen video queued — check status in 2-5 minutes' });
+  } catch(e) {
+    console.error('HeyGen template error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Check HeyGen video status
+app.get('/api/heygen/video/status/:videoId', async (req, res) => {
+  try {
+    const data = await heygenRequest('/v2/video_status.get?video_id=' + req.params.videoId);
+    const status = data.data?.status;
+    const videoUrl = data.data?.video_url || null;
+    const gifUrl = data.data?.gif_url || null;
+    res.json({ status, videoUrl, gifUrl, raw: data.data });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
