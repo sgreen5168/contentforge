@@ -182,6 +182,10 @@ export default function Dashboard({ onNavigate }) {
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
   const [heygenLoading, setHeygenLoading] = useState(false);
+  const [heygenNoAvatar, setHeygenNoAvatar] = useState(false);
+  const [heygenAvatars, setHeygenAvatars] = useState([]);
+  const [heygenSelectedAvatar, setHeygenSelectedAvatar] = useState('');
+  const [showHeygenOptions, setShowHeygenOptions] = useState(false);
   const [heygenVideoId, setHeygenVideoId] = useState(null);
   const [heygenStatus, setHeygenStatus] = useState(null);
   const [heygenVideoUrl, setHeygenVideoUrl] = useState(null);
@@ -581,6 +585,8 @@ export default function Dashboard({ onNavigate }) {
           topic: selectedTopic?.label || '',
           affiliateUrl: results?.link?.url || '',
           aspectRatio: '9:16',
+          noAvatar: heygenNoAvatar,
+          avatarId: heygenSelectedAvatar || undefined,
         }),
       });
       const d = await r.json();
@@ -1045,10 +1051,52 @@ export default function Dashboard({ onNavigate }) {
                   style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
                   ✏️ Edit Script
                 </button>
+                <button onClick={async function(){
+                    setShowHeygenOptions(!showHeygenOptions);
+                    if (!heygenAvatars.length) {
+                      try {
+                        const r = await fetch(API+'/api/heygen/avatars');
+                        const d = await r.json();
+                        setHeygenAvatars(d.data?.avatars||[]);
+                      } catch(e){}
+                    }
+                  }}
+                  style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(99,102,241,.4)', background:'rgba(99,102,241,.1)', color:'#818CF8', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  🎬 HeyGen Options
+                </button>
                 <button onClick={generateHeyGenVideo} disabled={heygenLoading}
                   style={{ padding:'6px 14px', borderRadius:7, border:'none', background:heygenLoading?'rgba(99,102,241,.3)':'#6366F1', color:'white', fontSize:10, fontWeight:700, cursor:heygenLoading?'default':'pointer', fontFamily:'inherit' }}>
                   {heygenLoading ? '⏳ HeyGen Rendering...' : '🎬 Generate with HeyGen'}
                 </button>
+
+                {/* HeyGen Options Panel */}
+                {showHeygenOptions && (
+                  <div style={{ width:'100%', marginTop:6, padding:'10px 12px', background:'rgba(99,102,241,.06)', border:'1px solid rgba(99,102,241,.2)', borderRadius:8 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'#818CF8', marginBottom:8 }}>🎬 HeyGen Video Options</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                      <input type="checkbox" id="no-avatar" checked={heygenNoAvatar} onChange={function(e){ setHeygenNoAvatar(e.target.checked); }}
+                        style={{ cursor:'pointer' }} />
+                      <label htmlFor="no-avatar" style={{ fontSize:11, color:TXT2, cursor:'pointer' }}>
+                        No avatar — background scene only (product demo style)
+                      </label>
+                    </div>
+                    {!heygenNoAvatar && heygenAvatars.length > 0 && (
+                      <div>
+                        <div style={{ fontSize:10, color:TXT3, marginBottom:4 }}>Choose avatar:</div>
+                        <select value={heygenSelectedAvatar} onChange={function(e){ setHeygenSelectedAvatar(e.target.value); }}
+                          style={{ width:'100%', padding:'6px 8px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, fontSize:11, color:TXT, fontFamily:'inherit' }}>
+                          <option value="">Auto-select best avatar</option>
+                          {heygenAvatars.map(function(a){
+                            return <option key={a.avatar_id} value={a.avatar_id} style={{ background:'#0B1829' }}>{a.avatar_name}</option>;
+                          })}
+                        </select>
+                      </div>
+                    )}
+                    <div style={{ marginTop:6, fontSize:10, color:TXT3 }}>
+                      Background image auto-matches your topic from Pexels
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* HeyGen status and video */}
