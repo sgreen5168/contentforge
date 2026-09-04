@@ -181,6 +181,10 @@ export default function Dashboard({ onNavigate }) {
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
+  const [heygenLoading, setHeygenLoading] = useState(false);
+  const [heygenVideoId, setHeygenVideoId] = useState(null);
+  const [heygenStatus, setHeygenStatus] = useState(null);
+  const [heygenVideoUrl, setHeygenVideoUrl] = useState(null);
   const [trendSearch, setTrendSearch] = useState('');
   const [trendResults, setTrendResults] = useState([]);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -561,6 +565,55 @@ export default function Dashboard({ onNavigate }) {
       video:'1280×720px, MP4, 2:20 min max, under 512MB',
       ratio:'16:9 or 1:1', url:'https://twitter.com/compose/tweet' },
   ];
+
+  async function generateHeyGenVideo() {
+    if (!results?.script) { alert('Generate a script first'); return; }
+    setHeygenLoading(true);
+    setHeygenStatus('Sending to HeyGen...');
+    setHeygenVideoId(null);
+    setHeygenVideoUrl(null);
+    try {
+      const r = await fetch(API + '/api/heygen/quick-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: results.script,
+          topic: selectedTopic?.label || '',
+          affiliateUrl: results?.link?.url || '',
+          aspectRatio: '9:16',
+        }),
+      });
+      const d = await r.json();
+      if (d.error) { setHeygenStatus('❌ ' + d.error); setHeygenLoading(false); return; }
+      setHeygenVideoId(d.videoId);
+      setHeygenStatus('⏳ HeyGen is rendering your video (2-5 minutes)...');
+      // Poll for completion
+      let attempts = 0;
+      const poll = setInterval(async function() {
+        attempts++;
+        if (attempts > 40) { clearInterval(poll); setHeygenStatus('⚠ Timed out — check HeyGen dashboard'); setHeygenLoading(false); return; }
+        try {
+          const sr = await fetch(API + '/api/heygen/video/status/' + d.videoId);
+          const sd = await sr.json();
+          if (sd.status === 'completed' && sd.videoUrl) {
+            clearInterval(poll);
+            setHeygenVideoUrl(sd.videoUrl);
+            setHeygenStatus('✅ HeyGen video ready!');
+            setHeygenLoading(false);
+          } else if (sd.status === 'failed') {
+            clearInterval(poll);
+            setHeygenStatus('❌ HeyGen generation failed — check your HeyGen account');
+            setHeygenLoading(false);
+          } else {
+            setHeygenStatus('⏳ HeyGen rendering... (' + (attempts * 8) + 's)');
+          }
+        } catch(e) { console.warn('Poll error:', e.message); }
+      }, 8000);
+    } catch(e) {
+      setHeygenStatus('❌ Error: ' + e.message);
+      setHeygenLoading(false);
+    }
+  }
 
   function resizeForPlatform(file, targetW, targetH, callback) {
     if (!file || !file.type.startsWith('image/')) return;
@@ -992,7 +1045,33 @@ export default function Dashboard({ onNavigate }) {
                   style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
                   ✏️ Edit Script
                 </button>
+                <button onClick={generateHeyGenVideo} disabled={heygenLoading}
+                  style={{ padding:'6px 14px', borderRadius:7, border:'none', background:heygenLoading?'rgba(99,102,241,.3)':'#6366F1', color:'white', fontSize:10, fontWeight:700, cursor:heygenLoading?'default':'pointer', fontFamily:'inherit' }}>
+                  {heygenLoading ? '⏳ HeyGen Rendering...' : '🎬 Generate with HeyGen'}
+                </button>
               </div>
+
+              {/* HeyGen status and video */}
+              {heygenStatus && (
+                <div style={{ marginTop:8, padding:'10px 12px', background:'rgba(99,102,241,.08)', border:'1px solid rgba(99,102,241,.2)', borderRadius:8 }}>
+                  <div style={{ fontSize:11, color:'#818CF8', marginBottom:heygenVideoUrl?8:0 }}>{heygenStatus}</div>
+                  {heygenVideoUrl && (
+                    <div>
+                      <video src={heygenVideoUrl} controls style={{ width:'100%', maxHeight:200, borderRadius:8, background:'#000', marginBottom:8 }} />
+                      <div style={{ display:'flex', gap:6 }}>
+                        <a href={heygenVideoUrl} download="heygen-video.mp4" target="_blank" rel="noreferrer"
+                          style={{ flex:1, padding:'7px', borderRadius:7, border:'none', background:'#6366F1', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
+                          ⬇ Download HeyGen MP4
+                        </a>
+                        <button onClick={()=>copy(heygenVideoUrl,'hgurl')}
+                          style={{ padding:'7px 12px', borderRadius:7, border:'1px solid rgba(99,102,241,.3)', background:'transparent', color:'#818CF8', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                          {copied==='hgurl'?'✓':'📋 Copy URL'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {results.video ? (
                 <div style={{ padding:'10px 14px', borderTop:`1px solid ${BORD}`, display:'flex', alignItems:'center', gap:10 }}>
                   <span style={{ fontSize:11, color:ACCH, flex:1 }}>✅ Video MP4 ready</span>
