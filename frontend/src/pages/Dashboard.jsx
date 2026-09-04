@@ -181,14 +181,7 @@ export default function Dashboard({ onNavigate }) {
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
-  const [heygenLoading, setHeygenLoading] = useState(false);
-  const [heygenNoAvatar, setHeygenNoAvatar] = useState(false);
-  const [heygenAvatars, setHeygenAvatars] = useState([]);
-  const [heygenSelectedAvatar, setHeygenSelectedAvatar] = useState('');
-  const [showHeygenOptions, setShowHeygenOptions] = useState(false);
-  const [heygenVideoId, setHeygenVideoId] = useState(null);
-  const [heygenStatus, setHeygenStatus] = useState(null);
-  const [heygenVideoUrl, setHeygenVideoUrl] = useState(null);
+  const [showHeygenPanel, setShowHeygenPanel] = useState(false);
   const [trendSearch, setTrendSearch] = useState('');
   const [trendResults, setTrendResults] = useState([]);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -569,57 +562,6 @@ export default function Dashboard({ onNavigate }) {
       video:'1280×720px, MP4, 2:20 min max, under 512MB',
       ratio:'16:9 or 1:1', url:'https://twitter.com/compose/tweet' },
   ];
-
-  async function generateHeyGenVideo() {
-    if (!results?.script) { alert('Generate a script first'); return; }
-    setHeygenLoading(true);
-    setHeygenStatus('Sending to HeyGen...');
-    setHeygenVideoId(null);
-    setHeygenVideoUrl(null);
-    try {
-      const r = await fetch(API + '/api/heygen/quick-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          script: results.script,
-          topic: selectedTopic?.label || '',
-          affiliateUrl: results?.link?.url || '',
-          aspectRatio: '9:16',
-          noAvatar: heygenNoAvatar,
-          avatarId: heygenSelectedAvatar || undefined,
-        }),
-      });
-      const d = await r.json();
-      if (d.error) { setHeygenStatus('❌ ' + d.error); setHeygenLoading(false); return; }
-      setHeygenVideoId(d.videoId);
-      setHeygenStatus('⏳ HeyGen is rendering your video (2-5 minutes)...');
-      // Poll for completion
-      let attempts = 0;
-      const poll = setInterval(async function() {
-        attempts++;
-        if (attempts > 40) { clearInterval(poll); setHeygenStatus('⚠ Timed out — check HeyGen dashboard'); setHeygenLoading(false); return; }
-        try {
-          const sr = await fetch(API + '/api/heygen/video/status/' + d.videoId);
-          const sd = await sr.json();
-          if (sd.status === 'completed' && sd.videoUrl) {
-            clearInterval(poll);
-            setHeygenVideoUrl(sd.videoUrl);
-            setHeygenStatus('✅ HeyGen video ready!');
-            setHeygenLoading(false);
-          } else if (sd.status === 'failed') {
-            clearInterval(poll);
-            setHeygenStatus('❌ HeyGen generation failed — check your HeyGen account');
-            setHeygenLoading(false);
-          } else {
-            setHeygenStatus('⏳ HeyGen rendering... (' + (attempts * 8) + 's)');
-          }
-        } catch(e) { console.warn('Poll error:', e.message); }
-      }, 8000);
-    } catch(e) {
-      setHeygenStatus('❌ Error: ' + e.message);
-      setHeygenLoading(false);
-    }
-  }
 
   function resizeForPlatform(file, targetW, targetH, callback) {
     if (!file || !file.type.startsWith('image/')) return;
@@ -1051,76 +993,57 @@ export default function Dashboard({ onNavigate }) {
                   style={{ padding:'5px 12px', borderRadius:6, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit', marginLeft:'auto' }}>
                   ✏️ Edit Script
                 </button>
-                <button onClick={async function(){
-                    const newShow = !showHeygenOptions;
-                    setShowHeygenOptions(newShow);
-                    if (newShow && !heygenAvatars.length) {
-                      try {
-                        const r = await fetch(API+'/api/heygen/avatars');
-                        const d = await r.json();
-                        const avatars = d.data?.avatars || [];
-                        setHeygenAvatars(avatars);
-                        console.log('Loaded avatars:', avatars.map(function(a){ return a.avatar_name; }));
-                      } catch(e){ console.warn('Avatar load failed:', e.message); }
-                    }
-                  }}
+                <button onClick={function(){ setShowHeygenPanel(!showHeygenPanel); }}
                   style={{ padding:'6px 14px', borderRadius:7, border:'1px solid rgba(99,102,241,.4)', background:'rgba(99,102,241,.1)', color:'#818CF8', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                  🎬 HeyGen Options
+                  🎬 Use in HeyGen
                 </button>
-                <button onClick={generateHeyGenVideo} disabled={heygenLoading}
-                  style={{ padding:'6px 14px', borderRadius:7, border:'none', background:heygenLoading?'rgba(99,102,241,.3)':'#6366F1', color:'white', fontSize:10, fontWeight:700, cursor:heygenLoading?'default':'pointer', fontFamily:'inherit' }}>
-                  {heygenLoading ? '⏳ HeyGen Rendering...' : '🎬 Generate with HeyGen'}
-                </button>
-
-                {/* HeyGen Options Panel */}
-                {showHeygenOptions && (
-                  <div style={{ width:'100%', marginTop:6, padding:'10px 12px', background:'rgba(99,102,241,.06)', border:'1px solid rgba(99,102,241,.2)', borderRadius:8 }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:'#818CF8', marginBottom:8 }}>🎬 HeyGen Video Options</div>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                      <input type="checkbox" id="no-avatar" checked={heygenNoAvatar} onChange={function(e){ setHeygenNoAvatar(e.target.checked); }}
-                        style={{ cursor:'pointer' }} />
-                      <label htmlFor="no-avatar" style={{ fontSize:11, color:TXT2, cursor:'pointer' }}>
-                        No avatar — background scene only (product demo style)
-                      </label>
-                    </div>
-                    {!heygenNoAvatar && heygenAvatars.length > 0 && (
-                      <div>
-                        <div style={{ fontSize:10, color:TXT3, marginBottom:4 }}>Choose avatar:</div>
-                        <select value={heygenSelectedAvatar} onChange={function(e){ setHeygenSelectedAvatar(e.target.value); }}
-                          style={{ width:'100%', padding:'6px 8px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, fontSize:11, color:TXT, fontFamily:'inherit' }}>
-                          <option value="">Auto-select best avatar</option>
-                          {heygenAvatars.map(function(a){
-                            return <option key={a.avatar_id} value={a.avatar_id} style={{ background:'#0B1829' }}>{a.avatar_name}</option>;
-                          })}
-                        </select>
-                      </div>
-                    )}
-                    <div style={{ marginTop:6, fontSize:10, color:TXT3 }}>
-                      Background image auto-matches your topic from Pexels
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* HeyGen status and video */}
-              {heygenStatus && (
-                <div style={{ marginTop:8, padding:'10px 12px', background:'rgba(99,102,241,.08)', border:'1px solid rgba(99,102,241,.2)', borderRadius:8 }}>
-                  <div style={{ fontSize:11, color:'#818CF8', marginBottom:heygenVideoUrl?8:0 }}>{heygenStatus}</div>
-                  {heygenVideoUrl && (
-                    <div>
-                      <video src={heygenVideoUrl} controls style={{ width:'100%', maxHeight:200, borderRadius:8, background:'#000', marginBottom:8 }} />
-                      <div style={{ display:'flex', gap:6 }}>
-                        <a href={heygenVideoUrl} download="heygen-video.mp4" target="_blank" rel="noreferrer"
-                          style={{ flex:1, padding:'7px', borderRadius:7, border:'none', background:'#6366F1', color:'white', fontSize:10, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                          ⬇ Download HeyGen MP4
-                        </a>
-                        <button onClick={()=>copy(heygenVideoUrl,'hgurl')}
-                          style={{ padding:'7px 12px', borderRadius:7, border:'1px solid rgba(99,102,241,.3)', background:'transparent', color:'#818CF8', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-                          {copied==='hgurl'?'✓':'📋 Copy URL'}
-                        </button>
+              {/* HeyGen handoff panel */}
+              {showHeygenPanel && (
+                <div style={{ marginTop:8, padding:'14px', background:'rgba(99,102,241,.06)', border:'1px solid rgba(99,102,241,.2)', borderRadius:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'#818CF8' }}>🎬 HeyGen Video Setup</div>
+                    <a href="https://app.heygen.com" target="_blank" rel="noreferrer"
+                      style={{ padding:'5px 12px', borderRadius:6, border:'none', background:'#6366F1', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
+                      Open HeyGen →
+                    </a>
+                  </div>
+
+                  <div style={{ fontSize:10, color:TXT3, marginBottom:10, padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:7, lineHeight:1.7 }}>
+                    <strong style={{ color:TXT2 }}>How to use:</strong> Copy the title below → paste into HeyGen as your video title or prompt. Copy the script → paste into the Script Writer. Select Abigail as avatar, choose a female voice, add a background image matching your topic, then generate.
+                  </div>
+
+                  {/* Video Title / Topic */}
+                  <div style={{ marginBottom:8 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'#818CF8', marginBottom:4 }}>🎯 Video Title — paste this as your HeyGen prompt</div>
+                    <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                      <div style={{ flex:1, padding:'8px 10px', background:'rgba(255,255,255,.05)', borderRadius:7, fontSize:12, color:TXT, fontWeight:600, lineHeight:1.4 }}>
+                        {results?.youtubeTitle || selectedTopic?.label || 'Your video title'}
                       </div>
+                      <button onClick={function(){ copy(results?.youtubeTitle||selectedTopic?.label||'','hg_title'); }}
+                        style={{ padding:'6px 12px', borderRadius:6, border:'1px solid rgba(99,102,241,.3)', background:'transparent', color:'#818CF8', fontSize:10, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                        {copied==='hg_title'?'✓ Copied!':'📋 Copy Title'}
+                      </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Script */}
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'#818CF8', marginBottom:4 }}>📝 Script — paste into HeyGen Script Writer</div>
+                    <div style={{ padding:'10px 12px', background:'rgba(255,255,255,.05)', borderRadius:7, fontSize:11, color:TXT2, lineHeight:1.7, maxHeight:150, overflowY:'auto' }}>
+                      {results?.script || 'Generate content first'}
+                    </div>
+                    <button onClick={function(){ copy(results?.script||'','hg_script'); }}
+                      style={{ marginTop:6, width:'100%', padding:'7px', borderRadius:6, border:'1px solid rgba(99,102,241,.3)', background:'transparent', color:'#818CF8', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                      {copied==='hg_script'?'✓ Script Copied!':'📋 Copy Full Script'}
+                    </button>
+                  </div>
+
+                  {/* Background search tip */}
+                  <div style={{ padding:'8px 10px', background:'rgba(255,255,255,.03)', borderRadius:7, fontSize:10, color:TXT3, lineHeight:1.6 }}>
+                    <strong style={{ color:TXT2 }}>Background image tip:</strong> In HeyGen, search Pexels for <span style={{ color:'#818CF8' }}>"{selectedTopic?.label || 'your topic'}"</span> — pick a lifestyle or product shot that matches the content. Avoid plain backgrounds for better engagement.
+                  </div>
                 </div>
               )}
               {results.video ? (
