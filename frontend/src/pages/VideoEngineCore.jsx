@@ -1000,10 +1000,26 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   async function ytUploadToYouTube() {
     if (!ytFile || !ytEditMeta?.title) return;
     setYtUploading(true); setYtUpErr(''); setYtUpRes(null);
-    // Set a 3 minute timeout for large video uploads
+    // 10 minute timeout for large video files
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 180000);
+    const timeout = setTimeout(() => controller.abort(), 600000);
+
+    // Show progress messages while uploading
+    const fileMB = (ytFile.size / 1024 / 1024).toFixed(1);
+    const progressMessages = [
+      'Uploading ' + fileMB + 'MB to YouTube...',
+      'Still uploading — large files take a few minutes...',
+      'Almost there — YouTube is processing your video...',
+      'Finalizing upload...',
+    ];
+    let msgIdx = 0;
+    const progressInterval = setInterval(function() {
+      msgIdx = Math.min(msgIdx + 1, progressMessages.length - 1);
+      setYtUpErr('⏳ ' + progressMessages[msgIdx]);
+    }, 15000);
+
     try {
+      setYtUpErr('⏳ ' + progressMessages[0]);
       const formData = new FormData();
       formData.append('video', ytFile);
       formData.append('title', ytEditMeta.title);
@@ -1020,7 +1036,6 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       });
       const data = await res.json();
       if (!res.ok) {
-        // If OAuth not connected, show manual upload instructions
         if (data.error && data.error.includes('YOUTUBE_REFRESH_TOKEN')) {
           setYtUpErr('YouTube not connected — use the manual upload instructions below instead.');
         } else {
@@ -1028,15 +1043,16 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         }
         return;
       }
+      setYtUpErr('');
       setYtUpRes(data);
     } catch(e) {
       if (e.name === 'AbortError') {
-        setYtUpErr('Upload timed out — your video file may be too large. Use manual YouTube upload instead.');
+        setYtUpErr('Upload timed out after 10 minutes — file may be too large. Use the manual upload steps below — copy the title and description first.');
       } else {
-        setYtUpErr(e.message + ' — Try manual upload below.');
+        setYtUpErr(e.message + ' — Use manual upload below.');
       }
     }
-    finally { clearTimeout(timeout); setYtUploading(false); }
+    finally { clearTimeout(timeout); clearInterval(progressInterval); setYtUploading(false); }
   }
 
   // ── Video Builder functions ──────────────────────────────────────────────
