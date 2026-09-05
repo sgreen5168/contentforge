@@ -5265,6 +5265,43 @@ app.post('/api/heygen/quick-generate', async (req, res) => {
   }
 });
 
+
+// ── Auto Thumbnail Generator ──────────────────────────────────────────────────
+app.post('/api/thumbnail/generate', async (req, res) => {
+  const { title, hook, topic, category } = req.body;
+  if (!title && !topic) return res.status(400).json({ error: 'title or topic required' });
+
+  try {
+    const { createCanvas, loadImage } = await import('canvas').catch(() => null) || {};
+
+    // Get background image from Pexels
+    let bgImageUrl = null;
+    if (process.env.PEXELS_API_KEY) {
+      const searchTerm = (category || topic || title || '').slice(0, 40);
+      const pRes = await fetch(
+        'https://api.pexels.com/v1/search?query=' + encodeURIComponent(searchTerm) + '&per_page=3&orientation=landscape',
+        { headers: { Authorization: process.env.PEXELS_API_KEY } }
+      );
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        bgImageUrl = pData.photos?.[0]?.src?.large2x || pData.photos?.[0]?.src?.large || null;
+      }
+    }
+
+    // Return thumbnail data for client-side canvas rendering
+    res.json({
+      title: title || topic || '',
+      hook: hook || '',
+      bgImageUrl,
+      category: category || topic || '',
+      width: 1280,
+      height: 720,
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
