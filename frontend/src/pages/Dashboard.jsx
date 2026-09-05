@@ -417,7 +417,30 @@ export default function Dashboard({ onNavigate }) {
             out.post = out.post.trimEnd() + nl + nl + 'Full details: ' + landingD.url;
           }
           // Force React to re-render the post immediately with the landing page URL
-          setResults(prev => prev ? { ...prev, post: out.post, landingUrl: landingD.url, landing: landingD.url } : out);
+          setResults(prev => {
+            const newLandingUrl = landingD.url;
+            // Build platform captions now that we have the landing URL
+            const tikTokCaption = (out.hook || (out.post||'').slice(0,100)) +
+              '\n\nFull details link in bio 👆\n\n' +
+              '#' + (selectedTopic?.id||'content').replace(/-/g,'') + ' #fyp #sidehustle #homebusiness #contentcreator';
+            const igCaption = (out.post||'').slice(0,200) +
+              '\n\nLink in bio 👆\n\n' +
+              '#' + (selectedTopic?.id||'content').replace(/-/g,'') + ' #reels #homebusiness #sidehustle #contentcreator #lifestyle';
+            const updated = prev ? {
+              ...prev,
+              post: out.post,
+              landingUrl: newLandingUrl,
+              landing: newLandingUrl,
+              tikTokCaption,
+              igCaption,
+              youtubeTitle: out.youtubeTitle || prev.youtubeTitle,
+              youtubeDescription: out.youtubeDescription || prev.youtubeDescription,
+              youtubeTags: out.youtubeTags || prev.youtubeTags,
+            } : { ...out, landingUrl: newLandingUrl, tikTokCaption, igCaption };
+            // Save to localStorage
+            try { localStorage.setItem('cf_cc_results', JSON.stringify(updated)); } catch(e) {}
+            return updated;
+          });
           updateStep('post', { status:'done', data: out.post });
         }
       } else {
