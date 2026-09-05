@@ -5302,6 +5302,91 @@ app.post('/api/thumbnail/generate', async (req, res) => {
   }
 });
 
+
+// ── Instagram Auto-Post ───────────────────────────────────────────────────────
+app.post('/api/instagram/post', async (req, res) => {
+  const { caption, imageUrl, videoUrl } = req.body;
+  const igAccountId = process.env.INSTAGRAM_ACCOUNT_ID;
+  const igToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+
+  if (!igAccountId || !igToken) {
+    return res.status(400).json({ error: 'INSTAGRAM_ACCOUNT_ID or INSTAGRAM_ACCESS_TOKEN not configured in Railway' });
+  }
+  if (!caption) return res.status(400).json({ error: 'caption required' });
+
+  try {
+    // Step 1 — Create media container
+    const mediaType = videoUrl ? 'REELS' : 'IMAGE';
+    const containerParams = new URLSearchParams({
+      access_token: igToken,
+      caption: caption.slice(0, 2200),
+    });
+    if (videoUrl) {
+      containerParams.append('media_type', 'REELS');
+      containerParams.append('video_url', videoUrl);
+    } else if (imageUrl) {
+      containerParams.append('image_url', imageUrl);
+    } else {
+      return res.status(400).json({ error: 'imageUrl or videoUrl required for Instagram post' });
+    }
+
+    const containerRes = await fetch(
+      'https://graph.facebook.com/v19.0/' + igAccountId + '/media',
+      { method: 'POST', body: containerParams }
+    );
+    const containerData = await containerRes.json();
+    if (containerData.error) throw new Error(containerData.error.message);
+    const containerId = containerData.id;
+    if (!containerId) throw new Error('No container ID returned from Instagram');
+
+    // Step 2 — Wait for video processing if needed (for Reels)
+    if (videoUrl) {
+      await new Promise(r => setTimeout(r, 8000));
+    }
+
+    // Step 3 — Publish the container
+    const publishRes = await fetch(
+      'https://graph.facebook.com/v19.0/' + igAccountId + '/media_publish',
+      {
+        method: 'POST',
+        body: new URLSearchParams({
+          creation_id: containerId,
+          access_token: igToken,
+        }),
+      }
+    );
+    const publishData = await publishRes.json();
+    if (publishData.error) throw new Error(publishData.error.message);
+
+    res.json({ success: true, id: publishData.id, containerId });
+  } catch(e) {
+    console.error('Instagram post error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// Alias for Dashboard compatibility
+app.post('/api/facebook/post', async (req, res) => {
+  const { message, link } = req.body;
+  req.body.message = message || '';
+  req.body.link = link || '';
+  // Forward to post-text handler
+  const pageId = process.env.FACEBOOK_PAGE_ID;
+  const token = process.env.FACEBOOK_ACCESS_TOKEN;
+  if (!pageId || !token) return res.status(400).json({ error: 'Facebook not configured' });
+  try {
+    const params = new URLSearchParams({ message: (message||'').slice(0,63206), access_token: token });
+    if (link) params.append('link', link);
+    const r = await fetch('https://graph.facebook.com/v19.0/' + pageId + '/feed', { method:'POST', body:params });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    res.json({ success:true, id:d.id });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
