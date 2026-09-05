@@ -185,6 +185,8 @@ export default function Dashboard({ onNavigate }) {
   const [thumbUrl, setThumbUrl] = useState(null);
   const [thumbLoading, setThumbLoading] = useState(false);
   const [fbPosting, setFbPosting] = useState(false);
+  const [igPosting, setIgPosting] = useState(false);
+  const [igPostResult, setIgPostResult] = useState(null);
   const [fbPostResult, setFbPostResult] = useState(null);
   const [showAutoPost, setShowAutoPost] = useState(false);
   const [trendSearch, setTrendSearch] = useState('');
@@ -642,6 +644,33 @@ export default function Dashboard({ onNavigate }) {
       console.warn('Thumbnail error:', e.message);
     }
     setThumbLoading(false);
+  }
+
+  // Instagram auto-post
+  async function postToInstagram() {
+    if (!results?.igCaption && !results?.post) return;
+    if (!thumbUrl && !results?.videoUrl) {
+      alert('Generate a thumbnail or video first — Instagram requires an image or video');
+      return;
+    }
+    setIgPosting(true); setIgPostResult(null);
+    try {
+      const r = await fetch(API + '/api/instagram/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caption: results.igCaption || results.post || '',
+          imageUrl: thumbUrl ? null : null, // Canvas blob URLs can't be used directly
+          videoUrl: results.videoUrl || null,
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setIgPostResult({ success: true, id: d.id });
+    } catch(e) {
+      setIgPostResult({ success: false, error: e.message });
+    }
+    setIgPosting(false);
   }
 
   // Facebook auto-post
