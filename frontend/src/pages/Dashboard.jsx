@@ -327,6 +327,14 @@ export default function Dashboard({ onNavigate }) {
       // Auto-build YouTube tags
       const topicWords = (topic.label||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').split(' ').filter(function(w){ return w.length>2; });
       out.youtubeTags = [...topicWords, 'home business', 'side hustle', 'how to', topic.cat||'lifestyle'].join(', ');
+
+      // Build platform captions — set on out so they're available immediately
+      out.tikTokCaption = (out.hook || (out.script||'').slice(0,100)) +
+        '\n\nFull details link in bio 👆\n\n' +
+        '#' + (topic.id||'content').replace(/-/g,'') + ' #fyp #sidehustle #homebusiness #contentcreator';
+      out.igCaption = (out.post||'').slice(0,200) +
+        '\n\nLink in bio 👆\n\n' +
+        '#' + (topic.id||'content').replace(/-/g,'') + ' #reels #homebusiness #sidehustle #contentcreator #lifestyle';
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
