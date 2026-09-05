@@ -1445,10 +1445,51 @@ export default function Dashboard({ onNavigate }) {
                       })}
                     </div>
 
-                    <a href={pp.url} target="_blank" rel="noreferrer"
-                      style={{ display:'block', padding:'9px', borderRadius:8, border:'none', background:pp.color, color:'white', fontSize:11, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
-                      {pp.icon} Open {pp.label} — Upload Now
-                    </a>
+                    {/* Auto-post for Facebook */}
+                    {pp.id === 'facebook' && (
+                      <button onClick={postToFacebook} disabled={fbPosting}
+                        style={{ width:'100%', padding:'9px', borderRadius:8, border:'none', background:fbPosting?'rgba(24,119,242,.4)':'#1877F2', color:'white', fontSize:11, fontWeight:700, cursor:fbPosting?'default':'pointer', fontFamily:'inherit', marginBottom:6 }}>
+                        {fbPosting?'⏳ Posting to Facebook...':'⚡ Auto-Post to Facebook Now'}
+                      </button>
+                    )}
+                    {/* Auto-post for Instagram */}
+                    {pp.id === 'instagram' && (
+                      <button onClick={postToInstagram} disabled={igPosting}
+                        style={{ width:'100%', padding:'9px', borderRadius:8, border:'none', background:igPosting?'rgba(225,48,108,.4)':'#E1306C', color:'white', fontSize:11, fontWeight:700, cursor:igPosting?'default':'pointer', fontFamily:'inherit', marginBottom:6 }}>
+                        {igPosting?'⏳ Posting to Instagram...':'📸 Auto-Post to Instagram Now'}
+                      </button>
+                    )}
+                    {/* Copy-then-open for other platforms */}
+                    <button onClick={function(){
+                      // Copy all content to clipboard then open platform
+                      const allContent = [ptitle, pdesc, landUrl].filter(Boolean).join('
+
+');
+                      navigator.clipboard.writeText(allContent).catch(function(){});
+                      setTimeout(function(){ window.open(pp.url, '_blank'); }, 300);
+                    }}
+                      style={{ display:'block', width:'100%', padding:'9px', borderRadius:8, border:'none', background:pp.color, color:'white', fontSize:11, fontWeight:700, textDecoration:'none', textAlign:'center', cursor:'pointer', fontFamily:'inherit' }}>
+                      {pp.icon} Copy Content + Open {pp.label}
+                    </button>
+                    <div style={{ fontSize:9, color:TXT3, textAlign:'center', marginTop:4 }}>
+                      {pp.id==='facebook'||pp.id==='instagram' ? 'Auto-post available above' :
+                       pp.id==='youtube' ? 'Use YouTube Studio tab for full auto-upload with metadata' :
+                       pp.id==='tiktok' ? 'Content copied — paste caption when TikTok opens' :
+                       pp.id==='reddit' ? 'Content copied — paste title and body when Reddit opens' :
+                       pp.id==='pinterest' ? 'Content copied — paste title and description when Pinterest opens' :
+                       'Content copied to clipboard — paste when platform opens'}
+                    </div>
+                  {/* Post results */}
+                  {publishPlatform==='facebook' && fbPostResult && (
+                    <div style={{ marginTop:8, padding:'8px 10px', background:fbPostResult.success?'rgba(5,150,105,.08)':'rgba(239,68,68,.08)', border:`1px solid ${fbPostResult.success?'rgba(5,150,105,.2)':'rgba(239,68,68,.2)'}`, borderRadius:7 }}>
+                      {fbPostResult.success ? <div style={{ fontSize:11, color:'#34D399' }}>✅ Posted to Facebook! ID: {fbPostResult.id}</div> : <div style={{ fontSize:11, color:'#FC8F8F' }}>❌ {fbPostResult.error}</div>}
+                    </div>
+                  )}
+                  {publishPlatform==='instagram' && igPostResult && (
+                    <div style={{ marginTop:8, padding:'8px 10px', background:igPostResult.success?'rgba(5,150,105,.08)':'rgba(239,68,68,.08)', border:`1px solid ${igPostResult.success?'rgba(5,150,105,.2)':'rgba(239,68,68,.2)'}`, borderRadius:7 }}>
+                      {igPostResult.success ? <div style={{ fontSize:11, color:'#34D399' }}>✅ Posted to Instagram! ID: {igPostResult.id}</div> : <div style={{ fontSize:11, color:'#FC8F8F' }}>❌ {igPostResult.error}</div>}
+                    </div>
+                  )}
                   </div>
                 );
               })()}
