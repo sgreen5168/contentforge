@@ -1462,9 +1462,7 @@ export default function Dashboard({ onNavigate }) {
                     {/* Copy-then-open for other platforms */}
                     <button onClick={function(){
                       // Copy all content to clipboard then open platform
-                      const allContent = [ptitle, pdesc, landUrl].filter(Boolean).join('
-
-');
+                      const allContent = [ptitle, pdesc, landUrl].filter(Boolean).join('\n\n');
                       navigator.clipboard.writeText(allContent).catch(function(){});
                       setTimeout(function(){ window.open(pp.url, '_blank'); }, 300);
                     }}
