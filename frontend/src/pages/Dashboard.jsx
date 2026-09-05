@@ -182,6 +182,11 @@ export default function Dashboard({ onNavigate }) {
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
   const [showHeygenPanel, setShowHeygenPanel] = useState(false);
+  const [thumbUrl, setThumbUrl] = useState(null);
+  const [thumbLoading, setThumbLoading] = useState(false);
+  const [fbPosting, setFbPosting] = useState(false);
+  const [fbPostResult, setFbPostResult] = useState(null);
+  const [showAutoPost, setShowAutoPost] = useState(false);
   const [trendSearch, setTrendSearch] = useState('');
   const [trendResults, setTrendResults] = useState([]);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -565,6 +570,101 @@ export default function Dashboard({ onNavigate }) {
       video:'1280×720px, MP4, 2:20 min max, under 512MB',
       ratio:'16:9 or 1:1', url:'https://twitter.com/compose/tweet' },
   ];
+
+  // Generate thumbnail using canvas
+  async function generateThumbnail() {
+    if (!results?.youtubeTitle && !selectedTopic?.label) return;
+    setThumbLoading(true);
+    try {
+      const r = await fetch(API + '/api/thumbnail/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: results?.youtubeTitle || selectedTopic?.label || '',
+          hook: results?.hook || '',
+          topic: selectedTopic?.label || '',
+          category: selectedTopic?.cat || '',
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+
+      // Draw thumbnail on canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280; canvas.height = 720;
+      const ctx = canvas.getContext('2d');
+
+      if (d.bgImageUrl) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise(function(resolve, reject) {
+          img.onload = resolve; img.onerror = reject;
+          img.src = d.bgImageUrl;
+        });
+        ctx.drawImage(img, 0, 0, 1280, 720);
+        // Dark overlay for text readability
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, 1280, 720);
+      } else {
+        ctx.fillStyle = '#0B1829';
+        ctx.fillRect(0, 0, 1280, 720);
+      }
+
+      // Title text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 64px Arial';
+      ctx.textAlign = 'center';
+      const title = d.title.slice(0, 60);
+      const words = title.split(' ');
+      let lines = []; let line = '';
+      words.forEach(function(w) {
+        const test = line + (line??' ') + w;
+        if (ctx.measureText(test).width > 1100) { lines.push(line); line = w; }
+        else line = test;
+      });
+      lines.push(line);
+      const lineH = 76;
+      const startY = 720/2 - (lines.length * lineH)/2;
+      lines.forEach(function(l, i) { ctx.fillText(l, 640, startY + i * lineH); });
+
+      // Category badge
+      if (d.category) {
+        ctx.fillStyle = '#1D9E75';
+        ctx.fillRect(40, 40, 200, 44);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(d.category.toUpperCase(), 56, 69);
+      }
+
+      setThumbUrl(canvas.toDataURL('image/jpeg', 0.92));
+    } catch(e) {
+      console.warn('Thumbnail error:', e.message);
+    }
+    setThumbLoading(false);
+  }
+
+  // Facebook auto-post
+  async function postToFacebook() {
+    if (!results?.post) return;
+    setFbPosting(true); setFbPostResult(null);
+    try {
+      const r = await fetch(API + '/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: results.post,
+          link: results.landingUrl || results.landing || '',
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setFbPostResult({ success: true, id: d.id || d.post_id });
+    } catch(e) {
+      setFbPostResult({ success: false, error: e.message });
+    }
+    setFbPosting(false);
+  }
 
   function resizeForPlatform(file, targetW, targetH, callback) {
     if (!file || !file.type.startsWith('image/')) return;
