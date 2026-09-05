@@ -32,9 +32,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '200mb' }));
 
 const PORT = process.env.PORT || 3001;
+// Increase server timeout for large video uploads (10 minutes)
+const serverTimeout = 600000;
 const jobs = new Map();
 
 async function updateJob(id, updates) {
