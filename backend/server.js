@@ -5387,6 +5387,181 @@ app.post('/api/facebook/post', async (req, res) => {
   }
 });
 
+
+// ── Traffic Dashboard ─────────────────────────────────────────────────────────
+app.get('/api/traffic/dashboard', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    // Get all submissions with their click data
+    const { data: submissions } = await db
+      .from('submissions')
+      .select('slug, title, niche, created_at, affiliate_url')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // Get click data
+    const { data: clicks } = await db
+      .from('link_clicks')
+      .select('slug, href, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    // Aggregate clicks per slug
+    const clickMap = {};
+    (clicks || []).forEach(function(c) {
+      if (!clickMap[c.slug]) clickMap[c.slug] = { total: 0, affiliate: 0, recent: 0 };
+      clickMap[c.slug].total++;
+      if (c.href && (c.href.includes('amazon') || c.href.includes('clickbank') || c.href.includes('hop.'))) {
+        clickMap[c.slug].affiliate++;
+      }
+      // Recent = last 7 days
+      const daysAgo = (Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysAgo <= 7) clickMap[c.slug].recent++;
+    });
+
+    // Build pages with stats
+    const pages = (submissions || []).map(function(s) {
+      const stats = clickMap[s.slug] || { total: 0, affiliate: 0, recent: 0 };
+      return {
+        slug: s.slug,
+        title: (s.title || s.slug).replace(/\*\*/g, '').slice(0, 60),
+        niche: s.niche || '',
+        url: 'https://nichroute.com/content.html?slug=' + s.slug,
+        created_at: s.created_at,
+        clicks: stats.total,
+        affiliateClicks: stats.affiliate,
+        recentClicks: stats.recent,
+        ctr: stats.total > 0 ? Math.round((stats.affiliate / stats.total) * 100) : 0,
+      };
+    });
+
+    // Summary stats
+    const totalClicks = Object.values(clickMap).reduce((s, c) => s + c.total, 0);
+    const totalAffiliate = Object.values(clickMap).reduce((s, c) => s + c.affiliate, 0);
+    const topPage = pages.sort((a, b) => b.clicks - a.clicks)[0];
+
+    res.json({
+      pages,
+      summary: {
+        totalPages: pages.length,
+        totalClicks,
+        totalAffiliate,
+        topPage: topPage?.title || 'None yet',
+        topPageClicks: topPage?.clicks || 0,
+      }
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Reddit Community Finder ───────────────────────────────────────────────────
+app.get('/api/reddit/find', async (req, res) => {
+  const { topic, category } = req.query;
+  if (!topic) return res.status(400).json({ error: 'topic required' });
+
+  // Curated subreddit map by category
+  const SUBREDDITS = {
+    'cooking':     ['MealPrepSunday','EatCheapAndHealthy','Cooking','recipes','airfryer','mealprep'],
+    'health':      ['fitness','loseit','Health','Wellness','xxfitness','bodyweightfitness'],
+    'meal-prep':   ['MealPrepSunday','EatCheapAndHealthy','mealprep','HealthyFood','1200isplenty'],
+    'side-hustle': ['SideHustle','Entrepreneur','passive_income','WorkOnline','beermoney'],
+    'mindset':     ['getdisciplined','selfimprovement','productivity','DecidingToBeBetter','BettermentBookClub'],
+    'remote-work': ['WorkFromHome','digitalnomad','RemoteWork','freelance','WFH'],
+    'finance':     ['personalfinance','Frugal','financialindependence','Budgeting','povertyfinance'],
+    'baking':      ['Baking','Breadit','AmateurFoodPics','food','Cooking'],
+    'home-income': ['SideHustle','Entrepreneur','passive_income','WorkOnline','beermoney'],
+    'niche':       ['Entrepreneur','SideHustle','blogging','content_marketing','socialmedia'],
+  };
+
+  const cat = category || 'side-hustle';
+  const subs = SUBREDDITS[cat] || SUBREDDITS['side-hustle'];
+
+  // Search Reddit for relevant posts
+  const searchResults = [];
+  for (const sub of subs.slice(0, 3)) {
+    try {
+      const searchUrl = 'https://www.reddit.com/r/' + sub + '/search.json?q=' +
+        encodeURIComponent(topic) + '&restrict_sr=1&sort=hot&limit=5';
+      const r = await fetch(searchUrl, {
+        headers: { 'User-Agent': 'ContentForge/1.0 (affiliate content tool)' }
+      });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const posts = (d.data?.children || []).map(function(p) {
+        return {
+          subreddit: 'r/' + sub,
+          title: p.data?.title || '',
+          url: 'https://reddit.com' + (p.data?.permalink || ''),
+          upvotes: p.data?.ups || 0,
+          comments: p.data?.num_comments || 0,
+          created: p.data?.created_utc,
+        };
+      });
+      searchResults.push(...posts);
+    } catch(e) { continue; }
+  }
+
+  // Generate a reply suggestion using Claude
+  let replySuggestion = '';
+  try {
+    const replyRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 300,
+      messages: [{
+        role: 'user',
+        content: 'Write a helpful Reddit comment (2-3 sentences) for someone asking about "' + topic + '". Be genuinely helpful. Never use I/me/my. End with a subtle mention that more details are at a link. Do not include any actual URL — just say "link in my profile" or "details in the comments". No promotional language.'
+      }]
+    });
+    replySuggestion = replyRes.content[0]?.text || '';
+  } catch(e) { replySuggestion = ''; }
+
+  res.json({
+    topic,
+    category: cat,
+    subreddits: subs,
+    posts: searchResults.slice(0, 10),
+    replySuggestion,
+  });
+});
+
+// ── Content Multiplier ────────────────────────────────────────────────────────
+app.post('/api/content/multiply', async (req, res) => {
+  const { post, script, title, affiliateUrl, landingUrl, topic, category } = req.body;
+  if (!post && !topic) return res.status(400).json({ error: 'post or topic required' });
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: 'You are a social media content expert. Never use I/me/my. Always write in second or third person. Be platform-specific and compelling.',
+      messages: [{
+        role: 'user',
+        content: `Take this content and create 6 platform-specific versions. Topic: "${topic || title}". Original post: "${(post || '').slice(0, 500)}". Affiliate/landing URL: ${landingUrl || affiliateUrl || ''}.
+
+Return ONLY valid JSON:
+{
+  "youtube": {"title": "SEO title with buyer keyword", "description": "full YT description with hook, value, CTA, hashtags", "tags": "comma separated tags"},
+  "tiktok": {"caption": "punchy hook + 3 value points + link in bio + 5 hashtags", "hook": "first line hook only"},
+  "instagram": {"caption": "engaging caption + link in bio + 10 hashtags"},
+  "pinterest": {"title": "keyword-rich pin title", "description": "searchable pin description + destination link mention + 5 hashtags"},
+  "reddit": {"title": "helpful post title no promotional language", "body": "genuinely helpful post ending with question"},
+  "email": {"subject": "email subject line", "preview": "email preview text", "body": "short email body 3 paragraphs"}
+}`
+      }]
+    });
+
+    const raw = response.content[0]?.text || '{}';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const multiplied = JSON.parse(clean);
+    res.json({ success: true, ...multiplied });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
