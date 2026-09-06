@@ -11,6 +11,7 @@ const API  = (typeof window !== 'undefined' && window.__CF_API__) || 'https://co
 
 const TABS = [
   { id:'daily',     label:'📅 Daily Plan',         icon:'📅' },
+  { id:'calendar',  label:'📆 30-Day Calendar',    icon:'📆' },
   { id:'dashboard', label:'📊 Traffic Dashboard',  icon:'📊' },
   { id:'reddit',    label:'🔴 Reddit Finder',      icon:'🔴' },
   { id:'multiply',  label:'✨ Content Multiplier',  icon:'✨' },
@@ -619,6 +620,172 @@ function YouTubeOptimizer() {
   );
 }
 
+// ── 30-Day Content Calendar ──────────────────────────────────────────────────
+const CALENDAR_DAYS = [
+  { day:1,  topic:'Air Fryer Meals Under 30 Min',     niche:'cooking',     keyword:'best air fryer meals quick', longTail:'air fryer meals under 30 minutes for beginners', aff:'Air Fryer Dual Basket', hook:'Most people think healthy cooking takes an hour', yt:'5 Air Fryer Meals Ready in 15 Minutes', pin:'Quick Air Fryer Recipes That Actually Taste Good', reddit:'r/EatCheapAndHealthy' },
+  { day:2,  topic:'Morning Routine for Energy',        niche:'health',      keyword:'morning routine energy boost', longTail:'morning routine to boost energy without caffeine', aff:'Atomic Habits Book', hook:'The reason most people feel exhausted by 10am', yt:'3 Morning Habits That Boost Energy All Day', pin:'Simple Morning Routine That Gives You Energy', reddit:'r/getdisciplined' },
+  { day:3,  topic:'Weekly Meal Prep Guide',            niche:'meal-prep',   keyword:'weekly meal prep for beginners', longTail:'how to meal prep for a week on a budget', aff:'Meal Prep Containers', hook:'Spending 2 hours every night cooking is the problem', yt:'How I Meal Prep 5 Lunches in 20 Minutes', pin:'Budget Meal Prep That Saves $150 a Month', reddit:'r/MealPrepSunday' },
+  { day:4,  topic:'Side Hustle Ideas From Home',      niche:'side-hustle', keyword:'side hustle ideas from home 2026', longTail:'best side hustles to start from home with no money', aff:'CB Profit Club', hook:'Three home income streams most people overlook', yt:'3 Side Hustles You Can Start From Home This Week', pin:'Side Hustle Ideas That Actually Work in 2026', reddit:'r/SideHustle' },
+  { day:5,  topic:'Portable Blender Protein Shakes',  niche:'health',      keyword:'portable blender protein shake recipe', longTail:'best portable blender for protein shakes on the go', aff:'Portable Mini Blender', hook:'Getting protein every day does not require a kitchen full of equipment', yt:'This $25 Blender Changed My Morning Protein Routine', pin:'Easy Protein Shake Recipes With a Portable Blender', reddit:'r/fitness' },
+  { day:6,  topic:'Home Bakery Business',             niche:'baking',      keyword:'how to start a home bakery', longTail:'how to start a home bakery business with no experience', aff:'KitchenAid Stand Mixer', hook:'Turning a hobby into income sounds complicated until you see the start', yt:'How to Start a Home Bakery — Complete Beginner Guide', pin:'Start a Home Bakery Business From Your Kitchen', reddit:'r/Baking' },
+  { day:7,  topic:'Under Desk Treadmill Review',      niche:'health',      keyword:'under desk treadmill review', longTail:'best under desk treadmill walking pad for home office', aff:'Under Desk Treadmill', hook:'Remote workers sit 8 hours straight — this adds 10K steps without leaving the desk', yt:'I Walked 10K Steps Working From Home — Honest Review', pin:'Walking Pad for Home Office — Worth It?', reddit:'r/WorkFromHome' },
+  { day:8,  topic:'Budget Meal Plan Under $50',       niche:'finance',     keyword:'budget meal plan $50 a week', longTail:'cheap healthy meal plan for one person per week', aff:'Budget Planner Journal', hook:'Eating well on $50 a week is not just possible — most people overspend by $80', yt:'Full Week of Healthy Meals for Under $50', pin:'$50 Weekly Meal Plan With Recipes', reddit:'r/EatCheapAndHealthy' },
+  { day:9,  topic:'Resistance Band Workout',          niche:'health',      keyword:'resistance band workout for beginners', longTail:'full body resistance band workout at home no equipment', aff:'Resistance Bands Set', hook:'A $20 set of bands can replace a $100 gym membership', yt:'20-Minute Resistance Band Workout — Full Body No Gym', pin:'Full Body Resistance Band Workout at Home', reddit:'r/bodyweightfitness' },
+  { day:10, topic:'Chipotle Bowl Meal Prep',          niche:'meal-prep',   keyword:'chipotle bowl meal prep recipe', longTail:'how to make chipotle steak bowls at home for meal prep', aff:'Meal Prep Containers', hook:'Restaurant bowls cost $15 — this version costs $2.50 and tastes better', yt:'Chipotle Steak Bowl Meal Prep — 5 Lunches for $12', pin:'Homemade Chipotle Bowl Meal Prep Recipe', reddit:'r/MealPrepSunday' },
+  { day:11, topic:'Work From Home Setup Tips',        niche:'remote-work', keyword:'work from home setup ideas', longTail:'best home office setup on a budget for productivity', aff:'Standing Desk Converter', hook:'The desk setup that reduces back pain and doubled productivity costs under $100', yt:'My $100 Home Office Setup That Fixed My Back Pain', pin:'Budget Home Office Setup That Actually Works', reddit:'r/WorkFromHome' },
+  { day:12, topic:'High Protein Meal Prep',           niche:'meal-prep',   keyword:'high protein meal prep ideas', longTail:'high protein meal prep for weight loss on a budget', aff:'Meal Prep Containers', hook:'Hitting 150g of protein per day is easier when meals are already prepped', yt:'High Protein Meal Prep — 4 Meals 30G Protein Each', pin:'High Protein Meal Prep for the Week', reddit:'r/1200isplenty' },
+  { day:13, topic:'Make Money From Home',             niche:'home-income', keyword:'how to make money from home legit', longTail:'legitimate ways to make money from home without investment', aff:'Home Business Success System', hook:'Most home income ideas fail because people pick the complicated ones', yt:'3 Legitimate Ways to Make Money From Home in 2026', pin:'Real Ways to Make Money From Home', reddit:'r/beermoney' },
+  { day:14, topic:'Air Fryer Chicken Recipes',        niche:'cooking',     keyword:'air fryer chicken recipes easy', longTail:'juicy air fryer chicken breast recipe for meal prep', aff:'Air Fryer Dual Basket', hook:'Dry overcooked chicken is a cooking problem an air fryer solves in 20 minutes', yt:'Juicy Air Fryer Chicken — 3 Ways in Under 20 Minutes', pin:'Easy Air Fryer Chicken Recipes for the Week', reddit:'r/Cooking' },
+  { day:15, topic:'Finding Your Niche Online',        niche:'niche',       keyword:'how to find your niche online', longTail:'how to find a profitable content niche as a beginner', aff:'CB Profit Club', hook:'Trying to reach everyone is why most content creators reach no one', yt:'How to Find Your Profitable Niche in 2026', pin:'How to Pick a Profitable Niche for Content Creating', reddit:'r/Entrepreneur' },
+  { day:16, topic:'Smoothie Meal Prep Packs',         niche:'health',      keyword:'smoothie meal prep ideas', longTail:'make ahead smoothie packs for the week meal prep', aff:'Portable Mini Blender', hook:'Skipping breakfast is a protein problem — this fixes it in 3 minutes', yt:'Make-Ahead Smoothie Packs — 5 Flavors Under $15', pin:'Smoothie Meal Prep Packs for the Week', reddit:'r/fitness' },
+  { day:17, topic:'Atomic Habits Morning Routine',    niche:'mindset',     keyword:'atomic habits morning routine tips', longTail:'how to build a morning routine using atomic habits principles', aff:'Atomic Habits Book', hook:'One small habit change in the first 15 minutes changes everything that follows', yt:'Atomic Habits Morning Routine — 5 Small Changes Big Results', pin:'Morning Routine Based on Atomic Habits', reddit:'r/selfimprovement' },
+  { day:18, topic:'5 Meals Under $5',                 niche:'finance',     keyword:'meals under $5 per person', longTail:'cheap healthy dinner ideas under $5 per serving', aff:'Budget Planner Journal', hook:'A $5 dinner that fills you up just requires knowing 3 ingredients', yt:'5 Filling Dinners Under $5 — Grocery List Included', pin:'Healthy Dinners Under $5 Per Serving', reddit:'r/EatCheapAndHealthy' },
+  { day:19, topic:'Ring Light Setup for Content',     niche:'side-hustle', keyword:'ring light setup for videos', longTail:'best ring light setup for youtube and tiktok beginners', aff:'Ring Light with Tripod', hook:'Bad lighting kills good content — this $35 setup fixes it in 10 minutes', yt:'Studio Quality Lighting for $35 — Ring Light Setup Guide', pin:'Ring Light Setup for Content Creators on a Budget', reddit:'r/NewTubers' },
+  { day:20, topic:'Veggie Meal Prep for the Week',    niche:'meal-prep',   keyword:'vegetable meal prep for the week', longTail:'how to prep vegetables for the week to save time cooking', aff:'Meal Prep Containers', hook:'The reason meal prep takes so long is the chopping not the cooking', yt:'The Chopper That Cut My Meal Prep Time in Half', pin:'How to Prep Vegetables for the Whole Week', reddit:'r/MealPrepSunday' },
+  { day:21, topic:'Home Business Success Tips',       niche:'home-income', keyword:'home business tips for beginners', longTail:'how to run a successful home based business in 2026', aff:'Home Business Success System', hook:'Most home businesses fail in year one because of one avoidable mistake', yt:'5 Home Business Mistakes to Avoid in 2026', pin:'Home Business Tips That Actually Work', reddit:'r/Entrepreneur' },
+  { day:22, topic:'Morning Coffee Metabolism Boost',  niche:'health',      keyword:'morning coffee routine for energy', longTail:'how to boost metabolism with your morning coffee routine', aff:'Java Burn', hook:'Most people drink coffee for energy but miss the ingredient that makes it work better', yt:'Morning Coffee Routine That Boosts Metabolism Naturally', pin:'Morning Coffee Habit That Boosts Your Energy', reddit:'r/Coffee' },
+  { day:23, topic:'Budget Grocery Shopping Tips',     niche:'finance',     keyword:'budget grocery shopping tips', longTail:'how to grocery shop on a budget and eat healthy', aff:'Budget Planner Journal', hook:'The average family overspends $200 a month on groceries without realizing it', yt:'How to Cut Your Grocery Bill by $200 This Month', pin:'Smart Grocery Shopping on a Budget', reddit:'r/Frugal' },
+  { day:24, topic:'Air Fryer Vegetables',             niche:'cooking',     keyword:'air fryer vegetables recipe', longTail:'crispy air fryer vegetables recipe for meal prep', aff:'Air Fryer Dual Basket', hook:'Vegetables nobody wants to eat become vegetables everyone asks for with this method', yt:'Crispy Air Fryer Vegetables — The Method That Works', pin:'Air Fryer Vegetables That Actually Taste Good', reddit:'r/Cooking' },
+  { day:25, topic:'Passive Income Ideas 2026',        niche:'side-hustle', keyword:'passive income ideas 2026', longTail:'realistic passive income ideas you can start from home', aff:'CB Profit Club', hook:'Passive income takes work upfront — but these three take less than most think', yt:'3 Realistic Passive Income Streams to Start in 2026', pin:'Passive Income Ideas That Actually Pay in 2026', reddit:'r/passive_income' },
+  { day:26, topic:'Meal Prep for Weight Loss',        niche:'health',      keyword:'meal prep for weight loss beginners', longTail:'weekly meal prep for weight loss on a budget', aff:'Meal Prep Containers', hook:'Every successful weight loss story has one thing in common — prepped food ready to grab', yt:'How Meal Prep Makes Weight Loss Easy — Full Week Plan', pin:'Meal Prep for Weight Loss — Full Week Breakdown', reddit:'r/loseit' },
+  { day:27, topic:'Standing Desk Benefits WFH',       niche:'remote-work', keyword:'standing desk benefits working from home', longTail:'do standing desks help with back pain working from home', aff:'Standing Desk Converter', hook:'Sitting for 8 hours reduces focus by 20% — here is what changes it', yt:'I Used a Standing Desk for 30 Days — Honest Results', pin:'Standing Desk for Work From Home — Is It Worth It?', reddit:'r/WorkFromHome' },
+  { day:28, topic:'High Protein Smoothie Packs',      niche:'health',      keyword:'protein shake meal prep recipes', longTail:'high protein smoothie recipes to make ahead for the week', aff:'Portable Mini Blender', hook:'Missing protein goals is a prep problem not a willpower problem', yt:'Make-Ahead Protein Shakes — 5 Flavors One Blender', pin:'High Protein Smoothie Packs to Make Ahead', reddit:'r/gainit' },
+  { day:29, topic:'Gut Health Weight Loss',           niche:'health',      keyword:'gut health weight loss supplement', longTail:'best probiotic supplement for weight loss and metabolism', aff:'LeanBiome', hook:'Most weight loss supplements ignore the thing science says matters most — the gut', yt:'The Science Behind Gut Health and Weight Loss in 2026', pin:'Gut Health for Weight Loss — What Actually Works', reddit:'r/loseit' },
+  { day:30, topic:'30-Day Content Review',            niche:'mindset',     keyword:'content creator tips 30 days', longTail:'how to grow social media following in 30 days consistently', aff:'CB Profit Club', hook:'After 30 days of consistent content the results speak for themselves', yt:'30 Days of Daily Content — What Actually Happened', pin:'30-Day Content Challenge Results', reddit:'r/NewTubers' },
+];
+
+function ContentCalendar() {
+  const [week, setWeek] = useState(1);
+  const [activeDay, setActiveDay] = useState(null);
+  const [copied, setCopied] = useState('');
+  const [calChecked, setCalChecked] = useState(function() {
+    try { return JSON.parse(localStorage.getItem('cf_30day_checked') || '{}'); } catch { return {}; }
+  });
+
+  function copy(text, id) {
+    navigator.clipboard.writeText(text).catch(function(){});
+    setCopied(id);
+    setTimeout(function(){ setCopied(''); }, 2000);
+  }
+
+  function toggleCalCheck(dayNum, taskId) {
+    const key = 'd'+dayNum+'_'+taskId;
+    const newChecked = { ...calChecked, [key]: !calChecked[key] };
+    setCalChecked(newChecked);
+    localStorage.setItem('cf_30day_checked', JSON.stringify(newChecked));
+  }
+
+  function isCalChecked(dayNum, taskId) { return !!calChecked['d'+dayNum+'_'+taskId]; }
+
+  const weekDays = CALENDAR_DAYS.slice((week-1)*7, week*7);
+  const selected = activeDay ? CALENDAR_DAYS[activeDay-1] : null;
+
+  const NICHE_COLORS = { cooking:'#eb6834', health:'#1D9E75', 'meal-prep':'#2a78d6', 'side-hustle':'#8B5CF6', baking:'#F59E0B', finance:'#10B981', 'remote-work':'#06B6D4', mindset:'#EC4899', 'home-income':'#6366F1', niche:'#64748B' };
+
+  return (
+    <div>
+      {/* Week selector */}
+      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        {[1,2,3,4].map(function(w){
+          return (
+            <button key={w} onClick={function(){ setWeek(w); setActiveDay(null); }}
+              style={{ flex:1, padding:'8px', borderRadius:8, border:`1px solid ${week===w?'rgba(29,158,117,.5)':BORD}`, background:week===w?'rgba(29,158,117,.15)':'transparent', color:week===w?GRN:TXT3, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              Week {w}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Day grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:6, marginBottom:12 }}>
+        {weekDays.map(function(d){
+          const tasks = ['yt','pin','reddit','fb'];
+          const doneCount = tasks.filter(function(t){ return isCalChecked(d.day, t); }).length;
+          const color = NICHE_COLORS[d.niche] || TXT3;
+          return (
+            <button key={d.day} onClick={function(){ setActiveDay(activeDay===d.day?null:d.day); }}
+              style={{ padding:'8px 6px', borderRadius:8, border:`1px solid ${activeDay===d.day?color+'80':BORD}`, background:activeDay===d.day?color+'15':'rgba(255,255,255,.03)', cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
+              <div style={{ fontSize:11, color:TXT3, marginBottom:2 }}>Day {d.day}</div>
+              <div style={{ fontSize:9, color:color, fontWeight:700 }}>{d.niche}</div>
+              <div style={{ fontSize:10, color:TXT3, marginTop:3 }}>{doneCount}/{tasks.length}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Day detail */}
+      {selected && (
+        <div style={{ padding:'14px', background:'rgba(255,255,255,.03)', borderRadius:10, border:`1px solid ${NICHE_COLORS[selected.niche]||BORD}33` }}>
+          <div style={{ fontSize:14, fontWeight:700, color:TXT, marginBottom:4 }}>Day {selected.day} — {selected.topic}</div>
+          <div style={{ fontSize:11, color:TXT3, marginBottom:10, fontStyle:'italic' }}>"{selected.hook}"</div>
+
+          {/* Keywords */}
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:TXT2, marginBottom:6 }}>Keywords to use everywhere</div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {[selected.keyword, selected.longTail].map(function(kw, i){
+                return (
+                  <button key={i} onClick={function(){ copy(kw, 'kw'+i+selected.day); }}
+                    style={{ padding:'4px 10px', borderRadius:12, border:`1px solid rgba(79,163,255,.3)`, background:'rgba(79,163,255,.08)', color:'rgba(79,163,255,.9)', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
+                    {copied==='kw'+i+selected.day?'✓ Copied!':kw}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Pre-written titles */}
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:TXT2, marginBottom:6 }}>Pre-written titles — copy and paste</div>
+            {[
+              { label:'▶ YouTube', value:selected.yt, id:'yt' },
+              { label:'📌 Pinterest', value:selected.pin, id:'pin' },
+            ].map(function(f){
+              return (
+                <div key={f.id} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
+                  <span style={{ fontSize:10, color:TXT3, width:70, flexShrink:0 }}>{f.label}</span>
+                  <div style={{ flex:1, fontSize:10, color:TXT2, padding:'4px 8px', background:'rgba(255,255,255,.04)', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.value}</div>
+                  <button onClick={function(){ copy(f.value, f.id+selected.day); }}
+                    style={{ padding:'3px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit', flexShrink:0 }}>
+                    {copied===f.id+selected.day?'✓':'📋'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Task checklist */}
+          <div style={{ fontSize:11, fontWeight:700, color:TXT2, marginBottom:6 }}>Daily tasks</div>
+          {[
+            { id:'yt', label:'▶ Upload YouTube Short', detail:'Generate in Command Center → HeyGen → upload' },
+            { id:'pin', label:'📌 Create Pinterest Pin', detail:selected.pin+' → '+selected.yt.split('—')[0] },
+            { id:'reddit', label:'🔴 Post in '+selected.reddit, detail:'Reddit Finder → engage + share NichRoute link' },
+            { id:'fb', label:'📘 Post to Facebook', detail:'Command Center → copy post → post at 9am or 7pm' },
+          ].map(function(t){
+            const done = isCalChecked(selected.day, t.id);
+            return (
+              <div key={t.id} style={{ display:'flex', gap:8, padding:'6px 0', borderBottom:`1px solid ${BORD}`, alignItems:'center' }}>
+                <button onClick={function(){ toggleCalCheck(selected.day, t.id); }}
+                  style={{ width:18, height:18, borderRadius:4, border:`1.5px solid ${done?GRN:BORD}`, background:done?GRN:'transparent', color:'white', fontSize:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  {done?'✓':''}
+                </button>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:done?TXT3:TXT, textDecoration:done?'line-through':'none' }}>{t.label}</div>
+                  <div style={{ fontSize:10, color:TXT3 }}>{t.detail}</div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={{ marginTop:8, padding:'6px 10px', background:'rgba(29,158,117,.08)', borderRadius:6, fontSize:10, color:GRN }}>
+            Affiliate to feature: {selected.aff}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Daily Action Plan ────────────────────────────────────────────────────────
 function DailyPlan() {
   const [checked, setChecked] = useState(() => {
@@ -805,6 +972,7 @@ export default function TrafficEngine({ onNavigate }) {
         </div>
 
         {activeTab === 'daily'     && <DailyPlan />}
+        {activeTab === 'calendar'  && <ContentCalendar />}
         {activeTab === 'dashboard' && <TrafficDashboard />}
         {activeTab === 'reddit'    && <RedditFinder />}
         {activeTab === 'multiply'  && <ContentMultiplier />}
