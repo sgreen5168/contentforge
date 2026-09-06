@@ -10,11 +10,12 @@ const GRN  = '#1D9E75';
 const API  = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 
 const TABS = [
-  { id:'dashboard', label:'📊 Traffic Dashboard', icon:'📊' },
-  { id:'reddit',    label:'🔴 Reddit Finder',     icon:'🔴' },
-  { id:'multiply',  label:'✨ Content Multiplier', icon:'✨' },
-  { id:'pinterest', label:'📌 Pinterest Queue',    icon:'📌' },
-  { id:'youtube',   label:'▶ YouTube Optimizer',  icon:'▶'  },
+  { id:'daily',     label:'📅 Daily Plan',         icon:'📅' },
+  { id:'dashboard', label:'📊 Traffic Dashboard',  icon:'📊' },
+  { id:'reddit',    label:'🔴 Reddit Finder',      icon:'🔴' },
+  { id:'multiply',  label:'✨ Content Multiplier',  icon:'✨' },
+  { id:'pinterest', label:'📌 Pinterest Queue',     icon:'📌' },
+  { id:'youtube',   label:'▶ YouTube Optimizer',   icon:'▶'  },
 ];
 
 function card(extra) {
@@ -520,17 +521,17 @@ function PinterestQueue() {
 
 // ── YouTube Optimizer ─────────────────────────────────────────────────────────
 function YouTubeOptimizer() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState('');
+  const [ytTitle, setYtTitle] = useState('');
+  const [ytDesc, setYtDesc] = useState('');
+  const [ytTags, setYtTags] = useState('');
   const [copied, setCopied] = useState('');
 
   useEffect(function() {
     try {
       const saved = JSON.parse(localStorage.getItem('cf_cc_results') || 'null');
-      if (saved?.youtubeTitle) setTitle(saved.youtubeTitle);
-      if (saved?.youtubeDescription) setDescription(saved.youtubeDescription);
-      if (saved?.youtubeTags) setTags(saved.youtubeTags);
+      if (saved?.youtubeTitle) setYtTitle(saved.youtubeTitle);
+      if (saved?.youtubeDescription) setYtDesc(saved.youtubeDescription);
+      if (saved?.youtubeTags) setYtTags(saved.youtubeTags);
     } catch(e) {}
   }, []);
 
@@ -558,31 +559,39 @@ function YouTubeOptimizer() {
         <div style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>▶ YouTube Optimizer</div>
         <div style={{ fontSize:11, color:TXT3, marginBottom:10 }}>Auto-loaded from your last Command Center session — edit and copy each field for YouTube Studio</div>
 
-        {[
-          { label:'Video Title', value:title, setter:setTopic, id:'yt_t', placeholder:'SEO-optimized video title with buyer keyword' },
-          { label:'Description', value:description, setter:setDescription, id:'yt_d', placeholder:'Full video description', rows:6 },
-          { label:'Tags', value:tags, setter:setTags, id:'yt_tg', placeholder:'comma, separated, tags' },
-        ].map(function(f){
-          return (
-            <div key={f.id} style={{ marginBottom:10 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:'#EF4444' }}>{f.label}</div>
-                <button onClick={function(){ copy(f.value, f.id); }}
-                  style={{ padding:'2px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
-                  {copied===f.id?'✓ Copied!':'📋 Copy'}
-                </button>
-              </div>
-              {f.rows ? (
-                <textarea value={f.value} onChange={function(e){ f.setter(e.target.value); }}
-                  rows={f.rows} placeholder={f.placeholder}
-                  style={{ ...inp({ resize:'vertical', lineHeight:1.6 }) }} />
-              ) : (
-                <input value={f.value} onChange={function(e){ f.setter(e.target.value); }}
-                  placeholder={f.placeholder} style={inp()} />
-              )}
-            </div>
-          );
-        })}
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#EF4444' }}>Video Title</div>
+            <button onClick={function(){ copy(ytTitle,'yt_t'); }} style={{ padding:'2px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+              {copied==='yt_t'?'✓ Copied!':'📋 Copy'}
+            </button>
+          </div>
+          <input value={ytTitle} onChange={function(e){ setYtTitle(e.target.value); }}
+            placeholder="SEO-optimized video title with buyer keyword" style={inp()} />
+        </div>
+
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#EF4444' }}>Description</div>
+            <button onClick={function(){ copy(ytDesc,'yt_d'); }} style={{ padding:'2px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+              {copied==='yt_d'?'✓ Copied!':'📋 Copy'}
+            </button>
+          </div>
+          <textarea value={ytDesc} onChange={function(e){ setYtDesc(e.target.value); }}
+            rows={6} placeholder="Full video description with affiliate link and hashtags"
+            style={{ ...inp({ resize:'vertical', lineHeight:1.6 }) }} />
+        </div>
+
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#EF4444' }}>Tags</div>
+            <button onClick={function(){ copy(ytTags,'yt_tg'); }} style={{ padding:'2px 8px', borderRadius:4, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>
+              {copied==='yt_tg'?'✓ Copied!':'📋 Copy'}
+            </button>
+          </div>
+          <input value={ytTags} onChange={function(e){ setYtTags(e.target.value); }}
+            placeholder="comma, separated, tags" style={inp()} />
+        </div>
 
         <a href="https://studio.youtube.com" target="_blank" rel="noreferrer"
           style={{ display:'block', padding:'10px', borderRadius:8, border:'none', background:'#EF4444', color:'white', fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center' }}>
@@ -610,9 +619,170 @@ function YouTubeOptimizer() {
   );
 }
 
+// ── Daily Action Plan ────────────────────────────────────────────────────────
+function DailyPlan() {
+  const [checked, setChecked] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cf_daily_checked') || '{}'); } catch { return {}; }
+  });
+
+  const today = new Date().toDateString();
+
+  function toggle(id) {
+    const key = today + '_' + id;
+    const newChecked = { ...checked, [key]: !checked[key] };
+    setChecked(newChecked);
+    localStorage.setItem('cf_daily_checked', JSON.stringify(newChecked));
+  }
+
+  function isChecked(id) { return !!checked[today + '_' + id]; }
+
+  const DAILY_TASKS = [
+    {
+      time: '⏱ 2 min', platform: '🚀 Command Center', color: GRN, id: 'cmd',
+      task: 'Generate new content topic',
+      steps: ['Open Command Center → pick a trending topic from the Buyer Trends search','Click ⚡ Generate Everything → wait 60 seconds','Copy the Facebook post + landing URL'],
+      why: 'Creates your NichRoute page and affiliate-matched content for the day',
+    },
+    {
+      time: '⏱ 5 min', platform: '🎬 HeyGen + YouTube', color: '#EF4444', id: 'yt',
+      task: 'Post one YouTube Short',
+      steps: ['Copy script from Command Center → click 🎬 Use in HeyGen','Paste title and script into HeyGen → select Abigail → generate (2-3 min)','Download MP4 → open YouTube Studio → upload → paste title, description, tags → publish as Short'],
+      why: 'YouTube Shorts builds toward monetization (1000 subscribers + 4000 watch hours)',
+    },
+    {
+      time: '⏱ 2 min', platform: '📌 Pinterest', color: '#E60023', id: 'pin',
+      task: 'Pin one video or image',
+      steps: ['Click 📌 Pinterest Queue tab → Add Current Session to Queue','Copy all fields → open Pinterest → Create Pin → paste title, description, URL','Upload your thumbnail or MP4 → publish'],
+      why: 'Pinterest traffic is evergreen — pins get discovered for months after posting',
+    },
+    {
+      time: '⏱ 3 min', platform: '🔍 Google Search Console', color: '#4285F4', id: 'gsc',
+      task: 'Submit new page to Google',
+      steps: ['In Command Center Step 3 → click 🔍 Submit to Google & Bing','Open Google Search Console → URL Inspection → paste landing page URL','Click Request Indexing'],
+      why: 'Gets your new content indexed by Google same day instead of waiting a week',
+    },
+    {
+      time: '⏱ 1 min', platform: '📘 Facebook', color: '#1877F2', id: 'fb',
+      task: 'Post to Facebook page',
+      steps: ['Copy post from Command Center Step 1','Paste into your Facebook page → publish','Post at 9am or 7pm for maximum reach'],
+      why: 'Even at 1-3% organic reach, consistent posting builds your page audience over time',
+    },
+  ];
+
+  const WEEKLY_TASKS = [
+    { id:'w1', day:'Mon/Thu', task:'Post in 2 Reddit communities', time:'5 min each', detail:'Reddit Finder tab → search your topic → engage with hot posts → share your reply with NichRoute link' },
+    { id:'w2', day:'Any 3 days', task:'Generate 3 new NichRoute pages', time:'2 min each', detail:'Command Center → different topic each time → builds your SEO content library' },
+    { id:'w3', day:'Weekly', task:'Check Traffic Dashboard', time:'2 min', detail:'See which pages are getting clicks → double down on what works → drop what does not' },
+    { id:'w4', day:'Weekly', task:'Add affiliate products from JVZoo/WarriorPlus', time:'5 min', detail:'Find products with 50%+ commission → add to Affiliate Library → they auto-match to content' },
+  ];
+
+  const completedToday = DAILY_TASKS.filter(function(t){ return isChecked(t.id); }).length;
+  const totalMinutes = completedToday * 3;
+
+  return (
+    <div>
+      {/* Progress */}
+      <div style={{ ...card({ marginBottom:16, background:'rgba(29,158,117,.08)', border:'1px solid rgba(29,158,117,.2)' }) }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:GRN }}>📅 Today's Action Plan — {today}</div>
+          <div style={{ fontSize:12, color:GRN, fontWeight:700 }}>{completedToday}/{DAILY_TASKS.length} done · ~{13-totalMinutes} min remaining</div>
+        </div>
+        <div style={{ height:8, background:'rgba(255,255,255,.08)', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ height:'100%', width:(completedToday/DAILY_TASKS.length*100)+'%', background:GRN, borderRadius:4, transition:'width .3s' }} />
+        </div>
+        <div style={{ fontSize:11, color:TXT3, marginTop:6 }}>
+          Complete all 5 tasks daily for 30 days → 10x traffic potential
+        </div>
+      </div>
+
+      {/* Daily tasks */}
+      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+        {DAILY_TASKS.map(function(t){
+          const done = isChecked(t.id);
+          return (
+            <div key={t.id} style={{ ...card({ opacity:done?0.7:1, border:`1px solid ${done?'rgba(29,158,117,.3)':BORD}` }) }}>
+              <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                <button onClick={function(){ toggle(t.id); }}
+                  style={{ width:24, height:24, borderRadius:6, border:`2px solid ${done?GRN:BORD}`, background:done?GRN:'transparent', color:'white', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
+                  {done?'✓':''}
+                </button>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:t.color }}>{t.platform}</span>
+                    <span style={{ fontSize:10, color:TXT3 }}>{t.time}</span>
+                    {done && <span style={{ fontSize:10, color:GRN }}>✅ Done</span>}
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:700, color:done?TXT3:TXT, marginBottom:6, textDecoration:done?'line-through':'none' }}>{t.task}</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:3, marginBottom:6 }}>
+                    {t.steps.map(function(step, i){
+                      return (
+                        <div key={i} style={{ display:'flex', gap:6, fontSize:11, color:TXT2 }}>
+                          <span style={{ color:t.color, flexShrink:0 }}>{i+1}.</span>
+                          <span>{step}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize:10, color:TXT3, fontStyle:'italic' }}>💡 {t.why}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Weekly tasks */}
+      <div style={{ ...card() }}>
+        <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>📆 Weekly Tasks</div>
+        {WEEKLY_TASKS.map(function(t){
+          const done = isChecked(t.id);
+          return (
+            <div key={t.id} style={{ display:'flex', gap:10, padding:'10px 0', borderBottom:`1px solid ${BORD}`, alignItems:'flex-start' }}>
+              <button onClick={function(){ toggle(t.id); }}
+                style={{ width:20, height:20, borderRadius:4, border:`2px solid ${done?GRN:BORD}`, background:done?GRN:'transparent', color:'white', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:2 }}>
+                {done?'✓':''}
+              </button>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:2 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:done?TXT3:TXT, textDecoration:done?'line-through':'none' }}>{t.task}</div>
+                  <span style={{ fontSize:10, color:TXT3 }}>{t.day} · {t.time}</span>
+                </div>
+                <div style={{ fontSize:11, color:TXT3 }}>{t.detail}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 30-day projection */}
+      <div style={{ ...card({ marginTop:12, background:'rgba(99,102,241,.06)', border:'1px solid rgba(99,102,241,.2)' }) }}>
+        <div style={{ fontSize:13, fontWeight:700, color:'#818CF8', marginBottom:10 }}>📈 30-Day Traffic Projection</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+          {[
+            { label:'YouTube Shorts posted', value:'30', sub:'builds toward monetization' },
+            { label:'Pinterest pins created', value:'30', sub:'evergreen traffic for months' },
+            { label:'Reddit posts/replies', value:'8-10', sub:'community traffic' },
+            { label:'NichRoute pages', value:'12+', sub:'indexed by Google & Bing' },
+            { label:'Affiliate links exposed', value:'1,000+', sub:'potential click opportunities' },
+            { label:'Daily time investment', value:'13 min', sub:'per day total' },
+          ].map(function(s,i){
+            return (
+              <div key={i} style={{ padding:'10px 12px', background:'rgba(255,255,255,.03)', borderRadius:8, border:`1px solid ${BORD}` }}>
+                <div style={{ fontSize:20, fontWeight:700, color:'#818CF8' }}>{s.value}</div>
+                <div style={{ fontSize:11, color:TXT2, fontWeight:600 }}>{s.label}</div>
+                <div style={{ fontSize:10, color:TXT3 }}>{s.sub}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function TrafficEngine({ onNavigate }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('daily');
 
   return (
     <div style={{ minHeight:'100vh', background:BG, color:TXT, fontFamily:'system-ui,sans-serif', padding:'24px 20px' }}>
@@ -634,6 +804,7 @@ export default function TrafficEngine({ onNavigate }) {
           })}
         </div>
 
+        {activeTab === 'daily'     && <DailyPlan />}
         {activeTab === 'dashboard' && <TrafficDashboard />}
         {activeTab === 'reddit'    && <RedditFinder />}
         {activeTab === 'multiply'  && <ContentMultiplier />}
