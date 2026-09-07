@@ -10,6 +10,7 @@ import FacebookStudio from './pages/FacebookStudio.jsx';
 import StrategyHub from './pages/StrategyHub.jsx';
 import SocialHub from './pages/SocialHub.jsx';
 import TrafficEngine from './pages/TrafficEngine.jsx';
+import PublishHub from './pages/PublishHub.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import ScriptWriter from './pages/ScriptWriter.jsx';
 import Scheduler from './pages/Scheduler.jsx';
