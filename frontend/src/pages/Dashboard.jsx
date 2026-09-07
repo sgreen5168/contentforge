@@ -817,6 +817,52 @@ export default function Dashboard({ onNavigate }) {
       </div>
 
       {/* Buyer Trends Search */}
+      {/* Zone header with connection status */}
+      <div style={{ marginBottom:12, padding:'10px 14px', background:'rgba(255,255,255,.03)', border:`1px solid ${BORD}`, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+        <div style={{ display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:TXT }}>⚡ Create Zone</div>
+          <div style={{ fontSize:11, color:TXT3 }}>Topic → content → video → landing page → all platforms</div>
+        </div>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {[
+            { label:'NichRoute', ok:true },
+            { label:'Affiliate links', ok:true },
+            { label:'HeyGen', ok:true },
+            { label:'YouTube', ok:true },
+            { label:'Facebook', ok:!!results },
+          ].map(function(s,i){
+            return (
+              <span key={i} style={{ fontSize:10, display:'flex', alignItems:'center', gap:4, color:s.ok?'#34D399':'rgba(255,255,255,.3)' }}>
+                <span style={{ width:5, height:5, borderRadius:'50%', background:s.ok?'#34D399':'rgba(255,255,255,.2)', display:'inline-block' }} />
+                {s.label}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Workflow guide */}
+      <div style={{ marginBottom:12, display:'flex', gap:0, background:'rgba(255,255,255,.02)', border:`1px solid ${BORD}`, borderRadius:10, overflow:'hidden' }}>
+        {[
+          { n:'1', label:'Pick topic', sub:'Buyer trends search below', color:'#2a78d6' },
+          { n:'→', label:'', sub:'', color:'transparent' },
+          { n:'2', label:'Generate', sub:'Post + script + page auto-created', color:'#1D9E75' },
+          { n:'→', label:'', sub:'', color:'transparent' },
+          { n:'3', label:'Video', sub:'Copy script → HeyGen → upload', color:'#8B5CF6' },
+          { n:'→', label:'', sub:'', color:'transparent' },
+          { n:'4', label:'Publish', sub:'Auto-post or copy per platform', color:'#EF4444' },
+        ].map(function(s,i){
+          if (s.n==='→') return <div key={i} style={{ display:'flex', alignItems:'center', padding:'0 6px', color:'rgba(255,255,255,.2)', fontSize:16 }}>→</div>;
+          return (
+            <div key={i} style={{ flex:1, padding:'8px 10px', borderLeft:i>1?`1px solid ${BORD}`:'none' }}>
+              <div style={{ fontSize:10, fontWeight:700, color:s.color, marginBottom:2 }}>Step {s.n}</div>
+              <div style={{ fontSize:11, fontWeight:600, color:TXT }}>{s.label}</div>
+              <div style={{ fontSize:9, color:TXT3, marginTop:1 }}>{s.sub}</div>
+            </div>
+          );
+        })}
+      </div>
+
       <div style={{ marginBottom:16 }}>
         <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:showTrends&&trendResults.length>0?8:0 }}>
           <div style={{ flex:1, position:'relative' }}>
