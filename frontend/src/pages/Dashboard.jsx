@@ -48,7 +48,7 @@ const TOPICS = [
     trendingTitles:['Money habits that changed my finances','How to save $1000 fast starting now','Budgeting tips that actually work 2026'] },
 
   { id:'remote-work',    cat:'remote-work',  label:'Remote Work Setup',            icon:'💻',
-    hook:"The home office setup that doubled productivity — under $200.",
+    hook:"The home office setup that reduced back pain and improved focus — under $200.",
     videoType:'educational', cbSearch:'freelance writing virtual assistant remote', amzSearch:'standing desk ring light blue light glasses',
     trendingTitles:['Home office setup that changed everything','Work from home setup under $200','Remote work tips nobody tells you'] },
 
@@ -123,7 +123,7 @@ const TOPICS = [
     videoType:'product-demo', cbSearch:'', amzSearch:'burr coffee grinder electric',
     trendingTitles:['Why your coffee tastes bad (and the easy fix)','Best burr grinder under $100 — honest review','Stop buying expensive coffee — do this instead'] },
   { id:'pour-over',      cat:'coffee',  label:'Pour Over Coffee in 4 Minutes',  icon:'☕',
-    hook:"A $40 pour over setup produces coffee that beats a $500 machine — here is exactly how.",
+    hook:"A $40 pour over setup produces coffee that rivals expensive machines — here is exactly how.",
     videoType:'educational', cbSearch:'', amzSearch:'pour over coffee maker set',
     trendingTitles:['How to make pour over coffee at home','Pour over vs drip coffee — which is better?','The only coffee setup you need under $50'] },
   { id:'home-latte',     cat:'coffee',  label:'Café Latte at Home for Under $1', icon:'☕',
