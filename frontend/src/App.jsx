@@ -793,6 +793,10 @@ export default function App() {
           {page === 'dashboard'  && <Dashboard onNavigate={navigateTo} />}
           {page === 'composer'   && <Composer onPlatformsChange={setPlatforms} />}
           {page === 'video'      && <VideoEngine />}
+          {page === 'publish'     && <PublishHub onNavigate={navigateTo} />}
+          {page === 'fbstudio'    && <PublishHub onNavigate={navigateTo} />}
+          {page === 'socialhub'   && <PublishHub onNavigate={navigateTo} />}
+          {page === 'submitter'   && <PublishHub onNavigate={navigateTo} />}
           {page === 'scheduler'  && <Scheduler />}
           {page === 'bulk'       && <BulkGenerator />}
           {page === 'email'      && <EmailSettings />}
