@@ -135,7 +135,7 @@ function RedditFinder() {
     setTimeout(function(){ setCopied(''); }, 2000);
   }
 
-  const CATS = ['cooking','health','meal-prep','side-hustle','mindset','remote-work','finance','baking','home-income'];
+  const CATS = ['cooking','health','meal-prep','side-hustle','mindset','remote-work','finance','baking','home-income','coffee','woodworking','outdoor-cooking'];
 
   return (
     <div>
@@ -652,6 +652,20 @@ const CALENDAR_DAYS = [
   { day:28, topic:'High Protein Smoothie Packs',      niche:'health',      keyword:'protein shake meal prep recipes', longTail:'high protein smoothie recipes to make ahead for the week', aff:'Portable Mini Blender', hook:'Missing protein goals is a prep problem not a willpower problem', yt:'Make-Ahead Protein Shakes — 5 Flavors One Blender', pin:'High Protein Smoothie Packs to Make Ahead', reddit:'r/gainit' },
   { day:29, topic:'Gut Health Weight Loss',           niche:'health',      keyword:'gut health weight loss supplement', longTail:'best probiotic supplement for weight loss and metabolism', aff:'LeanBiome', hook:'Most weight loss supplements ignore the thing science says matters most — the gut', yt:'The Science Behind Gut Health and Weight Loss in 2026', pin:'Gut Health for Weight Loss — What Actually Works', reddit:'r/loseit' },
   { day:30, topic:'30-Day Content Review',            niche:'mindset',     keyword:'content creator tips 30 days', longTail:'how to grow social media following in 30 days consistently', aff:'CB Profit Club', hook:'After 30 days of consistent content the results speak for themselves', yt:'30 Days of Daily Content — What Actually Happened', pin:'30-Day Content Challenge Results', reddit:'r/NewTubers' },
+
+  // ── Hobby Niche Expansion ──────────────────────────────────────────────────
+  { day:31, topic:'Best Burr Grinder Under $100',      niche:'coffee',        keyword:'best burr grinder under 100', longTail:'best burr coffee grinder for beginners under 100 dollars', aff:'Burr Coffee Grinder', hook:'Most people ruin good coffee beans before the water even touches them', yt:'Best Burr Coffee Grinder Under $100 — Honest Review', pin:'Best Burr Grinder for Fresh Coffee at Home', reddit:'r/Coffee' },
+  { day:32, topic:'Pour Over Coffee at Home',          niche:'coffee',        keyword:'pour over coffee guide beginners', longTail:'how to make pour over coffee at home step by step', aff:'Pour Over Coffee Set', hook:'A $40 pour over setup makes better coffee than a $500 machine', yt:'How to Make Pour Over Coffee at Home — Complete Guide', pin:'Pour Over Coffee Setup for Beginners', reddit:'r/Coffee' },
+  { day:33, topic:'Home Latte Without Espresso Machine',niche:'coffee',       keyword:'homemade latte without espresso machine', longTail:'how to make a latte at home without an espresso machine', aff:'Electric Milk Frother', hook:'Spending $7 a day on lattes adds up to $2,500 a year — here is the fix', yt:'Café Quality Latte at Home for Under $1 — No Machine Needed', pin:'How to Make a Latte at Home Without an Espresso Machine', reddit:'r/Coffee' },
+  { day:34, topic:'Beginner Woodworking Projects',     niche:'woodworking',   keyword:'beginner woodworking projects easy', longTail:'easy woodworking projects for beginners with basic tools', aff:'Wood Carving Tools Set', hook:'Most people think woodworking requires a full shop — these 3 projects need one tool', yt:'3 Beginner Woodworking Projects You Can Make This Weekend', pin:'Easy Beginner Woodworking Projects With Basic Tools', reddit:'r/woodworking' },
+  { day:35, topic:'Wood Carving for Beginners',        niche:'woodworking',   keyword:'wood carving for beginners guide', longTail:'how to start wood carving as a beginner with no experience', aff:'Wood Carving Tools Set', hook:'Wood carving looks complicated until you see what a beginner can make in one afternoon', yt:'How to Start Wood Carving — Complete Beginner Guide', pin:'Wood Carving for Beginners — Tools and First Projects', reddit:'r/Whittling' },
+  { day:36, topic:'DIY Wood Sanding and Finishing',    niche:'woodworking',   keyword:'wood sanding finishing tips', longTail:'how to sand and finish wood for beginners diy projects', aff:'Random Orbital Sander', hook:'The difference between a good and great wood project is almost always the sanding', yt:'How to Sand and Finish Wood Like a Pro — Beginner Tips', pin:'DIY Wood Finishing Guide — Sanding to Final Coat', reddit:'r/DIY' },
+  { day:37, topic:'Cast Iron Cooking Outdoors',        niche:'outdoor-cooking',keyword:'cast iron outdoor cooking tips', longTail:'how to cook with cast iron skillet outdoors camping', aff:'Cast Iron Skillet Set', hook:'Cast iron over a campfire produces better food than most restaurant kitchens', yt:'Cast Iron Cooking Over Fire — 3 Outdoor Meals Anyone Can Make', pin:'Outdoor Cast Iron Cooking Guide for Beginners', reddit:'r/CampingandHiking' },
+  { day:38, topic:'Camping Meals on a Portable Stove', niche:'outdoor-cooking',keyword:'camping meals portable stove easy', longTail:'easy camping meals to make on a portable camp stove', aff:'Portable Camp Stove Burner', hook:'Eating well while camping does not mean eating from a can', yt:'5 Easy Camping Meals on a Portable Stove — No Cooler Needed', pin:'Easy Camping Meals for a Portable Camp Stove', reddit:'r/CampingandHiking' },
+  { day:39, topic:'Backyard BBQ Smoking Guide',        niche:'outdoor-cooking',keyword:'beginner bbq smoking guide', longTail:'how to smoke meat in backyard bbq for beginners', aff:'BBQ Smoker Box for Grill', hook:'Smoked food from a backyard grill tastes better than most bbq restaurants', yt:'How to Smoke Meat in Your Backyard Grill — Beginner Guide', pin:'Beginner BBQ Smoking Guide — Smoker Box Setup', reddit:'r/BBQ' },
+  { day:40, topic:'Coffee Bean Roast Guide',           niche:'coffee',        keyword:'coffee roast guide light dark medium', longTail:'difference between light medium dark roast coffee explained', aff:'Burr Coffee Grinder', hook:'Most people drink dark roast thinking it has more caffeine — here is the truth', yt:'Light vs Medium vs Dark Roast Coffee — What Nobody Tells You', pin:'Coffee Roast Guide — How to Pick the Right Beans', reddit:'r/Coffee' },
+  { day:41, topic:'Woodworking Router Basics',         niche:'woodworking',   keyword:'wood router beginner guide', longTail:'how to use a wood router for beginners step by step', aff:'Compact Wood Router Kit', hook:'A router turns basic boards into professional-looking furniture in minutes', yt:'How to Use a Wood Router — Complete Beginner Tutorial', pin:'Wood Router Basics for Beginners — Setup and First Cuts', reddit:'r/woodworking' },
+  { day:42, topic:'Outdoor Dutch Oven Cooking',        niche:'outdoor-cooking',keyword:'dutch oven outdoor cooking recipes', longTail:'easy dutch oven recipes for camping and outdoor cooking', aff:'Cast Iron Skillet Set', hook:'One pot over a fire can produce a meal that impresses any dinner guest', yt:'Dutch Oven Outdoor Cooking — 3 Recipes Over a Campfire', pin:'Easy Dutch Oven Recipes for Outdoor Cooking', reddit:'r/CampingandHiking' },
 ];
 
 function ContentCalendar() {
@@ -680,13 +694,13 @@ function ContentCalendar() {
   const weekDays = CALENDAR_DAYS.slice((week-1)*7, week*7);
   const selected = activeDay ? CALENDAR_DAYS[activeDay-1] : null;
 
-  const NICHE_COLORS = { cooking:'#eb6834', health:'#1D9E75', 'meal-prep':'#2a78d6', 'side-hustle':'#8B5CF6', baking:'#F59E0B', finance:'#10B981', 'remote-work':'#06B6D4', mindset:'#EC4899', 'home-income':'#6366F1', niche:'#64748B' };
+  const NICHE_COLORS = { cooking:'#eb6834', health:'#1D9E75', 'meal-prep':'#2a78d6', 'side-hustle':'#8B5CF6', baking:'#F59E0B', finance:'#10B981', 'remote-work':'#06B6D4', mindset:'#EC4899', 'home-income':'#6366F1', niche:'#64748B', coffee:'#7C4A1E', woodworking:'#A0522D', 'outdoor-cooking':'#FF6B35' };
 
   return (
     <div>
       {/* Week selector */}
       <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-        {[1,2,3,4].map(function(w){
+        {[1,2,3,4,5,6].map(function(w){
           return (
             <button key={w} onClick={function(){ setWeek(w); setActiveDay(null); }}
               style={{ flex:1, padding:'8px', borderRadius:8, border:`1px solid ${week===w?'rgba(29,158,117,.5)':BORD}`, background:week===w?'rgba(29,158,117,.15)':'transparent', color:week===w?GRN:TXT3, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
