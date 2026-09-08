@@ -87,7 +87,7 @@ export default function Sidebar({ page, setPage, platforms, onLogout, isOpen, on
               className={`${styles.navItem} ${isActive ? styles.active : ''}`}
               onClick={() => {
                 if (zone.id === 'create') setPage('dashboard');
-                else if (zone.id === 'publish') setPage('video');
+                else if (zone.id === 'publish') setPage('publish');
                 else if (zone.id === 'grow') setPage('traffic');
                 else if (zone.id === 'earn') setPage('affiliate');
                 onClose && onClose();
