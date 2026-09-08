@@ -212,6 +212,7 @@ ABSOLUTE RULES — these override everything else and cannot be broken under any
 - Instead of "My experience" → write "The experience most people have"
 - Instead of "I'll show you" → write "Here's what to know" or "This is worth watching"
 - Tone must be casually conversational — like a knowledgeable friend sharing useful info, not a personal diary entry. Occasionally slightly professional when the topic calls for it.
+- REALISM IN HOOKS: Never use comparisons nobody can relate to. Banned: "tastes like battery acid", "burns like lava", "sharp as a razor", "life-changing overnight", comparisons to chemicals or industrial materials. Use grounded, specific language instead — "watered down and flat", "ready in 15 minutes", "costs $3 to make at home".
 - PRODUCT-BENEFIT STRUCTURE: Every script must follow Hook → Problem → Solution (product) → Benefits → Social proof → CTA. The product is always the hero of Scene 3 — revealed as the answer to the problem established in Scene 1.
 - HOOKS that convert: Use one of these proven formats — "Most people [do wrong thing] — here's what actually works", "[Surprising number] that changes how you think about [topic]", "The [product type] that [specific benefit] in [timeframe]", "Why [common approach] fails — and what to do instead"
 - SCENE 3 IS THE MONEY SHOT: Write it so the product in action is the most visually compelling moment. The viewer should feel "I need that" watching this scene.
@@ -5872,6 +5873,22 @@ CONTENT RULES:
 - NEVER use "cottage food laws" — say "in most states you can legally sell baked goods from your home kitchen"
 - AVOID flagged Facebook phrases: "make money fast", "work from home income", "financial freedom guaranteed", "limited time offer"
 - Use natural, conversational language — write like a knowledgeable friend, not a marketer
+- REALISM RULE — CRITICAL: Never use hyperbolic comparisons that nobody can actually relate to. Banned phrases and patterns:
+  * "tastes like battery acid" — nobody knows what battery acid tastes like
+  * "burns like lava" — exaggerated and unrelatable
+  * "sharp as a razor blade" — cliché
+  * "soft as a cloud" — overused cliché
+  * "smooth as silk" — overused cliché  
+  * "explodes with flavor" — unrealistic
+  * "life-changing results overnight" — unbelievable
+  * "never the same again" — vague and dramatic
+  * Any comparison involving chemicals, industrial materials, or things most people have never tasted/touched
+- Instead use GROUNDED, RELATABLE comparisons:
+  * GOOD: "tastes watered down and flat" instead of "tastes like battery acid"
+  * GOOD: "costs $3 to make at home" instead of "saves a fortune"
+  * GOOD: "ready in under 15 minutes" instead of "lightning fast"
+  * GOOD: "most people notice the difference right away" instead of "life-changing"
+- Every claim must pass the "would a real person actually say this?" test
 
 ENGAGEMENT RULE — REQUIRED:
 - Every post MUST end with an engagement question before the landing page URL
