@@ -48,7 +48,7 @@ const TOPICS = [
     trendingTitles:['Money habits that changed my finances','How to save $1000 fast starting now','Budgeting tips that actually work 2026'] },
 
   { id:'remote-work',    cat:'remote-work',  label:'Remote Work Setup',            icon:'💻',
-    hook:"The home office setup that reduced back pain and improved focus — under $200.",
+    hook:"The home office setup that doubled productivity — under $200.",
     videoType:'educational', cbSearch:'freelance writing virtual assistant remote', amzSearch:'standing desk ring light blue light glasses',
     trendingTitles:['Home office setup that changed everything','Work from home setup under $200','Remote work tips nobody tells you'] },
 
@@ -116,60 +116,6 @@ const TOPICS = [
     hook:"A full week of dinners for less than you spend on one takeout order.",
     videoType:'educational', cbSearch:'meal planning budget cooking', amzSearch:'instant pot budget meals cookbook',
     trendingTitles:['Dinners under $5 per serving','Budget meal prep for the week','Cheap meals that actually taste good'] },
-
-  // ── Coffee Niche ──────────────────────────────────────────────────────────
-  { id:'burr-grinder',   cat:'coffee',  label:'Why Cheap Coffee Tastes Bitter', icon:'☕',
-    hook:"The real reason your home coffee never tastes as good as the coffee shop — and the $40 fix.",
-    videoType:'product-demo', cbSearch:'', amzSearch:'burr coffee grinder electric',
-    trendingTitles:['Why your coffee tastes bad (and the easy fix)','Best burr grinder under $100 — honest review','Stop buying expensive coffee — do this instead'] },
-  { id:'pour-over',      cat:'coffee',  label:'Pour Over Coffee in 4 Minutes',  icon:'☕',
-    hook:"A $40 pour over setup produces coffee that rivals expensive machines — here is exactly how.",
-    videoType:'educational', cbSearch:'', amzSearch:'pour over coffee maker set',
-    trendingTitles:['How to make pour over coffee at home','Pour over vs drip coffee — which is better?','The only coffee setup you need under $50'] },
-  { id:'home-latte',     cat:'coffee',  label:'Café Latte at Home for Under $1', icon:'☕',
-    hook:"Spending $7 a day on lattes adds up to $2,500 a year. Here is the two-minute fix.",
-    videoType:'product-demo', cbSearch:'', amzSearch:'electric milk frother handheld',
-    trendingTitles:['Make a latte at home for under $1','Stop spending $7 on lattes — do this instead','Milk frother latte recipe that actually works'] },
-  { id:'coffee-roasts',  cat:'coffee',  label:'Dark Roast Has Less Caffeine',    icon:'☕',
-    hook:"Most people drink dark roast thinking it is stronger. Science says the opposite.",
-    videoType:'educational', cbSearch:'', amzSearch:'light roast coffee beans specialty',
-    trendingTitles:['Dark roast vs light roast caffeine truth','Coffee roast guide for beginners','What nobody tells you about coffee roasts'] },
-
-  // ── Woodworking Niche ─────────────────────────────────────────────────────
-  { id:'wood-carving-start', cat:'woodworking', label:'Start Wood Carving This Weekend', icon:'🪵',
-    hook:"Wood carving looks intimidating until you see what a beginner makes in one afternoon with one knife.",
-    videoType:'educational', cbSearch:'', amzSearch:'wood carving tools set beginner',
-    trendingTitles:['How to start wood carving as a total beginner','Wood carving for beginners — first project','One knife is all you need to start wood carving'] },
-  { id:'diy-wood-project', cat:'woodworking', label:'3 DIY Projects That Sell on Etsy', icon:'🪵',
-    hook:"These three beginner woodworking projects sell on Etsy for $40–$120 each and take one afternoon to make.",
-    videoType:'educational', cbSearch:'home business etsy selling', amzSearch:'wood carving tools beginner whittling',
-    trendingTitles:['Woodworking projects that sell on Etsy','Make money with beginner woodworking','Easy wood crafts people actually buy'] },
-  { id:'sanding-secrets', cat:'woodworking', label:'The Sanding Mistake Killing Your Projects', icon:'🪵',
-    hook:"One sanding mistake makes every DIY wood project look amateur — most beginners make it every single time.",
-    videoType:'educational', cbSearch:'', amzSearch:'random orbital sander woodworking beginner',
-    trendingTitles:['Sanding mistakes beginners always make','How to get a smooth wood finish every time','The sanding secret pros never tell you'] },
-  { id:'wood-router-basics', cat:'woodworking', label:'Wood Router Turns Boards Into Furniture', icon:'🪵',
-    hook:"A wood router is the one tool that turns basic lumber into furniture that looks professionally made.",
-    videoType:'educational', cbSearch:'', amzSearch:'wood router kit beginner compact',
-    trendingTitles:['Wood router for beginners — complete guide','How to use a router to make furniture','Router woodworking projects for beginners'] },
-
-  // ── Outdoor Cooking Niche ─────────────────────────────────────────────────
-  { id:'cast-iron-fire',  cat:'outdoor-cooking', label:'Cast Iron Over Fire Changes Everything', icon:'🔥',
-    hook:"Cast iron over an open fire produces food that no indoor oven or pan can replicate — here is why.",
-    videoType:'product-demo', cbSearch:'', amzSearch:'cast iron skillet set outdoor cooking',
-    trendingTitles:['Cast iron cooking over campfire — beginner guide','Why cast iron makes better food outdoors','3 campfire cast iron meals anyone can make'] },
-  { id:'camping-meals',   cat:'outdoor-cooking', label:'5 Camping Meals That Feel Like Restaurants', icon:'🏕️',
-    hook:"These five camp meals take 20 minutes on a portable stove and impress everyone at the campsite.",
-    videoType:'educational', cbSearch:'', amzSearch:'portable camp stove burner outdoor',
-    trendingTitles:['Easy camping meals that actually taste good','Camp cooking on a portable stove — 5 recipes','Camping food upgrade — what to make instead of canned beans'] },
-  { id:'backyard-smoker', cat:'outdoor-cooking', label:'Restaurant BBQ From Your Backyard Grill', icon:'🔥',
-    hook:"A $15 smoker box turns any regular grill into a full BBQ smoker — the results are restaurant quality.",
-    videoType:'product-demo', cbSearch:'', amzSearch:'bbq smoker box wood chips grill',
-    trendingTitles:['How to smoke meat on a regular grill','BBQ smoker box setup for beginners','Smoked ribs at home without a smoker — here is how'] },
-  { id:'dutch-oven-camp', cat:'outdoor-cooking', label:'One Pot Over Fire Feeds the Whole Camp', icon:'🏕️',
-    hook:"A dutch oven over campfire coals can produce a meal so good people think it came from a restaurant.",
-    videoType:'educational', cbSearch:'', amzSearch:'cast iron dutch oven camping outdoor',
-    trendingTitles:['Dutch oven camping recipes for beginners','One pot campfire cooking that impresses everyone','Dutch oven over fire — 3 easy meals'] },
 ];
 
 // High-view video strategies built into each topic type
@@ -236,6 +182,13 @@ export default function Dashboard({ onNavigate }) {
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
   const [showHeygenPanel, setShowHeygenPanel] = useState(false);
+  const [scheduledPosts, setScheduledPosts] = useState([]);
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [schedulePlatform, setSchedulePlatform] = useState('facebook');
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState(null);
   const [thumbUrl, setThumbUrl] = useState(null);
   const [thumbLoading, setThumbLoading] = useState(false);
   const [fbPosting, setFbPosting] = useState(false);
@@ -778,6 +731,51 @@ export default function Dashboard({ onNavigate }) {
       setFbPostResult({ success: false, error: e.message });
     }
     setFbPosting(false);
+  }
+
+  // Load scheduled posts
+  async function loadScheduledPosts() {
+    try {
+      const r = await fetch(API + '/api/scheduler/posts');
+      const d = await r.json();
+      setScheduledPosts(d.posts || []);
+    } catch(e) { console.warn(e); }
+  }
+
+  // Schedule current post
+  async function schedulePost() {
+    if (!results?.post) { alert('Generate content first'); return; }
+    if (!scheduleDate) { alert('Pick a date'); return; }
+    setScheduling(true); setScheduleResult(null);
+    try {
+      const scheduledFor = new Date(scheduleDate + 'T' + scheduleTime + ':00').toISOString();
+      const r = await fetch(API + '/api/scheduler/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: schedulePlatform,
+          content: results.post,
+          link: results.landingUrl || '',
+          topic: selectedTopic?.label || '',
+          trackingTag: '',
+          scheduledFor,
+        }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setScheduleResult({ success: true, message: 'Scheduled for ' + new Date(scheduledFor).toLocaleString() });
+      loadScheduledPosts();
+    } catch(e) {
+      setScheduleResult({ success: false, message: e.message });
+    }
+    setScheduling(false);
+  }
+
+  async function deleteScheduledPost(id) {
+    try {
+      await fetch(API + '/api/scheduler/posts/' + id, { method: 'DELETE' });
+      loadScheduledPosts();
+    } catch(e) { console.warn(e); }
   }
 
   function resizeForPlatform(file, targetW, targetH, callback) {
