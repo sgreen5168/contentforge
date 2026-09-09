@@ -4442,7 +4442,8 @@ app.post('/api/nichroute/create-page', async (req, res) => {
     let finalAffUrl = affiliateUrl;
     if (affiliateUrl && affiliateUrl.includes('amazon.com/dp/')) {
       const asin = affiliateUrl.match(/\/dp\/([A-Z0-9]+)/)?.[1];
-      const tag = affiliateUrl.match(/tag=([^&]+)/)?.[1] || 'nichroute-20';
+      const category = topic?.cat || topic?.category || '';
+      const tag = affiliateUrl.match(/tag=([^&]+)/)?.[1] || getAmazonTag(category);
       if (asin) {
         finalAffUrl = 'https://www.amazon.com/s?k=' + encodeURIComponent(affiliateName || asin) + '&tag=' + tag;
       }
@@ -4722,7 +4723,7 @@ Suggest ${count} affiliate products total (mix of ClickBank and Amazon) that wou
       const link = {
         id,
         name: product.name,
-        url: 'https://www.amazon.com/s?tag=nichroute-20&k=' + searchParam,
+        url: 'https://www.amazon.com/s?tag=' + getAmazonTag(req.body?.category || '') + '&k=' + searchParam,
         platform: 'amazon',
         category: category || 'general',
         keywords: product.keywords || [],
@@ -5557,11 +5558,47 @@ Return ONLY valid JSON:
     const raw = response.content[0]?.text || '{}';
     const clean = raw.replace(/```json|```/g, '').trim();
     const multiplied = JSON.parse(clean);
-    res.json({ success: true, ...multiplied });
+    const category = req.body?.category || '';
+    const amazonTag = getAmazonTag(category);
+    res.json({ success: true, ...multiplied, amazonTag, trackingNote: 'Amazon tag ' + amazonTag + ' used for ' + (category||'default') + ' category' });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+
+// ── Amazon Tracking ID Map — one per content category ─────────────────────
+// Each category gets its own Amazon Associates tracking tag
+// This lets you see exactly which content category drives each sale
+// All tags must be registered at affiliate-program.amazon.com/gp/associates/network/main.html
+const AMAZON_TRACKING_TAGS = {
+  'mindset':         'nichroute-mind-20',
+  'home-income':     'nichroute-home-20',
+  'side-hustle':     'nichroute-side-20',
+  'health':          'nichroute-hlth-20',
+  'meal-prep':       'nichroute-meal-20',
+  'baking':          'nichroute-bake-20',
+  'cooking':         'nichroute-cook-20',
+  'finance':         'nichroute-fin-20',
+  'remote-work':     'nichroute-wfh-20',
+  'fitness':         'nichroute-fit-20',
+  'coffee':          'nichroute-cafe-20',
+  'woodworking':     'nichroute-wood-20',
+  'outdoor-cooking': 'nichroute-bbq-20',
+  'niche':           'nichroute-nich-20',
+  'default':         'nichroute-20',
+};
+
+function getAmazonTag(category) {
+  if (!category) return AMAZON_TRACKING_TAGS.default;
+  const cat = (category || '').toLowerCase().replace(/[^a-z-]/g, '');
+  return AMAZON_TRACKING_TAGS[cat] || AMAZON_TRACKING_TAGS.default;
+}
+
+function buildAmazonUrl(searchTerm, category) {
+  const tag = getAmazonTag(category);
+  return 'https://www.amazon.com/s?k=' + encodeURIComponent(searchTerm) + '&tag=' + tag;
+}
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
