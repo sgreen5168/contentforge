@@ -5600,7 +5600,224 @@ function buildAmazonUrl(searchTerm, category) {
   return 'https://www.amazon.com/s?k=' + encodeURIComponent(searchTerm) + '&tag=' + tag;
 }
 
-app.get('/health', (_req, res) => {
+
+// ── Post Scheduler ────────────────────────────────────────────────────────────
+// Stores scheduled posts in Supabase and auto-publishes at the right time
+
+// Get all scheduled posts
+app.get('/api/scheduler/posts', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+    const { data, error } = await db
+      .from('scheduled_posts')
+      .select('*')
+      .order('scheduled_for', { ascending: true });
+    if (error) throw new Error(error.message);
+    res.json({ posts: data || [] });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Schedule a new post
+app.post('/api/scheduler/add', async (req, res) => {
+  const { platform, content, link, scheduledFor, topic, trackingTag, mediaUrl } = req.body;
+  if (!platform || !content || !scheduledFor) {
+    return res.status(400).json({ error: 'platform, content, and scheduledFor required' });
+  }
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    // Create table if not exists
+    await db.rpc('exec', { sql: `
+      CREATE TABLE IF NOT EXISTS scheduled_posts (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        platform TEXT NOT NULL,
+        content TEXT NOT NULL,
+        link TEXT,
+        media_url TEXT,
+        topic TEXT,
+        tracking_tag TEXT,
+        scheduled_for TIMESTAMPTZ NOT NULL,
+        status TEXT DEFAULT 'pending',
+        result TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    ` }).catch(() => {}); // ignore if already exists
+
+    const { data, error } = await db
+      .from('scheduled_posts')
+      .insert({
+        platform,
+        content,
+        link: link || '',
+        media_url: mediaUrl || '',
+        topic: topic || '',
+        tracking_tag: trackingTag || '',
+        scheduled_for: scheduledFor,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    res.json({ success: true, post: data });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete a scheduled post
+app.delete('/api/scheduler/posts/:id', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+    const { error } = await db
+      .from('scheduled_posts')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) throw new Error(error.message);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Process due scheduled posts — called by cron or manually
+app.post('/api/scheduler/process', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    // Get all pending posts that are due
+    const now = new Date().toISOString();
+    const { data: duePosts, error } = await db
+      .from('scheduled_posts')
+      .select('*')
+      .eq('status', 'pending')
+      .lte('scheduled_for', now)
+      .limit(10);
+
+    if (error) throw new Error(error.message);
+    if (!duePosts || duePosts.length === 0) {
+      return res.json({ processed: 0, message: 'No posts due' });
+    }
+
+    const results = [];
+    for (const post of duePosts) {
+      let result = { id: post.id, platform: post.platform, status: 'failed', message: '' };
+
+      try {
+        if (post.platform === 'facebook') {
+          const pageId = process.env.FACEBOOK_PAGE_ID;
+          const token = process.env.FACEBOOK_ACCESS_TOKEN;
+          if (!pageId || !token) throw new Error('Facebook not configured');
+
+          const params = new URLSearchParams({
+            message: post.content,
+            access_token: token,
+          });
+          if (post.link) params.append('link', post.link);
+
+          const fbRes = await fetch(
+            'https://graph.facebook.com/v19.0/' + pageId + '/feed',
+            { method: 'POST', body: params }
+          );
+          const fbData = await fbRes.json();
+          if (fbData.error) throw new Error(fbData.error.message);
+          result.status = 'published';
+          result.message = 'Posted to Facebook — ID: ' + fbData.id;
+
+        } else if (post.platform === 'instagram') {
+          const igAccountId = process.env.INSTAGRAM_ACCOUNT_ID;
+          const igToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+          if (!igAccountId || !igToken) throw new Error('Instagram not configured');
+
+          // Create container
+          const containerParams = new URLSearchParams({
+            caption: post.content.slice(0, 2200),
+            access_token: igToken,
+          });
+          if (post.media_url) {
+            containerParams.append('image_url', post.media_url);
+          } else {
+            throw new Error('Instagram requires an image URL');
+          }
+
+          const cRes = await fetch(
+            'https://graph.facebook.com/v19.0/' + igAccountId + '/media',
+            { method: 'POST', body: containerParams }
+          );
+          const cData = await cRes.json();
+          if (cData.error) throw new Error(cData.error.message);
+
+          await new Promise(r => setTimeout(r, 3000));
+
+          const pRes = await fetch(
+            'https://graph.facebook.com/v19.0/' + igAccountId + '/media_publish',
+            { method: 'POST', body: new URLSearchParams({ creation_id: cData.id, access_token: igToken }) }
+          );
+          const pData = await pRes.json();
+          if (pData.error) throw new Error(pData.error.message);
+          result.status = 'published';
+          result.message = 'Posted to Instagram — ID: ' + pData.id;
+        } else {
+          result.status = 'skipped';
+          result.message = post.platform + ' requires manual posting';
+        }
+      } catch(e) {
+        result.status = 'failed';
+        result.message = e.message;
+      }
+
+      // Update post status in DB
+      await db.from('scheduled_posts').update({
+        status: result.status,
+        result: result.message,
+      }).eq('id', post.id);
+
+      results.push(result);
+      console.log('Scheduler:', result.platform, result.status, result.message);
+    }
+
+    res.json({ processed: results.length, results });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Auto-process scheduler every time server gets a health check
+// This runs the scheduler approximately every 5 minutes
+let lastSchedulerRun = 0;
+app.get('/health', async (_req, res) => {
+  // Auto-run scheduler every 5 minutes
+  const now = Date.now();
+  if (now - lastSchedulerRun > 5 * 60 * 1000) {
+    lastSchedulerRun = now;
+    try {
+      const db = await getNichrouteClient();
+      if (db) {
+        const nowISO = new Date().toISOString();
+        const { data: duePosts } = await db
+          .from('scheduled_posts')
+          .select('*')
+          .eq('status', 'pending')
+          .lte('scheduled_for', nowISO)
+          .limit(5);
+
+        if (duePosts && duePosts.length > 0) {
+          console.log('Scheduler: found', duePosts.length, 'due posts — processing');
+          // Process in background
+          fetch('http://localhost:' + (process.env.PORT || 3001) + '/api/scheduler/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).catch(e => console.warn('Scheduler process error:', e.message));
+        }
+      }
+    } catch(e) { console.warn('Scheduler check error:', e.message); }
+  }
   res.json({ status: 'ok', version: '2.0', luma: !!process.env.LUMA_API_KEY, r2: !!process.env.R2_BUCKET_NAME, supabase: !!process.env.SUPABASE_URL });
 });
 
