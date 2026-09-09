@@ -5630,23 +5630,6 @@ app.post('/api/scheduler/add', async (req, res) => {
     const db = await getNichrouteClient();
     if (!db) return res.status(500).json({ error: 'DB not configured' });
 
-    // Create table if not exists
-    await db.rpc('exec', { sql: `
-      CREATE TABLE IF NOT EXISTS scheduled_posts (
-        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        platform TEXT NOT NULL,
-        content TEXT NOT NULL,
-        link TEXT,
-        media_url TEXT,
-        topic TEXT,
-        tracking_tag TEXT,
-        scheduled_for TIMESTAMPTZ NOT NULL,
-        status TEXT DEFAULT 'pending',
-        result TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    ` }).catch(() => {}); // ignore if already exists
-
     const { data, error } = await db
       .from('scheduled_posts')
       .insert({
