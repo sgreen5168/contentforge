@@ -5777,20 +5777,16 @@ let lastSchedulerRun = 0;
 
 // ── Facebook Token Refresh ────────────────────────────────────────────────────
 
-// Step 1 — Generate OAuth URL for token refresh
+// Step 1 — Return Graph API Explorer URL for manual token copy
 app.get('/api/facebook/auth-url', (req, res) => {
-  const appId = process.env.FACEBOOK_APP_ID;
-  const redirectUri = process.env.FRONTEND_URL + '/token-callback.html';
-  if (!appId) return res.status(400).json({ error: 'FACEBOOK_APP_ID not configured' });
-
-  const scope = 'pages_manage_posts,pages_read_engagement,pages_show_list,instagram_basic,instagram_content_publish';
-  const url = 'https://www.facebook.com/dialog/oauth' +
-    '?client_id=' + appId +
-    '&redirect_uri=' + encodeURIComponent(redirectUri) +
-    '&scope=' + encodeURIComponent(scope) +
-    '&response_type=token';
-
-  res.json({ url });
+  // Direct to Graph API Explorer — simplest way to get a fresh token
+  const explorerUrl = 'https://developers.facebook.com/tools/explorer/' +
+    '?method=GET&path=me%2Faccounts&version=v19.0';
+  res.json({
+    url: explorerUrl,
+    instructions: 'In Graph API Explorer: select ContentForge app → Generate Access Token → authorize → copy the token shown',
+    method: 'manual'
+  });
 });
 
 // Step 2 — Exchange short-lived token for long-lived token + get page token
