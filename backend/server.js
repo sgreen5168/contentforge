@@ -4474,37 +4474,96 @@ app.post('/api/nichroute/create-page', async (req, res) => {
            </a>
          </div>` : '';
 
-    const postBlock = postContent
-      ? `<div style="background:#f8f9fa;border-radius:12px;padding:24px;margin:24px 0;font-size:15px;line-height:1.8;color:#333;white-space:pre-wrap;">${postContent.slice(0, 1500)}</div>`
+    // Fetch a Pexels image for the landing page
+    let heroImageUrl = '';
+    let inlineImageUrl = '';
+    if (process.env.PEXELS_API_KEY) {
+      try {
+        const pexelsFetch = (await import('node-fetch')).default;
+        const searchTerm = (topic || '').slice(0, 40);
+        // Hero image - landscape
+        const heroRes = await pexelsFetch(
+          'https://api.pexels.com/v1/search?query=' + encodeURIComponent(searchTerm) + '&per_page=2&orientation=landscape',
+          { headers: { Authorization: process.env.PEXELS_API_KEY } }
+        );
+        if (heroRes.ok) {
+          const heroData = await heroRes.json();
+          heroImageUrl = heroData.photos?.[0]?.src?.large2x || heroData.photos?.[0]?.src?.large || '';
+          inlineImageUrl = heroData.photos?.[1]?.src?.medium || heroData.photos?.[0]?.src?.medium || '';
+        }
+      } catch(e) { console.warn('Pexels image fetch error:', e.message); }
+    }
+
+    // Format post content with inline image embedded after first paragraph
+    let formattedPost = '';
+    if (postContent) {
+      const paragraphs = postContent.slice(0, 1500).split('\n').filter(p => p.trim());
+      const firstPara = paragraphs[0] || '';
+      const restParas = paragraphs.slice(1).join('\n\n');
+      formattedPost = firstPara +
+        (inlineImageUrl ? `\n\n[INLINE_IMAGE]` : '') +
+        (restParas ? '\n\n' + restParas : '');
+    }
+
+    const inlineImgHtml = inlineImageUrl
+      ? `<div style="margin:24px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);">
+           <img src="${inlineImageUrl}" alt="${topic}" style="width:100%;height:auto;display:block;" loading="lazy" />
+           <div style="padding:8px 12px;background:#f8f9fa;font-size:12px;color:#666;">📸 Related to: ${topic}</div>
+         </div>`
       : '';
 
-    const pageHtml = `<!DOCTYPE html>
+    const postBlock = formattedPost
+      ? `<div style="font-size:15px;line-height:1.9;color:#333;">
+          ${formattedPost.split('[INLINE_IMAGE]').map((part, i) =>
+            (i === 1 ? inlineImgHtml : '') +
+            '<p style="margin-bottom:16px;">' + part.split('\n\n').join('</p><p style="margin-bottom:16px;">') + '</p>'
+          ).join('')}
+         </div>`
+      : '';
+
+    const heroStyle = heroImageUrl
+      ? \`background:linear-gradient(rgba(11,24,41,.75),rgba(11,24,41,.85)),url('\${heroImageUrl}') center/cover no-repeat;color:#E8F4F0;padding:80px 24px 60px;text-align:center\`
+      : \`background:linear-gradient(135deg,#0B1829,#112240);color:#E8F4F0;padding:80px 24px 60px;text-align:center\`;
+
+    const pageHtml = \`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${topic} | ContentForge</title>
-<meta name="description" content="${(postContent||topic).slice(0,160)}">
+<title>\${topic} | NichRoute</title>
+<meta name="description" content="\${(postContent||topic).slice(0,160)}">
+<meta property="og:title" content="\${topic}" />
+<meta property="og:description" content="\${(postContent||topic).slice(0,160)}" />
+\${heroImageUrl ? \`<meta property="og:image" content="\${heroImageUrl}" />\` : ''}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:#fff;color:#1a1a1a;line-height:1.6}
-.hero{background:linear-gradient(135deg,#0B1829,#112240);color:#E8F4F0;padding:60px 24px 40px;text-align:center}
-h1{font-size:clamp(22px,4vw,36px);font-weight:700;margin-bottom:16px;line-height:1.3}
-.content{max-width:680px;margin:0 auto;padding:32px 24px}
+.hero{\${heroStyle}}
+h1{font-size:clamp(24px,4vw,42px);font-weight:800;margin-bottom:16px;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hero-sub{font-size:16px;opacity:.85;max-width:600px;margin:0 auto 24px;line-height:1.6}
+.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 14px;font-size:12px;margin-bottom:16px;backdrop-filter:blur(4px)}
+.content{max-width:720px;margin:0 auto;padding:40px 24px}
+.content p{margin-bottom:18px;font-size:16px;line-height:1.8;color:#2d3748}
+img{max-width:100%;height:auto}
 </style>
 </head>
 <body>
 <div class="hero">
-  <h1>${topic}</h1>
+  <div class="badge">✦ Featured</div>
+  <h1>\${topic}</h1>
+  <p class="hero-sub">\${(postContent||'').split('\\n')[0].slice(0,120) || topic}</p>
 </div>
 <div class="content">
-  ${affBlock}
-  ${postBlock}
-  ${videoBlock}
-  ${affBlock}
+  \${affBlock}
+  \${postBlock}
+  \${videoBlock}
+  \${affBlock}
+  <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
+    <p>This page contains affiliate links. As an affiliate we may earn a commission when you purchase through our links, at no extra cost to you.</p>
+  </div>
 </div>
 </body>
-</html>`;
+</html>\`;
 
     // Generate a DIFFERENT landing page body from the post
     // The post hooks — the landing page closes with deeper value + product tie-in
@@ -5864,8 +5923,9 @@ app.get('/api/facebook/token-status', async (req, res) => {
   }
 
   try {
+    // Use /me endpoint which only needs basic token — no pages_read_engagement needed
     const r = await fetch(
-      'https://graph.facebook.com/v19.0/' + pageId + '?fields=name,fan_count&access_token=' + token
+      'https://graph.facebook.com/v19.0/me?fields=name&access_token=' + token
     );
     const d = await r.json();
 
@@ -5877,10 +5937,17 @@ app.get('/api/facebook/token-status', async (req, res) => {
       });
     }
 
+    // Also try to get page info
+    let pageName = d.name || 'Connected';
+    try {
+      const pr = await fetch('https://graph.facebook.com/v19.0/' + pageId + '?fields=name&access_token=' + token);
+      const pd = await pr.json();
+      if (pd.name) pageName = pd.name;
+    } catch(e) {}
+
     res.json({
       status: 'valid',
-      pageName: d.name,
-      followers: d.fan_count || 0,
+      pageName,
       message: 'Token is valid',
       expired: false,
     });
