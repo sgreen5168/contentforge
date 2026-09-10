@@ -780,6 +780,29 @@ export default function Dashboard({ onNavigate }) {
     } catch(e) { console.warn(e); }
   }
 
+  function refreshFbToken() {
+    setFbRefreshing(true);
+    fetch(API + '/api/facebook/auth-url')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.error) { alert(d.error); setFbRefreshing(false); return; }
+        const popup = window.open(d.url, 'fb_auth', 'width=600,height=700,left=200,top=100');
+        function handleMsg(e) {
+          if (e.data && e.data.type === 'fb_token_refreshed') {
+            window.removeEventListener('message', handleMsg);
+            setFbTokenStatus({ status:'valid', pageName: e.data.pageName });
+            setFbRefreshing(false);
+            alert('Token refreshed for ' + e.data.pageName + ' — update Railway: FACEBOOK_ACCESS_TOKEN and INSTAGRAM_ACCESS_TOKEN');
+          }
+        }
+        window.addEventListener('message', handleMsg);
+        const timer = setInterval(function(){
+          if (popup && popup.closed){ clearInterval(timer); window.removeEventListener('message', handleMsg); setFbRefreshing(false); }
+        }, 1000);
+      })
+      .catch(function(){ setFbRefreshing(false); });
+  }
+
   function resizeForPlatform(file, targetW, targetH, callback) {
     if (!file || !file.type.startsWith('image/')) return;
     const img = new Image();
