@@ -5774,6 +5774,125 @@ app.post('/api/scheduler/process', async (req, res) => {
 // Auto-process scheduler every time server gets a health check
 // This runs the scheduler approximately every 5 minutes
 let lastSchedulerRun = 0;
+
+// ── Facebook Token Refresh ────────────────────────────────────────────────────
+
+// Step 1 — Generate OAuth URL for token refresh
+app.get('/api/facebook/auth-url', (req, res) => {
+  const appId = process.env.FACEBOOK_APP_ID;
+  const redirectUri = process.env.FRONTEND_URL + '/token-callback.html';
+  if (!appId) return res.status(400).json({ error: 'FACEBOOK_APP_ID not configured' });
+
+  const scope = 'pages_manage_posts,pages_read_engagement,pages_show_list,instagram_basic,instagram_content_publish';
+  const url = 'https://www.facebook.com/dialog/oauth' +
+    '?client_id=' + appId +
+    '&redirect_uri=' + encodeURIComponent(redirectUri) +
+    '&scope=' + encodeURIComponent(scope) +
+    '&response_type=token';
+
+  res.json({ url });
+});
+
+// Step 2 — Exchange short-lived token for long-lived token + get page token
+app.post('/api/facebook/refresh-token', async (req, res) => {
+  const { accessToken } = req.body;
+  if (!accessToken) return res.status(400).json({ error: 'accessToken required' });
+
+  const appId = process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
+
+  try {
+    // Exchange for long-lived token (60 days)
+    let longToken = accessToken;
+    if (appSecret) {
+      const exchangeRes = await fetch(
+        'https://graph.facebook.com/oauth/access_token' +
+        '?grant_type=fb_exchange_token' +
+        '&client_id=' + appId +
+        '&client_secret=' + appSecret +
+        '&fb_exchange_token=' + accessToken
+      );
+      const exchangeData = await exchangeRes.json();
+      if (exchangeData.access_token) {
+        longToken = exchangeData.access_token;
+        console.log('Token exchanged for long-lived token');
+      }
+    }
+
+    // Get page-specific token
+    const pagesRes = await fetch(
+      'https://graph.facebook.com/v19.0/me/accounts?access_token=' + longToken
+    );
+    const pagesData = await pagesRes.json();
+    const page = pagesData.data?.[0];
+
+    if (!page) {
+      return res.status(400).json({ error: 'No pages found — make sure you authorized the right account', raw: pagesData });
+    }
+
+    const pageToken = page.access_token;
+    const pageId = page.id;
+    const pageName = page.name;
+
+    // Update Railway environment variables via Railway API
+    // Since we can't update Railway vars programmatically without the Railway API key,
+    // we return the tokens for the user to update manually
+    // But we store them in memory for immediate use
+    process.env.FACEBOOK_ACCESS_TOKEN = pageToken;
+    process.env.FACEBOOK_PAGE_ID = pageId;
+
+    console.log('Facebook token refreshed — page:', pageName, 'ID:', pageId);
+
+    res.json({
+      success: true,
+      pageName,
+      pageId,
+      pageToken,
+      userToken: longToken,
+      message: 'Token refreshed successfully — valid for up to 60 days',
+      instructions: 'Copy the pageToken and userToken to Railway variables to make permanent',
+    });
+  } catch(e) {
+    console.error('Token refresh error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Step 3 — Test current token
+app.get('/api/facebook/token-status', async (req, res) => {
+  const token = process.env.FACEBOOK_ACCESS_TOKEN;
+  const pageId = process.env.FACEBOOK_PAGE_ID;
+
+  if (!token || !pageId) {
+    return res.json({ status: 'not_configured', message: 'Facebook not configured' });
+  }
+
+  try {
+    const r = await fetch(
+      'https://graph.facebook.com/v19.0/' + pageId + '?fields=name,fan_count&access_token=' + token
+    );
+    const d = await r.json();
+
+    if (d.error) {
+      return res.json({
+        status: 'expired',
+        message: 'Token expired: ' + d.error.message,
+        expired: true,
+      });
+    }
+
+    res.json({
+      status: 'valid',
+      pageName: d.name,
+      followers: d.fan_count || 0,
+      message: 'Token is valid',
+      expired: false,
+    });
+  } catch(e) {
+    res.json({ status: 'error', message: e.message, expired: true });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   // Auto-run scheduler every 5 minutes
   const now = Date.now();
