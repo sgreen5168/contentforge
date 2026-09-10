@@ -181,6 +181,8 @@ export default function Dashboard({ onNavigate }) {
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
+  const [fbTokenStatus, setFbTokenStatus] = useState(null);
+  const [fbRefreshing, setFbRefreshing] = useState(false);
   const [showHeygenPanel, setShowHeygenPanel] = useState(false);
   const [scheduledPosts, setScheduledPosts] = useState([]);
   const [showScheduler, setShowScheduler] = useState(false);
