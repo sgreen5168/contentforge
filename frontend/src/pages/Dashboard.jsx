@@ -1779,12 +1779,70 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ padding:12, background:'rgba(255,255,255,.04)', borderRadius:9, border:`1px solid ${BORD}` }}>
               <div style={{ fontSize:11, fontWeight:700, color:'#4FA3FF', marginBottom:6 }}>Step 5 — Schedule for later (optional)</div>
               <div style={{ fontSize:11, color:TXT3, marginBottom:8, lineHeight:1.5 }}>
-                Save the post to your scheduler to post at the best time — 9am or 7pm typically get the most reach on Facebook.
+                Schedule this post to auto-publish at the best time — 9am or 7pm gets the most reach on Facebook.
               </div>
-              <button onClick={()=>onNavigate&&onNavigate('submitter')}
-                style={{ padding:'8px 16px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
-                📅 Open Post Submitter
+              <button onClick={function(){ setShowScheduler(!showScheduler); if(!showScheduler){ loadScheduledPosts(); const d=new Date(); d.setDate(d.getDate()+1); setScheduleDate(d.toISOString().split('T')[0]); } }}
+                style={{ padding:'8px 16px', borderRadius:7, border:'1px solid rgba(99,102,241,.4)', background:'rgba(99,102,241,.1)', color:'#818CF8', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                🕐 {showScheduler ? 'Hide Scheduler' : 'Schedule This Post'}
               </button>
+
+              {showScheduler && (
+                <div style={{ marginTop:10 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:8 }}>
+                    <div>
+                      <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Platform</div>
+                      <select value={schedulePlatform} onChange={function(e){ setSchedulePlatform(e.target.value); }}
+                        style={{ width:'100%', padding:'7px 8px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, fontSize:11, color:TXT, fontFamily:'inherit' }}>
+                        <option value="facebook" style={{ background:'#0B1829' }}>📘 Facebook</option>
+                        <option value="instagram" style={{ background:'#0B1829' }}>📸 Instagram</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Date</div>
+                      <input type="date" value={scheduleDate} onChange={function(e){ setScheduleDate(e.target.value); }}
+                        style={{ width:'100%', padding:'7px 8px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, fontSize:11, color:TXT, fontFamily:'inherit', boxSizing:'border-box' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize:10, color:TXT3, marginBottom:3 }}>Time</div>
+                      <select value={scheduleTime} onChange={function(e){ setScheduleTime(e.target.value); }}
+                        style={{ width:'100%', padding:'7px 8px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:6, fontSize:11, color:TXT, fontFamily:'inherit' }}>
+                        {['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'].map(function(t){
+                          return <option key={t} value={t} style={{ background:'#0B1829' }}>{t}</option>;
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ fontSize:10, color:TXT3, marginBottom:8, padding:'5px 8px', background:'rgba(255,255,255,.03)', borderRadius:5 }}>
+                    Best times: 9:00 AM · 12:00 PM · 7:00 PM
+                  </div>
+                  <button onClick={schedulePost} disabled={scheduling}
+                    style={{ width:'100%', padding:'8px', borderRadius:7, border:'none', background:scheduling?'rgba(99,102,241,.3)':'#6366F1', color:'white', fontSize:11, fontWeight:700, cursor:scheduling?'default':'pointer', fontFamily:'inherit', marginBottom:6 }}>
+                    {scheduling?'⏳ Scheduling...':'🕐 Schedule This Post'}
+                  </button>
+                  {scheduleResult && (
+                    <div style={{ padding:'6px 10px', borderRadius:6, background:scheduleResult.success?'rgba(5,150,105,.08)':'rgba(239,68,68,.08)', border:`1px solid ${scheduleResult.success?'rgba(5,150,105,.2)':'rgba(239,68,68,.2)'}`, fontSize:11, color:scheduleResult.success?'#34D399':'#FC8F8F', marginBottom:6 }}>
+                      {scheduleResult.success?'✅ '+scheduleResult.message:'❌ '+scheduleResult.message}
+                    </div>
+                  )}
+                  {scheduledPosts.length > 0 && (
+                    <div style={{ marginTop:8 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:TXT2, marginBottom:4 }}>Upcoming posts</div>
+                      {scheduledPosts.slice(0,5).map(function(p){
+                        return (
+                          <div key={p.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderBottom:`1px solid ${BORD}` }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:11, color:TXT }}>{p.platform==='facebook'?'📘':'📸'} {p.topic||p.platform}</div>
+                              <div style={{ fontSize:10, color:TXT3 }}>{new Date(p.scheduled_for).toLocaleString()} · <span style={{ color:p.status==='published'?'#34D399':p.status==='failed'?'#FC8F8F':TXT3 }}>{p.status}</span></div>
+                            </div>
+                            <button onClick={function(){ deleteScheduledPost(p.id); }}
+                              style={{ padding:'2px 7px', borderRadius:4, border:'1px solid rgba(239,68,68,.3)', background:'transparent', color:'#FC8F8F', fontSize:9, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
