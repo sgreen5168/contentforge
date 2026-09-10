@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ContentForge — Connecting Facebook...</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0B1829; color: #E8F4F0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .card { background: #0F2035; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 40px; text-align: center; max-width: 480px; width: 90%; }
+  .icon { font-size: 48px; margin-bottom: 16px; }
+  h2 { margin: 0 0 8px; font-size: 20px; }
+  p { color: rgba(232,244,240,.6); margin: 8px 0; font-size: 14px; }
+  .token-box { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 12px; margin: 16px 0; font-size: 11px; color: rgba(232,244,240,.5); word-break: break-all; text-align: left; max-height: 80px; overflow: hidden; }
+  .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; background: #1D9E75; color: white; font-weight: 700; font-size: 14px; border: none; cursor: pointer; font-family: inherit; margin: 8px 4px; text-decoration: none; }
+  .btn-copy { background: #6366F1; }
+  .success { color: #34D399; }
+  .error { color: #FC8F8F; }
+  .status { margin-top: 16px; font-size: 13px; min-height: 20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon" id="icon">⏳</div>
+  <h2 id="title">Connecting to Facebook...</h2>
+  <p id="message">Exchanging token and getting your page access...</p>
+  <div class="token-box" id="token-display" style="display:none"></div>
+  <div class="status" id="status"></div>
+  <div id="actions" style="display:none; margin-top:16px;">
+    <button class="btn btn-copy" onclick="copyTokens()">📋 Copy tokens to clipboard</button>
+    <a href="https://contentstudiohub.com" class="btn">← Back to ContentForge</a>
+    <p style="margin-top:12px; font-size:12px;">Paste the page token into Railway → FACEBOOK_ACCESS_TOKEN<br>and the user token into INSTAGRAM_ACCESS_TOKEN</p>
+  </div>
+</div>
+
+<script>
+const API = 'https://contentforge-production-6e13.up.railway.app';
+let tokenData = null;
+
+async function init() {
+  // Get token from URL hash (Facebook returns it here)
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+
+  if (!accessToken) {
+    document.getElementById('icon').textContent = '❌';
+    document.getElementById('title').textContent = 'No token received';
+    document.getElementById('message').textContent = 'Facebook did not return a token. Please try again.';
+    document.getElementById('actions').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('message').textContent = 'Exchanging for long-lived page token...';
+
+  try {
+    const r = await fetch(API + '/api/facebook/refresh-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken }),
+    });
+    const d = await r.json();
+
+    if (d.error) {
+      document.getElementById('icon').textContent = '❌';
+      document.getElementById('title').textContent = 'Token exchange failed';
+      document.getElementById('message').textContent = d.error;
+      return;
+    }
+
+    tokenData = d;
+    document.getElementById('icon').textContent = '✅';
+    document.getElementById('title').textContent = 'Connected to ' + d.pageName;
+    document.getElementById('message').textContent = d.message;
+    document.getElementById('token-display').style.display = 'block';
+    document.getElementById('token-display').textContent =
+      'Page Token (→ FACEBOOK_ACCESS_TOKEN):\n' + d.pageToken.substring(0, 40) + '...\n\n' +
+      'User Token (→ INSTAGRAM_ACCESS_TOKEN):\n' + d.userToken.substring(0, 40) + '...';
+    document.getElementById('actions').style.display = 'block';
+    document.getElementById('status').innerHTML = '<span class="success">✅ Page: ' + d.pageName + ' · ID: ' + d.pageId + '</span>';
+
+    // Auto-close and redirect after 3 seconds if opener exists
+    if (window.opener) {
+      window.opener.postMessage({ type: 'fb_token_refreshed', ...d }, '*');
+      setTimeout(function() { window.close(); }, 3000);
+    }
+  } catch(e) {
+    document.getElementById('icon').textContent = '❌';
+    document.getElementById('title').textContent = 'Error';
+    document.getElementById('message').textContent = e.message;
+  }
+}
+
+function copyTokens() {
+  if (!tokenData) return;
+  const text = 'FACEBOOK_ACCESS_TOKEN=' + tokenData.pageToken + '\nINSTAGRAM_ACCESS_TOKEN=' + tokenData.userToken;
+  navigator.clipboard.writeText(text).catch(function(){});
+  document.getElementById('status').innerHTML = '<span class="success">✅ Tokens copied — paste into Railway variables</span>';
+}
+
+init();
+</script>
+</body>
+</html>
