@@ -183,6 +183,9 @@ export default function Dashboard({ onNavigate }) {
   const [indexing, setIndexing] = useState(false);
   const [fbTokenStatus, setFbTokenStatus] = useState(null);
   const [fbRefreshing, setFbRefreshing] = useState(false);
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [manualToken, setManualToken] = useState('');
+  const [tokenSaving, setTokenSaving] = useState(false);
   const [showHeygenPanel, setShowHeygenPanel] = useState(false);
   const [scheduledPosts, setScheduledPosts] = useState([]);
   const [showScheduler, setShowScheduler] = useState(false);
@@ -781,26 +784,29 @@ export default function Dashboard({ onNavigate }) {
   }
 
   function refreshFbToken() {
-    setFbRefreshing(true);
-    fetch(API + '/api/facebook/auth-url')
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (d.error) { alert(d.error); setFbRefreshing(false); return; }
-        const popup = window.open(d.url, 'fb_auth', 'width=600,height=700,left=200,top=100');
-        function handleMsg(e) {
-          if (e.data && e.data.type === 'fb_token_refreshed') {
-            window.removeEventListener('message', handleMsg);
-            setFbTokenStatus({ status:'valid', pageName: e.data.pageName });
-            setFbRefreshing(false);
-            alert('Token refreshed for ' + e.data.pageName + ' — update Railway: FACEBOOK_ACCESS_TOKEN and INSTAGRAM_ACCESS_TOKEN');
-          }
-        }
-        window.addEventListener('message', handleMsg);
-        const timer = setInterval(function(){
-          if (popup && popup.closed){ clearInterval(timer); window.removeEventListener('message', handleMsg); setFbRefreshing(false); }
-        }, 1000);
-      })
-      .catch(function(){ setFbRefreshing(false); });
+    setShowTokenInput(!showTokenInput);
+  }
+
+  async function saveManualToken() {
+    if (!manualToken.trim()) return;
+    setTokenSaving(true);
+    try {
+      const r = await fetch(API + '/api/facebook/refresh-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: manualToken.trim() }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setFbTokenStatus({ status:'valid', pageName: d.pageName });
+      setShowTokenInput(false);
+      setManualToken('');
+      alert('✅ Connected to ' + d.pageName + '\n\nNow update Railway variables:\nFACEBOOK_ACCESS_TOKEN = ' + d.pageToken.slice(0,20) + '...\n\nPage token copied — paste into Railway FACEBOOK_ACCESS_TOKEN');
+      navigator.clipboard.writeText('FACEBOOK_ACCESS_TOKEN=' + d.pageToken + '\nINSTAGRAM_ACCESS_TOKEN=' + manualToken).catch(function(){});
+    } catch(e) {
+      alert('❌ Error: ' + e.message + '\n\nMake sure you copied the full token from Graph API Explorer');
+    }
+    setTokenSaving(false);
   }
 
   function resizeForPlatform(file, targetW, targetH, callback) {
@@ -915,20 +921,40 @@ export default function Dashboard({ onNavigate }) {
               </span>
             );
           })}
-          {fbTokenStatus?.status !== 'valid' && (
-            <button onClick={refreshFbToken} disabled={fbRefreshing}
-              style={{ padding:'3px 10px', borderRadius:5, border:'1px solid rgba(239,68,68,.4)', background:'rgba(239,68,68,.1)', color:'#FC8F8F', fontSize:10, fontWeight:700, cursor:fbRefreshing?'default':'pointer', fontFamily:'inherit' }}>
-              {fbRefreshing?'⏳':'🔄'} {fbRefreshing?'Refreshing...':'Refresh Facebook Token'}
-            </button>
-          )}
-          {fbTokenStatus?.status === 'valid' && (
-            <button onClick={refreshFbToken} disabled={fbRefreshing}
-              style={{ padding:'3px 10px', borderRadius:5, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
-              🔄 Re-auth Facebook
-            </button>
-          )}
+          <button onClick={refreshFbToken}
+            style={{ padding:'3px 10px', borderRadius:5, border:fbTokenStatus?.status==='valid'?`1px solid ${BORD}`:'1px solid rgba(239,68,68,.4)', background:fbTokenStatus?.status==='valid'?'transparent':'rgba(239,68,68,.1)', color:fbTokenStatus?.status==='valid'?TXT3:'#FC8F8F', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            🔄 {fbTokenStatus?.status==='valid'?'Re-auth Facebook':'Refresh Facebook Token'}
+          </button>
         </div>
       </div>
+
+      {/* Token refresh panel */}
+      {showTokenInput && (
+        <div style={{ marginBottom:12, padding:'12px 14px', background:'rgba(24,119,242,.06)', border:'1px solid rgba(24,119,242,.2)', borderRadius:10 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:'#4FA3FF', marginBottom:8 }}>🔄 Refresh Facebook Token</div>
+          <div style={{ fontSize:11, color:TXT3, marginBottom:10, lineHeight:1.6 }}>
+            1. Go to <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer" style={{ color:'#4FA3FF' }}>Graph API Explorer</a><br/>
+            2. Select <strong style={{ color:TXT2 }}>ContentForge</strong> app → click <strong style={{ color:TXT2 }}>Generate Access Token</strong> → authorize<br/>
+            3. Copy the token that appears → paste below
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <input
+              value={manualToken}
+              onChange={function(e){ setManualToken(e.target.value); }}
+              placeholder="Paste your access token here..."
+              style={{ flex:1, padding:'8px 10px', background:'rgba(22,61,106,.4)', border:`1px solid ${BORD}`, borderRadius:7, fontSize:11, color:TXT, fontFamily:'inherit', outline:'none' }}
+            />
+            <button onClick={saveManualToken} disabled={tokenSaving||!manualToken.trim()}
+              style={{ padding:'8px 14px', borderRadius:7, border:'none', background:tokenSaving?'rgba(24,119,242,.3)':'#1877F2', color:'white', fontSize:11, fontWeight:700, cursor:(tokenSaving||!manualToken.trim())?'default':'pointer', fontFamily:'inherit', flexShrink:0 }}>
+              {tokenSaving?'⏳ Saving...':'✅ Save Token'}
+            </button>
+            <button onClick={function(){ setShowTokenInput(false); setManualToken(''); }}
+              style={{ padding:'8px 12px', borderRadius:7, border:`1px solid ${BORD}`, background:'transparent', color:TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Workflow guide */}
       <div style={{ marginBottom:12, display:'flex', gap:0, background:'rgba(255,255,255,.02)', border:`1px solid ${BORD}`, borderRadius:10, overflow:'hidden' }}>
