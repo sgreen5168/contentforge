@@ -4609,6 +4609,8 @@ ${(postContent||'').slice(0,500)}` }],
       niche: category || 'general',
       affiliate_url: affiliateUrl || '',
       content_type: 'landing_page',
+      hero_image: heroImageUrl || '',
+      inline_image: inlineImageUrl || '',
       created_at: new Date().toISOString(),
     }]).select('id, slug').single();
 
@@ -5043,7 +5045,10 @@ app.get('/api/prerender', async (req, res) => {
     const affUrl = data.affiliate_url || '';
     const niche = data.niche || '';
 
-    // Serve fully rendered HTML for crawlers
+    const heroImage = data.hero_image || '';
+    const inlineImage = data.inline_image || '';
+
+    // Serve fully rendered HTML for crawlers and direct visits
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5056,15 +5061,47 @@ app.get('/api/prerender', async (req, res) => {
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${body.slice(0,200)}">
 <meta property="og:url" content="https://nichroute.com/content.html?slug=${slug}">
+${heroImage ? '<meta property="og:image" content="'+heroImage+'">' : ''}
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#fff;color:#1a1a1a;line-height:1.7}
+.hero{${heroImage
+  ? 'background:linear-gradient(rgba(11,24,41,.7),rgba(11,24,41,.85)),url('+heroImage+') center/cover no-repeat'
+  : 'background:linear-gradient(135deg,#0B1829,#112240)'
+};color:#fff;padding:80px 24px 60px;text-align:center}
+h1{font-size:clamp(24px,4vw,42px);font-weight:800;margin-bottom:12px;line-height:1.2}
+.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 16px;font-size:12px;margin-bottom:16px}
+.content{max-width:720px;margin:0 auto;padding:40px 24px}
+.content p{margin-bottom:18px;font-size:16px;line-height:1.8;color:#374151}
+.inline-img{width:100%;border-radius:12px;margin:24px 0;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.img-caption{font-size:12px;color:#9ca3af;text-align:center;margin-top:-16px;margin-bottom:24px}
+.cta-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:24px;margin:32px 0;text-align:center}
+.cta-btn{display:inline-block;padding:14px 32px;background:#16a34a;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;margin-top:12px}
+footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;margin-top:40px}
+</style>
 </head>
 <body>
-<article>
-<h1>${title}</h1>
-<p><strong>Category:</strong> ${niche}</p>
-${(data.body||'').split('\n\n').slice(0,5).map(p => '<p>'+p.replace(/\*\*/g,'').replace(/#+\s/g,'')+'</p>').join('\n')}
-${affUrl ? '<p><a href="'+affUrl+'">See full product details</a></p>' : ''}
-</article>
-<footer><p><a href="https://nichroute.com">NichRoute</a> — Research-based reviews</p></footer>
+<div class="hero">
+  <div class="badge">✦ ${niche || 'Featured'}</div>
+  <h1>${title}</h1>
+</div>
+<div class="content">
+  ${affUrl ? '<div class="cta-box"><p style="font-weight:600;font-size:15px;margin-bottom:4px;">Ready to explore this topic further?</p><p style="font-size:14px;color:#6b7280;">Check out our recommended resource below.</p><a class="cta-btn" href="'+affUrl+'" target="_blank" rel="noopener">See full product details →</a></div>' : ''}
+  ${(data.body||'').split('\n\n').map((p, i) => {
+    const text = p.replace(/\*\*/g,'').replace(/#+\s/g,'').trim();
+    if (!text) return '';
+    // Insert inline image after second paragraph
+    const img = (i === 1 && inlineImage)
+      ? '<img src="'+inlineImage+'" alt="'+title+'" class="inline-img" loading="lazy"><p class="img-caption">📸 '+title+'</p>'
+      : '';
+    return '<p>' + text + '</p>' + img;
+  }).join('\n')}
+  ${affUrl ? '<div class="cta-box" style="margin-top:40px"><p style="font-weight:700;font-size:16px;margin-bottom:8px;">Want to go deeper on this topic?</p><a class="cta-btn" href="'+affUrl+'" target="_blank" rel="noopener">View Recommended Resource →</a></div>' : ''}
+</div>
+<footer>
+  <p><a href="https://nichroute.com" style="color:#16a34a;">NichRoute</a> · © ${new Date().getFullYear()}</p>
+  <p style="margin-top:6px">Some links on this page may earn us a small commission at no extra cost to you.</p>
+</footer>
 </body>
 </html>`;
 
@@ -5458,7 +5495,7 @@ app.get('/api/traffic/dashboard', async (req, res) => {
     // Get all submissions with their click data
     const { data: submissions } = await db
       .from('submissions')
-      .select('slug, title, niche, created_at, affiliate_url')
+      .select('slug, title, niche, created_at, affiliate_url, hero_image, inline_image')
       .order('created_at', { ascending: false })
       .limit(20);
 
