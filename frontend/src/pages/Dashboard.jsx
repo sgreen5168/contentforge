@@ -1671,7 +1671,7 @@ export default function Dashboard({ onNavigate }) {
                     ↗ View NichRoute Page
                   </a>
                   <a href={(results?.landingUrl||'').replace('https://nichroute.com/content.html?slug=','https://contentforge-production-6e13.up.railway.app/api/page/')} target="_blank" rel="noreferrer"
-                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(29,158,117,.4)', background:'rgba(29,158,117,.1)', color:GRN, fontSize:11, fontWeight:700, textDecoration:'none' }}>
+                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(29,158,117,.4)', background:'rgba(29,158,117,.1)', color:'#1D9E75', fontSize:11, fontWeight:700, textDecoration:'none' }}>
                     🖼 View Styled Page
                   </a>
                   <button onClick={()=>submitToSearchEngines(results.landingUrl || results?.link?.url || '')}
