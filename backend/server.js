@@ -5966,25 +5966,132 @@ app.get('/api/page/:slug', async (req, res) => {
     if (!db) return res.status(500).send('DB not configured');
     const { data, error } = await db.from('submissions').select('*').eq('slug', slug).single();
     if (error || !data) return res.status(404).send('Page not found');
+
     const title = (data.title || slug).replace(/\*\*/g,'').replace(/^#+\s*/,'').trim();
     const body = data.body || '';
     const affUrl = data.affiliate_url || '';
     const niche = data.niche || '';
     const heroImage = data.hero_image || '';
     const inlineImage = data.inline_image || '';
-    const paragraphs = body.split('\n\n').filter(p => p.trim()).map(p => p.replace(/\*\*/g,'').replace(/^#+\s*/,'').trim());
-    const heroStyle = heroImage
-      ? 'background:linear-gradient(rgba(11,24,41,.72),rgba(11,24,41,.82)),url(' + heroImage + ') center/cover no-repeat;color:#fff;padding:90px 24px 70px;text-align:center;min-height:320px;display:flex;align-items:center;justify-content:center;flex-direction:column'
-      : 'background:linear-gradient(135deg,#0B1829 0%,#112240 100%);color:#fff;padding:90px 24px 70px;text-align:center;min-height:320px;display:flex;align-items:center;justify-content:center;flex-direction:column';
-    const ogTag = heroImage ? '<meta property="og:image" content="' + heroImage + '">' : '';
-    const parasHtml = paragraphs.map((p, i) => {
-      const img = (i === 1 && inlineImage) ? '<div style="margin:24px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)"><img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy"></div>' : '';
-      return '<p style="margin-bottom:18px;font-size:16px;line-height:1.85;color:#374151">' + p + '</p>' + img;
-    }).join('');
-    const ctaHtml = affUrl ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:28px;margin:40px 0;text-align:center"><p style="font-weight:700;font-size:18px;margin-bottom:8px;color:#166534">Ready to explore this further?</p><p style="font-size:14px;color:#6b7280;margin-bottom:16px">Check out the recommended resource below</p><a href="' + affUrl + '" target="_blank" rel="noopener" style="display:inline-block;padding:14px 36px;background:#16a34a;color:#fff;border-radius:9px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 2px 8px rgba(22,163,74,.3)">View Recommended Resource &rarr;</a></div>' : '';
-    const year = new Date().getFullYear();
     const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-    const html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + ' &mdash; NichRoute</title><meta name="description" content="' + (paragraphs[0]||title).slice(0,160) + '"><meta property="og:title" content="' + title + '">' + ogTag + '<link rel="canonical" href="https://nichroute.com/content.html?slug=' + slug + '"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#fff}.hero{' + heroStyle + '}.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 16px;font-size:12px;font-weight:500;margin-bottom:18px;text-transform:uppercase;letter-spacing:.05em}h1{font-size:clamp(26px,5vw,46px);font-weight:800;line-height:1.15;max-width:800px;text-shadow:0 2px 12px rgba(0,0,0,.3);margin-bottom:12px}.hero-meta{font-size:14px;opacity:.75}.content{max-width:740px;margin:0 auto;padding:48px 24px}.content p{margin-bottom:18px;font-size:16px;line-height:1.85;color:#374151}footer{text-align:center;padding:28px 24px;font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6;margin-top:40px;line-height:1.8}footer a{color:#16a34a;text-decoration:none}@media(max-width:640px){.content{padding:32px 18px}}</style></head><body><div class="hero"><div class="badge">&#10022; ' + (niche||'Featured') + '</div><h1>' + title + '</h1><div class="hero-meta">' + dateStr + ' &middot; Article</div></div><div class="content">' + parasHtml + ctaHtml + '</div><footer><p>&copy; ' + year + ' NichRoute &mdash; <a href="https://nichroute.com">nichroute.com</a></p><p style="margin-top:6px">This page may contain affiliate links. We may earn a small commission at no extra cost to you.</p></footer></body></html>';
+    const year = new Date().getFullYear();
+
+    // Split content into paragraphs
+    const paragraphs = body.split('\n\n').filter(p => p.trim()).map(p =>
+      p.replace(/\*\*/g,'').replace(/^#+\s*/,'').replace(/^[-•]\s*/,'').trim()
+    ).filter(p => p.length > 20);
+
+    // First paragraph as subheadline
+    const subline = paragraphs[0] ? paragraphs[0].slice(0, 160) + (paragraphs[0].length > 160 ? '...' : '') : '';
+
+    // Remaining paragraphs as body
+    const bodyParas = paragraphs.slice(1);
+
+    // Separate benefit bullets (lines starting with → or -)
+    const allLines = body.split('\n');
+    const bullets = allLines.filter(l => l.trim().match(/^[→•\-]|^\d+\./)).map(l =>
+      l.replace(/^[→•\-\d.]+\s*/,'').replace(/\*\*/g,'').trim()
+    ).filter(l => l.length > 5).slice(0, 5);
+
+    const heroStyle = heroImage
+      ? 'background:linear-gradient(rgba(11,24,41,.68),rgba(11,24,41,.80)),url(' + heroImage + ') center/cover no-repeat'
+      : 'background:linear-gradient(135deg,#0B1829 0%,#0d2035 100%)';
+
+    const ogTag = heroImage ? '<meta property="og:image" content="' + heroImage + '">' : '';
+
+    // Build benefit bullets HTML
+    const bulletsHtml = bullets.length > 0
+      ? '<ul style="list-style:none;margin:0 0 28px">' +
+        bullets.map(b => '<li style="display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #e5e7eb;font-family:system-ui,sans-serif;font-size:15px;color:#374151"><span style="width:20px;height:20px;background:#D1FAE5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#047857;font-weight:700;flex-shrink:0;margin-top:1px">✓</span>' + b + '</li>').join('') +
+        '</ul>'
+      : '';
+
+    // Body paragraphs with inline image after 2nd
+    const bodyHtml = bodyParas.map((p, i) => {
+      const img = (i === 1 && inlineImage)
+        ? '<div style="margin:24px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)"><img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy"></div>'
+        : '';
+      return '<p style="font-family:Georgia,serif;font-size:16px;line-height:1.85;color:#374151;margin-bottom:18px">' + p + '</p>' + img;
+    }).join('');
+
+    // Product image block
+    const productImgHtml = inlineImage
+      ? '<div style="position:relative;width:100%;max-width:380px;margin:0 auto">' +
+        '<div style="position:absolute;inset:-12px -12px -12px 12px;background:#E8F5EE;border-radius:14px;z-index:0"></div>' +
+        '<img src="' + inlineImage + '" alt="' + title + '" style="position:relative;z-index:1;width:100%;border-radius:14px;box-shadow:0 4px 24px rgba(5,150,105,.1);display:block" loading="lazy">' +
+        '<div style="position:absolute;bottom:-14px;left:20px;z-index:2;background:#fff;border-radius:10px;padding:10px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif">' +
+        '<span style="font-size:20px">⭐</span><div style="font-size:12px;color:#5A7A63;line-height:1.3"><strong style="display:block;font-size:13px;color:#0F2419">Highly Rated</strong>Amazon Best Seller</div></div>' +
+        '</div>'
+      : '';
+
+    // CTA button
+    const ctaBtn = affUrl
+      ? '<a href="' + affUrl + '" target="_blank" rel="noopener" style="display:inline-block;background:#059669;color:#fff;font-family:system-ui,sans-serif;font-size:15px;font-weight:600;padding:15px 36px;border-radius:50px;text-decoration:none;box-shadow:0 4px 16px rgba(5,150,105,.35)">View on Amazon &rarr;</a>'
+      : '';
+
+    const html =
+      '<!DOCTYPE html><html lang="en"><head>' +
+      '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>' + title + ' &mdash; NichRoute</title>' +
+      '<meta name="description" content="' + subline.replace(/"/g,"'") + '">' +
+      '<meta property="og:title" content="' + title + '">' +
+      ogTag +
+      '<link rel="canonical" href="https://nichroute.com/content.html?slug=' + slug + '">' +
+      '<style>' +
+      '*{margin:0;padding:0;box-sizing:border-box}' +
+      'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.65}' +
+      '.disclosure{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:12px;color:#2D4A36}' +
+      '.hero{' + heroStyle + ';padding:80px 24px 70px;text-align:left;min-height:min(70vh,520px);display:flex;align-items:flex-end}' +
+      '.hero-inner{max-width:660px;padding-bottom:8px}' +
+      '.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 14px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#fff;letter-spacing:.07em;text-transform:uppercase;margin-bottom:18px}' +
+      'h1{font-size:clamp(28px,5vw,48px);font-weight:400;color:#fff;line-height:1.12;margin-bottom:14px;text-shadow:0 2px 12px rgba(0,0,0,.3)}' +
+      '.hero-sub{font-family:system-ui,sans-serif;font-size:16px;color:rgba(255,255,255,.78);line-height:1.6;max-width:520px}' +
+      '.product-section{background:#F2FFF7;padding:80px 24px}' +
+      '.product-inner{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}' +
+      'h2{font-size:clamp(24px,3vw,36px);font-weight:400;color:#0F2419;line-height:1.2;margin-bottom:18px}' +
+      '.desc{font-family:system-ui,sans-serif;font-size:16px;color:#374151;line-height:1.78;margin-bottom:24px}' +
+      '.body-section{max-width:740px;margin:0 auto;padding:64px 24px}' +
+      '.cta-section{background:linear-gradient(135deg,#047857,#059669);padding:64px 24px;text-align:center}' +
+      '.cta-section h2{color:#fff;margin-bottom:12px}' +
+      '.cta-section p{font-family:system-ui,sans-serif;font-size:16px;color:rgba(255,255,255,.8);margin-bottom:28px}' +
+      '.btn-white{display:inline-block;background:#fff;color:#047857;font-family:system-ui,sans-serif;font-size:15px;font-weight:700;padding:15px 38px;border-radius:50px;text-decoration:none;box-shadow:0 4px 18px rgba(0,0,0,.14)}' +
+      'footer{background:#0F2419;color:rgba(255,255,255,.45);padding:36px 24px;font-family:system-ui,sans-serif;font-size:12px;line-height:1.8;text-align:center}' +
+      'footer a{color:rgba(255,255,255,.45)}' +
+      '@media(max-width:768px){.product-inner{grid-template-columns:1fr}.product-right{display:none}}' +
+      '</style></head><body>' +
+
+      '<div class="disclosure">This page may contain affiliate links. A small commission may be earned on qualifying purchases at no added cost to you.</div>' +
+
+      '<section class="hero"><div class="hero-inner">' +
+      '<div class="badge">&#10022; ' + (niche || 'Featured') + '</div>' +
+      '<h1>' + title + '</h1>' +
+      (subline ? '<p class="hero-sub">' + subline + '</p>' : '') +
+      '</div></section>' +
+
+      '<section class="product-section"><div class="product-inner">' +
+      '<div class="product-left">' +
+      '<h2>What makes this worth a closer look</h2>' +
+      (bodyParas[0] ? '<p class="desc">' + bodyParas[0] + '</p>' : '') +
+      bulletsHtml +
+      ctaBtn +
+      '</div>' +
+      '<div class="product-right">' + productImgHtml + '</div>' +
+      '</div></section>' +
+
+      (bodyHtml ? '<section class="body-section">' + bodyHtml + '</section>' : '') +
+
+      (affUrl ? '<section class="cta-section">' +
+      '<h2>Ready to explore this further?</h2>' +
+      '<p>Compare options and check current pricing before deciding.</p>' +
+      '<a href="' + affUrl + '" target="_blank" rel="noopener" class="btn-white">View on Amazon &rarr;</a>' +
+      '</section>' : '') +
+
+      '<footer>' +
+      '<p>&copy; ' + year + ' NichRoute &nbsp;&middot;&nbsp; <a href="https://nichroute.com">nichroute.com</a> &nbsp;&middot;&nbsp; <a href="https://nichroute.com/privacy.html">Privacy Policy</a></p>' +
+      '<p style="margin-top:6px;color:rgba(255,255,255,.3)">This page contains affiliate links. When a purchase is made through a link on this page, a commission may be earned at no extra cost to you.</p>' +
+      '</footer>' +
+      '</body></html>';
+
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.send(html);
