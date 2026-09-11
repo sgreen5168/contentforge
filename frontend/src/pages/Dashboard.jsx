@@ -1668,7 +1668,11 @@ export default function Dashboard({ onNavigate }) {
                   </button>
                   <a href={results.landingUrl} target="_blank" rel="noreferrer"
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, textDecoration:'none' }}>
-                    ↗ View Live Page
+                    ↗ View NichRoute Page
+                  </a>
+                  <a href={(results?.landingUrl||'').replace('https://nichroute.com/content.html?slug=','https://contentforge-production-6e13.up.railway.app/api/page/')} target="_blank" rel="noreferrer"
+                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(29,158,117,.4)', background:'rgba(29,158,117,.1)', color:GRN, fontSize:11, fontWeight:700, textDecoration:'none' }}>
+                    🖼 View Styled Page
                   </a>
                   <button onClick={()=>submitToSearchEngines(results.landingUrl || results?.link?.url || '')}
                     disabled={indexing || (!results?.landingUrl && !results?.link?.url && !(results?.post||'').includes('nichroute.com'))}
