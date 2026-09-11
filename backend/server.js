@@ -4525,45 +4525,8 @@ app.post('/api/nichroute/create-page', async (req, res) => {
       ? 'background:linear-gradient(rgba(11,24,41,.75),rgba(11,24,41,.85)),url(' + heroImageUrl + ') center/cover no-repeat;color:#E8F4F0;padding:80px 24px 60px;text-align:center'
       : 'background:linear-gradient(135deg,#0B1829,#112240);color:#E8F4F0;padding:80px 24px 60px;text-align:center';
 
-    const pageHtml = \`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>\${topic} | NichRoute</title>
-<meta name="description" content="\${(postContent||topic).slice(0,160)}">
-<meta property="og:title" content="\${topic}" />
-<meta property="og:description" content="\${(postContent||topic).slice(0,160)}" />
-\${heroImageUrl ? '<meta property="og:image" content="' + heroImageUrl + '" />' : ''}
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#fff;color:#1a1a1a;line-height:1.6}
-.hero{\${heroStyle}}
-h1{font-size:clamp(24px,4vw,42px);font-weight:800;margin-bottom:16px;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,.3)}
-.hero-sub{font-size:16px;opacity:.85;max-width:600px;margin:0 auto 24px;line-height:1.6}
-.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 14px;font-size:12px;margin-bottom:16px;backdrop-filter:blur(4px)}
-.content{max-width:720px;margin:0 auto;padding:40px 24px}
-.content p{margin-bottom:18px;font-size:16px;line-height:1.8;color:#2d3748}
-img{max-width:100%;height:auto}
-</style>
-</head>
-<body>
-<div class="hero">
-  <div class="badge">✦ Featured</div>
-  <h1>\${topic}</h1>
-  <p class="hero-sub">\${(postContent||'').split('\\n')[0].slice(0,120) || topic}</p>
-</div>
-<div class="content">
-  \${affBlock}
-  \${postBlock}
-  \${videoBlock}
-  \${affBlock}
-  <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">
-    <p>This page contains affiliate links. As an affiliate we may earn a commission when you purchase through our links, at no extra cost to you.</p>
-  </div>
-</div>
-</body>
-</html>\`;
+    // pageHtml removed — landing page now served via /api/page/:slug endpoint
+
 
     // Generate a DIFFERENT landing page body from the post
     // The post hooks — the landing page closes with deeper value + product tie-in
