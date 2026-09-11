@@ -4522,8 +4522,8 @@ app.post('/api/nichroute/create-page', async (req, res) => {
       : '';
 
     const heroStyle = heroImageUrl
-      ? \`background:linear-gradient(rgba(11,24,41,.75),rgba(11,24,41,.85)),url('\${heroImageUrl}') center/cover no-repeat;color:#E8F4F0;padding:80px 24px 60px;text-align:center\`
-      : \`background:linear-gradient(135deg,#0B1829,#112240);color:#E8F4F0;padding:80px 24px 60px;text-align:center\`;
+      ? 'background:linear-gradient(rgba(11,24,41,.75),rgba(11,24,41,.85)),url(' + heroImageUrl + ') center/cover no-repeat;color:#E8F4F0;padding:80px 24px 60px;text-align:center'
+      : 'background:linear-gradient(135deg,#0B1829,#112240);color:#E8F4F0;padding:80px 24px 60px;text-align:center';
 
     const pageHtml = \`<!DOCTYPE html>
 <html lang="en">
@@ -4534,7 +4534,7 @@ app.post('/api/nichroute/create-page', async (req, res) => {
 <meta name="description" content="\${(postContent||topic).slice(0,160)}">
 <meta property="og:title" content="\${topic}" />
 <meta property="og:description" content="\${(postContent||topic).slice(0,160)}" />
-\${heroImageUrl ? \`<meta property="og:image" content="\${heroImageUrl}" />\` : ''}
+\${heroImageUrl ? '<meta property="og:image" content="' + heroImageUrl + '" />' : ''}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui,-apple-system,sans-serif;background:#fff;color:#1a1a1a;line-height:1.6}
