@@ -6014,7 +6014,8 @@ app.get('/api/page/:slug', async (req, res) => {
       : '';
 
     // Body paragraphs with inline image after 2nd para
-    const bodyHtml = bodyParas.map((p, i) => {
+    const bodyRemaining = bodyParas.slice(1);
+    const bodyHtml = bodyRemaining.map((p, i) => {
       const img = (i === 1 && inlineImage)
         ? '<div style="margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)"><img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy"></div>'
         : '';
