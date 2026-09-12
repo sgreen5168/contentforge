@@ -5983,7 +5983,7 @@ app.get('/api/page/:slug', async (req, res) => {
     else if (affUrl.includes('digistore') || affUrl.includes('checkout-ds24') || affUrl.includes('joinaimarketers')) ctaLabel = 'Get access here';
     else if (affUrl) ctaLabel = 'More information here';
 
-    // Clean body — strip stray URLs and markdown links
+    // Clean body
     const body = rawBody
       .replace(/https?:\/\/[^\s)>"\]]+/g, '')
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
@@ -5995,7 +5995,7 @@ app.get('/api/page/:slug', async (req, res) => {
 
     const subline = paragraphs[0] ? paragraphs[0].slice(0,200) + (paragraphs[0].length>200?'...':'') : '';
 
-    // Extract bullets
+    // Bullets
     const bullets = rawBody.split('\n')
       .filter(l => l.trim().match(/^[→•\-]|^\d+\./))
       .map(l => l.replace(/^[→•\-\d.]+\s*/,'').replace(/\*\*/g,'').trim())
@@ -6009,10 +6009,6 @@ app.get('/api/page/:slug', async (req, res) => {
       p.length > 30
     );
 
-    const heroStyle = heroImage
-      ? 'background:linear-gradient(rgba(11,24,41,.70),rgba(11,24,41,.82)),url(' + heroImage + ') center/cover no-repeat'
-      : 'background:linear-gradient(135deg,#0B1829 0%,#112240 100%)';
-
     const ogTag = heroImage ? '<meta property="og:image" content="' + heroImage + '">' : '';
 
     // Bullets HTML
@@ -6025,28 +6021,27 @@ app.get('/api/page/:slug', async (req, res) => {
         ).join('') + '</ul>'
       : '';
 
-    // Video embed block
+    // Video embed
     const videoBlock = videoUrl
       ? '<div style="margin:32px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)">' +
-        (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')
-          ? '<iframe width="100%" height="400" src="' + videoUrl.replace('watch?v=','embed/').replace('youtu.be/','youtube.com/embed/') + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
-          : '<video controls style="width:100%;display:block;border-radius:12px" preload="metadata"><source src="' + videoUrl + '" type="video/mp4"></video>'
-        ) +
-        '</div>'
+        (videoUrl.includes('youtube') || videoUrl.includes('youtu.be')
+          ? '<iframe width="100%" height="380" src="' + videoUrl.replace('watch?v=','embed/').replace('youtu.be/','youtube.com/embed/') + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
+          : '<video controls style="width:100%;display:block" preload="metadata"><source src="' + videoUrl + '" type="video/mp4"></video>'
+        ) + '</div>'
       : '';
 
-    // Inline image block
+    // Inline image
     const inlineImgBlock = inlineImage
       ? '<div style="margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)">' +
         '<img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy">' +
         '</div>'
       : '';
 
-    // Body HTML — video after first para, inline image after second
+    // Body HTML
     const bodyHtml = bodyParas.map((p, i) => {
       let extra = '';
-      if (i === 0) extra = videoBlock;
-      if (i === 1) extra = inlineImgBlock;
+      if (i === 0 && videoUrl) extra = videoBlock;
+      if (i === 1 && inlineImage) extra = inlineImgBlock;
       return '<p style="font-size:17px;line-height:1.9;color:#374151;margin-bottom:22px;font-family:Georgia,serif">' + p + '</p>' + extra;
     }).join('');
 
@@ -6057,7 +6052,7 @@ app.get('/api/page/:slug', async (req, res) => {
         ctaLabel + '</a>'
       : '';
 
-    // TTS bar — larger button, speed controls
+    // TTS bar with speed controls
     const ttsBar =
       '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:13px 20px;display:flex;align-items:center;gap:14px;z-index:999;box-shadow:0 -2px 16px rgba(0,0,0,.3)">' +
       '<button id="tts-btn" onclick="toggleTTS()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:10px 24px;font-family:system-ui,sans-serif;font-size:15px;font-weight:700;cursor:pointer;min-width:100px">&#9654; Listen</button>' +
@@ -6071,7 +6066,7 @@ app.get('/api/page/:slug', async (req, res) => {
       '</div>' +
       '<script>var _u=null,_p=false,_rate=1;' +
       'function setSpeed(r){_rate=r;["sp08","sp10","sp12"].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background="rgba(255,255,255,.1)";b.style.borderColor="rgba(255,255,255,.2)";b.style.color="rgba(255,255,255,.7)";}});' +
-      'var active=document.getElementById("sp"+String(r).replace(".",""));if(active){active.style.background="rgba(255,255,255,.25)";active.style.borderColor="rgba(255,255,255,.5)";active.style.color="#fff";}' +
+      'var k="sp"+String(r).replace(".","");var a=document.getElementById(k);if(a){a.style.background="rgba(255,255,255,.25)";a.style.borderColor="rgba(255,255,255,.5)";a.style.color="#fff";}' +
       'if(_p&&_u){window.speechSynthesis.cancel();_p=false;toggleTTS();}}' +
       'function toggleTTS(){var btn=document.getElementById("tts-btn");' +
       'if(_p){window.speechSynthesis.cancel();_p=false;btn.innerHTML="&#9654; Listen";return;}' +
@@ -6082,22 +6077,53 @@ app.get('/api/page/:slug', async (req, res) => {
       'document.getElementById("tts-close").onclick=function(){window.speechSynthesis.cancel();_p=false;document.getElementById("tts-bar").style.display="none";};' +
       '<\/script>';
 
+    // Branded site header — honest trust signals only
+    const nicheLabel = (niche||'guide').replace(/-/g,' ');
+
+    const siteHeader =
+      '<header style="background:#0F2419;padding:0">' +
+
+      // Brand bar
+      '<div style="padding:11px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.06)">' +
+      '<div style="display:flex;align-items:center;gap:9px">' +
+      '<div style="width:26px;height:26px;background:#059669;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px">&#127807;</div>' +
+      '<span style="color:#fff;font-size:15px;font-weight:500;font-family:Georgia,serif">NichRoute</span>' +
+      '</div>' +
+      '<div style="font-family:system-ui,sans-serif;font-size:12px;color:rgba(255,255,255,.35)">Affiliate disclosure included on every page</div>' +
+      '</div>' +
+
+      // Branded masthead
+      '<div style="padding:40px 28px 36px;text-align:center">' +
+      '<p style="font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#34D399;letter-spacing:.09em;text-transform:uppercase;margin-bottom:14px">Curated buying guides</p>' +
+      '<h1 style="font-size:clamp(24px,4vw,38px);font-weight:400;color:#fff;line-height:1.15;font-family:Georgia,serif;margin-bottom:10px">' + title + '</h1>' +
+      (subline ? '<p style="font-size:15px;color:rgba(255,255,255,.6);max-width:540px;margin:0 auto 24px;line-height:1.65;font-family:system-ui,sans-serif">' + subline + '</p>' : '') +
+
+      // Honest trust signals
+      '<div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap">' +
+      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">Affiliate disclosure included</span></div>' +
+      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">No personal data collected by this site</span></div>' +
+      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">AI-assisted research</span></div>' +
+      '</div>' +
+      '</div>' +
+
+      // Niche tag strip
+      '<div style="background:#0d2318;padding:10px 28px;text-align:center;border-top:1px solid rgba(255,255,255,.05)">' +
+      '<span style="background:rgba(5,150,105,.18);border:1px solid rgba(5,150,105,.3);border-radius:20px;padding:4px 14px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#34D399;letter-spacing:.06em;text-transform:uppercase">' + nicheLabel + '</span>' +
+      '</div>' +
+
+      '</header>';
+
     const css =
       '*{margin:0;padding:0;box-sizing:border-box}' +
       'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:72px}' +
       '.disc{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:13px;color:#2D4A36}' +
-      '.hero{' + heroStyle + ';min-height:min(55vh,420px);display:flex;align-items:center;justify-content:center;text-align:center;padding:64px 24px}' +
-      '.hw{max-width:660px;margin:0 auto}' +
-      '.badge{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:4px 14px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#fff;letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px}' +
-      'h1{font-size:clamp(26px,4vw,40px);font-weight:400;color:#fff;line-height:1.18;margin-bottom:12px;text-shadow:0 2px 10px rgba(0,0,0,.28)}' +
-      '.hs{font-family:system-ui,sans-serif;font-size:16px;color:rgba(255,255,255,.72);line-height:1.6;max-width:580px;margin:0 auto}' +
       '.content{max-width:720px;margin:0 auto;padding:52px 24px}' +
       'h2{font-size:22px;font-weight:600;font-family:system-ui,sans-serif;color:#0F2419;margin-bottom:14px}' +
       '.foot{background:#0F2419;color:rgba(255,255,255,.5);padding:52px 24px 84px;text-align:center;font-family:system-ui,sans-serif;font-size:14px;line-height:1.8}' +
       '.foot h3{font-size:22px;font-weight:400;color:#fff;margin-bottom:10px;font-family:Georgia,serif}' +
       '.foot p{margin-bottom:14px}.foot a{color:rgba(255,255,255,.5)}' +
       '.legal{font-size:12px;color:rgba(255,255,255,.28);margin-top:16px;line-height:1.7}' +
-      '@media(max-width:640px){.content{padding:36px 18px}.hero{padding:52px 18px 56px}}';
+      '@media(max-width:640px){.content{padding:36px 18px}}';
 
     const html =
       '<!DOCTYPE html><html lang="en"><head>' +
@@ -6106,17 +6132,12 @@ app.get('/api/page/:slug', async (req, res) => {
       '<meta name="description" content="' + subline.replace(/"/g,"'") + '">' +
       '<meta property="og:title" content="' + title + '">' +
       ogTag +
-      (videoUrl && videoUrl.includes('youtube') ? '<meta property="og:video" content="' + videoUrl + '">' : '') +
       '<link rel="canonical" href="https://nichroute.com/content.html?slug=' + slug + '">' +
       '<style>' + css + '</style></head><body>' +
 
-      '<div class="disc">This page may contain affiliate links. A small commission may be earned on qualifying purchases at no added cost.</div>' +
+      siteHeader +
 
-      '<section class="hero"><div class="hw">' +
-      '<div class="badge">&#10022; ' + (niche||'Featured') + '</div>' +
-      '<h1>' + title + '</h1>' +
-      (subline ? '<p class="hs">' + subline + '</p>' : '') +
-      '</div></section>' +
+      '<div class="disc">This page contains affiliate links. A small commission may be earned on qualifying purchases at no added cost to you.</div>' +
 
       '<section class="content" id="page-content">' +
       (bullets.length > 0 ? '<h2>Key points</h2>' + bulletsHtml : '') +
