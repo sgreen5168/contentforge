@@ -5973,86 +5973,118 @@ app.get('/api/page/:slug', async (req, res) => {
     const niche = data.niche || '';
     const heroImage = data.hero_image || '';
     const inlineImage = data.inline_image || '';
-    const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
     const year = new Date().getFullYear();
 
-    // Detect network from URL for button label
+    // Smart CTA label based on affiliate network
     let ctaLabel = 'Learn more';
     if (affUrl.includes('amazon.com')) ctaLabel = 'Learn where to purchase';
     else if (affUrl.includes('clickbank') || affUrl.includes('hop.clickbank')) ctaLabel = 'Get access here';
     else if (affUrl.includes('digistore') || affUrl.includes('checkout-ds24') || affUrl.includes('joinaimarketers')) ctaLabel = 'Get access here';
-    else if (affUrl.includes('awin') || affUrl.includes('warriorplus') || affUrl.includes('jvzoo')) ctaLabel = 'More information here';
-    else if (affUrl) ctaLabel = 'Learn more';
+    else if (affUrl) ctaLabel = 'More information here';
 
-    // Parse content
+    // Parse paragraphs
     const paragraphs = body.split('\n\n').filter(p => p.trim()).map(p =>
-      p.replace(/\*\*/g,'').replace(/^#+\s*/,'').replace(/^[-•]\s*/,'').trim()
+      p.replace(/\*\*/g,'').replace(/^#+\s*/,'').replace(/^[-•→]\s*/,'').trim()
     ).filter(p => p.length > 20);
 
-    const subline = paragraphs[0] ? paragraphs[0].slice(0, 180) + (paragraphs[0].length > 180 ? '...' : '') : '';
+    const subline = paragraphs[0] ? paragraphs[0].slice(0,180) + (paragraphs[0].length>180?'...':'') : '';
     const bodyParas = paragraphs.slice(1);
 
-    const allLines = body.split('\n');
-    const bullets = allLines.filter(l => l.trim().match(/^[→•\-]|^\d+\./)).map(l =>
-      l.replace(/^[→•\-\d.]+\s*/,'').replace(/\*\*/g,'').trim()
-    ).filter(l => l.length > 5).slice(0, 5);
+    // Extract bullet points
+    const bullets = body.split('\n')
+      .filter(l => l.trim().match(/^[→•\-]|^\d+\./))
+      .map(l => l.replace(/^[→•\-\d.]+\s*/,'').replace(/\*\*/g,'').trim())
+      .filter(l => l.length > 5).slice(0,5);
 
     const heroStyle = heroImage
-      ? 'background:linear-gradient(rgba(11,24,41,.68),rgba(11,24,41,.80)),url(' + heroImage + ') center/cover no-repeat'
-      : 'background:linear-gradient(135deg,#0B1829 0%,#0d2035 100%)';
+      ? 'background:linear-gradient(rgba(11,24,41,.70),rgba(11,24,41,.82)),url(' + heroImage + ') center/cover no-repeat'
+      : 'background:linear-gradient(135deg,#0B1829 0%,#112240 100%)';
 
     const ogTag = heroImage ? '<meta property="og:image" content="' + heroImage + '">' : '';
 
+    // Bullets HTML
     const bulletsHtml = bullets.length > 0
-      ? '<ul style="list-style:none;margin:0 0 28px">' +
+      ? '<ul style="list-style:none;margin:0 0 30px">' +
         bullets.map(b =>
-          '<li style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb;font-family:system-ui,sans-serif;font-size:16px;color:#374151">' +
-          '<span style="width:22px;height:22px;background:#D1FAE5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#047857;font-weight:700;flex-shrink:0;margin-top:2px">&#10003;</span>' +
-          b + '</li>'
-        ).join('') +
-        '</ul>'
+          '<li style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb">' +
+          '<span style="width:22px;height:22px;background:#D1FAE5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#047857;font-weight:700;flex-shrink:0;margin-top:3px">&#10003;</span>' +
+          '<span style="font-family:system-ui,sans-serif;font-size:16px;color:#374151;line-height:1.6">' + b + '</span>' +
+          '</li>'
+        ).join('') + '</ul>'
       : '';
 
+    // Body paragraphs with inline image after 2nd para
     const bodyHtml = bodyParas.map((p, i) => {
       const img = (i === 1 && inlineImage)
         ? '<div style="margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)"><img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy"></div>'
         : '';
-      return '<p style="font-family:Georgia,serif;font-size:17px;line-height:1.9;color:#374151;margin-bottom:20px">' + p + '</p>' + img;
+      return '<p style="font-size:17px;line-height:1.9;color:#374151;margin-bottom:22px">' + p + '</p>' + img;
     }).join('');
 
+    // Product image
     const productImgHtml = inlineImage
-      ? '<div style="position:relative;width:100%;max-width:380px;margin:0 auto">' +
+      ? '<div style="position:relative;width:100%;max-width:360px;margin:0 auto">' +
         '<div style="position:absolute;inset:-12px -12px -12px 12px;background:#E8F5EE;border-radius:14px;z-index:0"></div>' +
         '<img src="' + inlineImage + '" alt="' + title + '" style="position:relative;z-index:1;width:100%;border-radius:14px;box-shadow:0 4px 24px rgba(5,150,105,.1);display:block" loading="lazy">' +
-        '<div style="position:absolute;bottom:-14px;left:20px;z-index:2;background:#fff;border-radius:10px;padding:10px 16px;box-shadow:0 4px 16px rgba(0,0,0,.1);display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif">' +
-        '<span style="font-size:20px">&#11088;</span>' +
-        '<div style="font-size:12px;color:#5A7A63;line-height:1.3"><strong style="display:block;font-size:13px;color:#0F2419">Highly Rated</strong>Top Seller</div></div>' +
         '</div>'
       : '';
 
-    // Single CTA button — in footer only
+    // CTA button
     const ctaBtn = affUrl
-      ? '<a href="' + affUrl + '" target="_blank" rel="noopener" style="display:inline-block;background:#059669;color:#fff;font-family:system-ui,sans-serif;font-size:16px;font-weight:600;padding:16px 40px;border-radius:50px;text-decoration:none;box-shadow:0 4px 16px rgba(5,150,105,.35);margin-bottom:24px">' + ctaLabel + '</a>'
+      ? '<a href="' + affUrl + '" target="_blank" rel="noopener" ' +
+        'style="display:inline-block;background:#059669;color:#fff;font-family:system-ui,sans-serif;font-size:16px;font-weight:600;padding:16px 42px;border-radius:50px;text-decoration:none;box-shadow:0 4px 16px rgba(5,150,105,.35);margin-bottom:28px">' +
+        ctaLabel + '</a>'
       : '';
 
-    // Text-to-speech reader script
-    const ttsScript =
-      '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 -2px 12px rgba(0,0,0,.2)">' +
-      '<button id="tts-btn" onclick="toggleTTS()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:8px 20px;font-family:system-ui,sans-serif;font-size:14px;font-weight:600;cursor:pointer">&#9654; Listen</button>' +
-      '<div style="font-family:system-ui,sans-serif;font-size:13px;color:rgba(255,255,255,.6)">Listen to this page</div>' +
-      '<button id="tts-close" style="margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;line-height:1">&times;</button>' +
+    // TTS reader bar
+    const ttsBar =
+      '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:11px 20px;display:flex;align-items:center;gap:12px;z-index:999;box-shadow:0 -2px 12px rgba(0,0,0,.25)">' +
+      '<button id="tts-btn" onclick="toggleTTS()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:8px 18px;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;cursor:pointer">&#9654; Listen</button>' +
+      '<span style="font-family:system-ui,sans-serif;font-size:13px;color:rgba(255,255,255,.55)">Listen to this page</span>' +
+      '<button id="tts-close" style="margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.4);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px">&times;</button>' +
       '</div>' +
       '<script>' +
-      'var ttsUtter=null;var ttsPlaying=false;' +
+      'var _u=null,_p=false;' +
       'function toggleTTS(){' +
-      'if(ttsPlaying){window.speechSynthesis.cancel();ttsPlaying=false;document.getElementById("tts-btn").innerHTML="&#9654; Listen";return;}' +
-      'var text=document.getElementById("page-content").innerText;' +
-      'ttsUtter=new SpeechSynthesisUtterance(text);' +
-      'ttsUtter.rate=0.92;ttsUtter.pitch=1;ttsUtter.lang="en-US";' +
-      'ttsUtter.onend=function(){ttsPlaying=false;document.getElementById("tts-btn").innerHTML="&#9654; Listen";};' +
-      'window.speechSynthesis.speak(ttsUtter);' +
-      'ttsPlaying=true;document.getElementById("tts-btn").innerHTML="&#9646;&#9646; Pause";' +
-      '}<\/script>';
+      'var btn=document.getElementById("tts-btn");' +
+      'if(_p){window.speechSynthesis.cancel();_p=false;btn.innerHTML="&#9654; Listen";return;}' +
+      'var el=document.getElementById("page-content");if(!el)return;' +
+      '_u=new SpeechSynthesisUtterance(el.innerText);' +
+      '_u.rate=0.92;_u.pitch=1;_u.lang="en-US";' +
+      '_u.onend=function(){_p=false;btn.innerHTML="&#9654; Listen";};' +
+      'window.speechSynthesis.speak(_u);_p=true;btn.innerHTML="&#9646;&#9646; Pause";}' +
+      'document.getElementById("tts-close").onclick=function(){window.speechSynthesis.cancel();_p=false;document.getElementById("tts-bar").style.display="none";};' +
+      '<\/script>';
+
+    const css =
+      '*{margin:0;padding:0;box-sizing:border-box}' +
+      'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:68px}' +
+      // Disclosure bar
+      '.disc{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:13px;color:#2D4A36}' +
+      // Hero — centered
+      '.hero{' + heroStyle + ';min-height:min(62vh,460px);display:flex;align-items:center;justify-content:center;text-align:center;padding:72px 24px}' +
+      '.hero-wrap{max-width:680px;margin:0 auto}' +
+      '.badge{display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:4px 14px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#fff;letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px}' +
+      // Topic title — standard readable size, not oversized
+      'h1{font-size:clamp(26px,4vw,40px);font-weight:400;color:#fff;line-height:1.18;margin-bottom:14px;text-shadow:0 2px 10px rgba(0,0,0,.28)}' +
+      // Subline — slightly smaller than body
+      '.hero-sub{font-family:system-ui,sans-serif;font-size:16px;color:rgba(255,255,255,.75);line-height:1.65}' +
+      // Product 2-col section
+      '.prod{background:#F2FFF7;padding:68px 24px}' +
+      '.prod-inner{max-width:1020px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}' +
+      // Section heading
+      'h2{font-size:24px;font-weight:600;font-family:system-ui,sans-serif;color:#0F2419;line-height:1.25;margin-bottom:14px}' +
+      // Description — same 17px as body
+      '.desc{font-size:17px;font-family:system-ui,sans-serif;color:#374151;line-height:1.8;margin-bottom:22px}' +
+      // Body content — Georgia serif, 17px, well-spaced
+      '.body{max-width:720px;margin:0 auto;padding:56px 24px;font-size:17px}' +
+      // Footer
+      '.foot{background:#0F2419;color:rgba(255,255,255,.5);padding:52px 24px 80px;text-align:center;font-family:system-ui,sans-serif;font-size:14px;line-height:1.8}' +
+      '.foot h3{font-size:22px;font-weight:400;color:#fff;margin-bottom:10px;font-family:Georgia,serif}' +
+      '.foot p{margin-bottom:14px}' +
+      '.foot a{color:rgba(255,255,255,.5)}' +
+      '.foot .legal{font-size:12px;color:rgba(255,255,255,.28);margin-top:16px;line-height:1.7}' +
+      '@media(max-width:768px){.prod-inner{grid-template-columns:1fr}.prod-img{display:none}.hero{padding:52px 20px 56px}}';
 
     const html =
       '<!DOCTYPE html><html lang="en"><head>' +
@@ -6062,59 +6094,39 @@ app.get('/api/page/:slug', async (req, res) => {
       '<meta property="og:title" content="' + title + '">' +
       ogTag +
       '<link rel="canonical" href="https://nichroute.com/content.html?slug=' + slug + '">' +
-      '<style>' +
-      '*{margin:0;padding:0;box-sizing:border-box}' +
-      'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:70px}' +
-      '.disclosure{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:13px;color:#2D4A36}' +
-      '.hero{' + heroStyle + ';padding:80px 24px 70px;text-align:center;min-height:min(65vh,480px);display:flex;align-items:center;justify-content:center}' +
-      '.hero-inner{max-width:700px;margin:0 auto}' +
-      '.badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 14px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#fff;letter-spacing:.07em;text-transform:uppercase;margin-bottom:18px}' +
-      'h1{font-size:clamp(28px,5vw,50px);font-weight:400;color:#fff;line-height:1.12;margin-bottom:16px;text-shadow:0 2px 12px rgba(0,0,0,.3)}' +
-      '.hero-sub{font-family:system-ui,sans-serif;font-size:17px;color:rgba(255,255,255,.78);line-height:1.65;max-width:560px;margin:0 auto}' +
-      '.product-section{background:#F2FFF7;padding:72px 24px}' +
-      '.product-inner{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}' +
-      'h2{font-size:clamp(22px,2.8vw,34px);font-weight:400;color:#0F2419;line-height:1.2;margin-bottom:16px}' +
-      '.desc{font-family:system-ui,sans-serif;font-size:17px;color:#374151;line-height:1.8;margin-bottom:22px}' +
-      '.body-section{max-width:720px;margin:0 auto;padding:60px 24px}' +
-      '.page-footer{background:#0F2419;color:rgba(255,255,255,.5);padding:48px 24px 80px;font-family:system-ui,sans-serif;font-size:13px;text-align:center}' +
-      '.page-footer a{color:rgba(255,255,255,.5)}' +
-      '.page-footer h3{font-size:20px;font-weight:400;color:#fff;margin-bottom:10px;font-family:Georgia,serif}' +
-      '.page-footer p{margin-bottom:16px;line-height:1.7}' +
-      '@media(max-width:768px){.product-inner{grid-template-columns:1fr}.product-right{display:none}.hero{padding:60px 20px 56px}}' +
-      '</style></head><body>' +
+      '<style>' + css + '</style></head><body>' +
 
-      '<div class="disclosure">This page may contain affiliate links. A small commission may be earned on qualifying purchases at no added cost to you.</div>' +
+      '<div class="disc">This page may contain affiliate links. A small commission may be earned on qualifying purchases at no added cost.</div>' +
 
-      '<section class="hero"><div class="hero-inner">' +
-      '<div class="badge">&#10022; ' + (niche || 'Featured') + '</div>' +
+      '<section class="hero"><div class="hero-wrap">' +
+      '<div class="badge">&#10022; ' + (niche||'Featured') + '</div>' +
       '<h1>' + title + '</h1>' +
       (subline ? '<p class="hero-sub">' + subline + '</p>' : '') +
       '</div></section>' +
 
-      '<section class="product-section"><div class="product-inner">' +
+      '<section class="prod"><div class="prod-inner">' +
       '<div>' +
       '<h2>What makes this worth a closer look</h2>' +
       (bodyParas[0] ? '<p class="desc">' + bodyParas[0] + '</p>' : '') +
       bulletsHtml +
       '</div>' +
-      '<div style="display:flex;justify-content:center">' + productImgHtml + '</div>' +
+      '<div class="prod-img" style="display:flex;justify-content:center">' + productImgHtml + '</div>' +
       '</div></section>' +
 
-      (bodyHtml ? '<section class="body-section" id="page-content">' + bodyHtml + '</section>' : '') +
+      (bodyHtml ? '<section class="body" id="page-content">' + bodyHtml + '</section>' : '') +
 
-      '<footer class="page-footer">' +
-      (affUrl ? '<h3>Ready to explore this further?</h3><p>Compare options and check pricing before deciding.</p>' + ctaBtn : '') +
-      '<p style="margin-top:16px"><a href="https://nichroute.com">NichRoute</a> &nbsp;&middot;&nbsp; <a href="https://nichroute.com/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp; &copy; ' + year + '</p>' +
-      '<p style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.3)">This page contains affiliate links. When a purchase is made through a link on this page, a commission may be earned at no extra cost to you.</p>' +
+      '<footer class="foot">' +
+      (affUrl ? '<h3>Ready to explore this further?</h3><p>Compare options and review details before deciding.</p>' + ctaBtn : '') +
+      '<p><a href="https://nichroute.com">NichRoute</a> &nbsp;&middot;&nbsp; <a href="https://nichroute.com/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp; &copy; ' + year + '</p>' +
+      '<p class="legal">This page contains affiliate links. When a purchase is made through a link on this page, a commission may be earned at no extra cost to you.</p>' +
       '</footer>' +
 
-      ttsScript +
-      '</body></html>';
+      ttsBar + '</body></html>';
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.setHeader('Cache-Control','public, max-age=3600');
     res.send(html);
-  } catch(e) { res.status(500).send('Error: ' + e.message); }
+  } catch(e){ res.status(500).send('Error: '+e.message); }
 });
 
 app.get('/health', async (_req, res) => {
