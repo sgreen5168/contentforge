@@ -5975,6 +5975,7 @@ app.get('/api/page/:slug', async (req, res) => {
     const inlineImage = data.inline_image || '';
     const videoUrl = data.video_url || '';
     const year = new Date().getFullYear();
+    const nicheLabel = (niche||'guide').replace(/-/g,' ');
 
     // Smart CTA label based on network
     let ctaLabel = 'Learn more';
