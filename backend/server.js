@@ -6053,79 +6053,56 @@ app.get('/api/page/:slug', async (req, res) => {
       : '';
 
     // TTS bar with speed controls
-    // Cookie consent banner — dismisses on click, saved to localStorage
-    const cookieBanner =
-      '<div id="cookie-bar" style="position:fixed;bottom:72px;left:0;right:0;background:#1a3a28;border-top:1px solid rgba(5,150,105,.3);padding:12px 20px;display:flex;align-items:center;gap:14px;z-index:998;box-shadow:0 -2px 12px rgba(0,0,0,.2);flex-wrap:wrap">' +
-      '<div style="flex:1;min-width:200px">' +
-      '<p style="font-family:system-ui,sans-serif;font-size:13px;color:rgba(255,255,255,.75);line-height:1.5;margin:0">' +
-      'This site does not set cookies. Third-party links (Amazon, ClickBank, Digistore24) may set their own cookies when clicked. ' +
-      '<a href="https://nichroute.com/privacy.html" style="color:#34D399;text-decoration:underline">Privacy Policy</a>' +
-      '</p></div>' +
-      '<button onclick="acceptCookies()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:9px 22px;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">Got it</button>' +
-      '</div>' +
-      '<script>' +
-      'function acceptCookies(){' +
-      'try{localStorage.setItem("nr_cookie_ok","1");}catch(e){}' +
-      'var b=document.getElementById("cookie-bar");if(b)b.style.display="none";' +
-      'var t=document.getElementById("tts-bar");if(t)t.style.bottom="0";}' +
-      'try{if(localStorage.getItem("nr_cookie_ok")==="1"){' +
-      'var b=document.getElementById("cookie-bar");if(b)b.style.display="none";' +
-      'var t=document.getElementById("tts-bar");if(t)t.style.bottom="0";' +
-      '}}catch(e){}' +
-      '<\/script>';
+    const cookieBanner = ''; // cookie box removed — revisit later
+
 
     const ttsBar =
-      '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:13px 20px;display:flex;align-items:center;gap:14px;z-index:999;box-shadow:0 -2px 16px rgba(0,0,0,.3)">' +
+      '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:11px 20px;display:flex;align-items:center;gap:14px;z-index:999;box-shadow:0 -2px 16px rgba(0,0,0,.3)">' +
       '<button id="tts-btn" onclick="toggleTTS()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:10px 24px;font-family:system-ui,sans-serif;font-size:15px;font-weight:700;cursor:pointer;min-width:100px">&#9654; Listen</button>' +
       '<div style="display:flex;gap:6px;align-items:center">' +
       '<span style="font-family:system-ui,sans-serif;font-size:12px;color:rgba(255,255,255,.4)">Speed:</span>' +
-      '<button onclick="setSpeed(0.8)" id="sp08" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">0.8x</button>' +
-      '<button onclick="setSpeed(1)" id="sp10" class="spd-btn" style="background:rgba(5,150,105,.4);border:1px solid #059669;border-radius:4px;color:#fff;font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">1x</button>' +
-      '<button onclick="setSpeed(1.25)" id="sp12" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">1.25x</button>' +
+      '<button onclick="setSpeed(0.85)" id="sp085" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Slow</button>' +
+      '<button onclick="setSpeed(1)" id="sp10" class="spd-btn" style="background:rgba(5,150,105,.4);border:1px solid #059669;border-radius:4px;color:#fff;font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Normal</button>' +
+      '<button onclick="setSpeed(1.2)" id="sp12" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Fast</button>' +
       '</div>' +
       '<button id="tts-close" style="margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.4);font-size:24px;cursor:pointer;line-height:1;padding:2px 8px">&times;</button>' +
       '</div>' +
       '<script>' +
       'var _u=null,_p=false,_rate=1,_voices=[];' +
-      // Load best available voice
-      'function loadVoices(){_voices=window.speechSynthesis.getVoices();} ' +
+      'function loadVoices(){_voices=window.speechSynthesis.getVoices();}' +
       'loadVoices();' +
-      'if(window.speechSynthesis.onvoiceschanged!==undefined){window.speechSynthesis.onvoiceschanged=loadVoices;}' +
+      'if(speechSynthesis.onvoiceschanged!==undefined){speechSynthesis.onvoiceschanged=loadVoices;}' +
       'function getBestVoice(){' +
-      'var preferred=["Google US English","Microsoft Aria","Samantha","Karen","Victoria","Google UK English Female"];' +
-      'for(var i=0;i<preferred.length;i++){' +
-      'var v=_voices.find(function(v){return v.name===preferred[i];});' +
-      'if(v)return v;}' +
-      'return _voices.find(function(v){return v.lang==="en-US"&&!v.name.toLowerCase().includes("male");})||_voices[0]||null;}' +
-      'function setSpeed(r){' +
-      '_rate=r;' +
-      'document.querySelectorAll(".spd-btn").forEach(function(b){' +
-      'b.style.background="rgba(255,255,255,.1)";' +
-      'b.style.borderColor="rgba(255,255,255,.2)";' +
-      'b.style.color="rgba(255,255,255,.7)";});' +
-      'var active=document.getElementById("sp"+String(r).replace(".",""));' +
-      'if(active){active.style.background="rgba(5,150,105,.4)";active.style.borderColor="#059669";active.style.color="#fff";}' +
-      'if(_p){window.speechSynthesis.cancel();_p=false;setTimeout(toggleTTS,100);}}' +
-      'function toggleTTS(){' +
-      'var btn=document.getElementById("tts-btn");' +
-      'if(_p){window.speechSynthesis.cancel();_p=false;btn.innerHTML="&#9654; Listen";return;}' +
-      'if(_voices.length===0){loadVoices();}' +
-      'var el=document.getElementById("page-content");if(!el)return;' +
-      '_u=new SpeechSynthesisUtterance(el.innerText);' +
-      '_u.rate=_rate;_u.pitch=1.0;_u.volume=1;_u.lang="en-US";' +
+      'var want=["Google US English","Microsoft Aria Online (Natural) - English (United States)","Microsoft Aria","Microsoft Jenny Online (Natural) - English (United States)","Microsoft Jenny","Samantha","Karen","Moira","Victoria"];' +
+      'for(var i=0;i<want.length;i++){var v=_voices.find(function(x){return x.name===want[i];});if(v)return v;}' +
+      'return _voices.find(function(v){return v.lang.startsWith("en")&&v.localService===false;})||' +
+      '_voices.find(function(v){return v.lang.startsWith("en");})||null;}' +
+      'function setSpeed(r){_rate=r;' +
+      'document.querySelectorAll(".spd-btn").forEach(function(b){b.style.background="rgba(255,255,255,.1)";b.style.borderColor="rgba(255,255,255,.2)";b.style.color="rgba(255,255,255,.7)";});' +
+      'var ids={"0.85":"sp085","1":"sp10","1.2":"sp12"};var a=document.getElementById(ids[String(r)]);' +
+      'if(a){a.style.background="rgba(5,150,105,.4)";a.style.borderColor="#059669";a.style.color="#fff";}' +
+      'if(_p){speechSynthesis.cancel();_p=false;setTimeout(toggleTTS,150);}}' +
+      'function splitText(t,max){var words=t.split(" "),chunks=[],cur="";' +
+      'words.forEach(function(w){if((cur+" "+w).trim().length>max){chunks.push(cur.trim());cur=w;}else{cur=(cur+" "+w).trim();}});' +
+      'if(cur)chunks.push(cur);return chunks;}' +
+      'function speakChunks(chunks,idx){if(idx>=chunks.length){_p=false;document.getElementById("tts-btn").innerHTML="&#9654; Listen";return;}' +
+      '_u=new SpeechSynthesisUtterance(chunks[idx]);' +
+      '_u.rate=_rate;_u.pitch=1.05;_u.volume=1;_u.lang="en-US";' +
       'var v=getBestVoice();if(v)_u.voice=v;' +
-      '_u.onend=function(){_p=false;btn.innerHTML="&#9654; Listen";};' +
-      '_u.onerror=function(){_p=false;btn.innerHTML="&#9654; Listen";};' +
-      'window.speechSynthesis.cancel();' +
-      'setTimeout(function(){window.speechSynthesis.speak(_u);},100);' +
-      '_p=true;btn.innerHTML="&#9646;&#9646; Pause";}' +
-      'document.getElementById("tts-close").onclick=function(){window.speechSynthesis.cancel();_p=false;document.getElementById("tts-bar").style.display="none";};' +
-      // Prevent Chrome from cutting off long text
-      'setInterval(function(){if(_p&&window.speechSynthesis.speaking){window.speechSynthesis.resume();}},10000);' +
+      '_u.onend=function(){speakChunks(chunks,idx+1);};' +
+      '_u.onerror=function(e){if(e.error!=="interrupted")speakChunks(chunks,idx+1);};' +
+      'speechSynthesis.speak(_u);}' +
+      'function toggleTTS(){var btn=document.getElementById("tts-btn");' +
+      'if(_p){speechSynthesis.cancel();_p=false;btn.innerHTML="&#9654; Listen";return;}' +
+      'if(_voices.length===0)loadVoices();' +
+      'var el=document.getElementById("page-content");if(!el)return;' +
+      'var text=el.innerText.replace(/\\n+/g," ").trim();' +
+      'var chunks=splitText(text,180);' +
+      'speechSynthesis.cancel();' +
+      'setTimeout(function(){_p=true;btn.innerHTML="&#9646;&#9646; Pause";speakChunks(chunks,0);},150);}' +
+      'document.getElementById("tts-close").onclick=function(){speechSynthesis.cancel();_p=false;document.getElementById("tts-bar").style.display="none";};' +
       '<\/script>';
 
-    // Branded site header — honest trust signals only
-    const nicheLabel = (niche||'guide').replace(/-/g,' ');
 
     const siteHeader =
       '<header style="background:#0F2419;padding:0">' +
