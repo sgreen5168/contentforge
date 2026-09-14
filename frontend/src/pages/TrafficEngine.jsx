@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import MsAdsBuilder from './MsAdsBuilder.jsx';
+import PinAdsBuilder from './PinAdsBuilder.jsx';
 
 const BG   = '#0B1829';
 const BG2  = '#0F2035';
@@ -215,9 +217,21 @@ function RedditFinder() {
           )}
         </div>
       )}
+
+      {/* ── Microsoft Ads Campaign Builder ── */}
+      {activeTab === 'msads' && (
+        <MsAdsBuilder />
+      )}
+
+      {/* ── Pinterest Ads Campaign Builder ── */}
+      {activeTab === 'pinads' && (
+        <PinAdsBuilder />
+      )}
+
     </div>
   );
 }
+
 
 // ── Content Multiplier ────────────────────────────────────────────────────────
 function ContentMultiplier() {
