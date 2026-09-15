@@ -220,16 +220,6 @@ function RedditFinder() {
         </div>
       )}
 
-      {/* ── Microsoft Ads Campaign Builder ── */}
-      {activeTab === 'msads' && (
-        <MsAdsBuilder />
-      )}
-
-      {/* ── Pinterest Ads Campaign Builder ── */}
-      {activeTab === 'pinads' && (
-        <PinAdsBuilder />
-      )}
-
     </div>
   );
 }
@@ -1008,6 +998,8 @@ export default function TrafficEngine({ onNavigate }) {
         {activeTab === 'multiply'  && <ContentMultiplier />}
         {activeTab === 'pinterest' && <PinterestQueue />}
         {activeTab === 'youtube'   && <YouTubeOptimizer />}
+      {activeTab === 'msads'    && <MsAdsBuilder />}
+      {activeTab === 'pinads'   && <PinAdsBuilder />}
 
       </div>
     </div>
