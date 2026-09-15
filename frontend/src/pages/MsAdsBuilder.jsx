@@ -71,7 +71,7 @@ export default function MsAdsBuilder() {
       const landingUrl = session?.landingUrl || 'https://nichroute.com';
       const affName = session?.link?.name || '';
 
-      const r = await fetch(API + '/api/generate', {
+      const r = await fetch(API + '/api/campaign/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,7 +115,7 @@ Make headlines compelling with strong CTAs. Keywords must be highly specific to 
         }),
       });
       const d = await r.json();
-      const text = d.content?.[0]?.text || d.text || '';
+      const text = d.text || d.content?.[0]?.text || '';
       const clean = text.replace(/```json|```/g,'').trim();
       const parsed = JSON.parse(clean);
       setCampaign(parsed);
