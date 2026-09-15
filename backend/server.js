@@ -6183,6 +6183,27 @@ app.get('/api/page/:slug', async (req, res) => {
   } catch(e){ res.status(500).send('Error: '+e.message); }
 });
 
+
+// ── Campaign Generator — accepts raw prompt, returns Claude response ──────────
+app.post('/api/campaign/generate', async (req, res) => {
+  const { prompt, max_tokens } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'prompt required' });
+  try {
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: max_tokens || 1500,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const text = msg.content?.[0]?.text || '';
+    res.json({ text, content: [{ text }] });
+  } catch(e) {
+    console.error('Campaign generate error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   // Auto-run scheduler every 5 minutes
   const now = Date.now();
