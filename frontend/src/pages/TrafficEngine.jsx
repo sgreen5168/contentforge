@@ -19,6 +19,8 @@ const TABS = [
   { id:'multiply',  label:'✨ Content Multiplier',  icon:'✨' },
   { id:'pinterest', label:'📌 Pinterest Queue',     icon:'📌' },
   { id:'youtube',   label:'▶ YouTube Optimizer',   icon:'▶'  },
+  { id:'msads',     label:'🔍 Microsoft Ads',        icon:'🔍' },
+  { id:'pinads',    label:'📌 Pinterest Ads',         icon:'📌' },
 ];
 
 function card(extra) {
