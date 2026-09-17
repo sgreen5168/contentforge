@@ -157,7 +157,7 @@ Return ONLY a JSON object:
 
       // Try search first
       try {
-        const r1 = await fetch(searchUrl, { headers:{ 'Accept':'application/json' } });
+        const r1 = await fetch('https://corsproxy.io/?' + encodeURIComponent(searchUrl));
         if (r1.ok) {
           const d1 = await r1.json();
           posts = (d1?.data?.children || []).map(c => c.data).filter(p => p && !p.stickied);
@@ -167,7 +167,7 @@ Return ONLY a JSON object:
       // Fall back to hot posts if search returned nothing
       if (posts.length === 0) {
         try {
-          const r2 = await fetch(hotUrl, { headers:{ 'Accept':'application/json' } });
+          const r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(hotUrl));
           if (r2.ok) {
             const d2 = await r2.json();
             posts = (d2?.data?.children || []).map(c => c.data).filter(p => p && !p.stickied);
