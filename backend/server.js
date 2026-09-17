@@ -6394,8 +6394,31 @@ async function runHealthCheck() {
         await db.from('submissions').update({ body: cleanBody }).eq('id', row.id);
       }
 
-      // Check for missing affiliate URL
-      if (!row.affiliate_url) rowIssues.push('missing_affiliate_url');
+      // Auto-repair missing affiliate URL
+      if (!row.affiliate_url) {
+        const allLinks = [...affiliateLinks.values()];
+        if (allLinks.length > 0) {
+          const niche = row.niche || '';
+          const slug = row.slug || '';
+          const topicLower = (slug + ' ' + niche).toLowerCase().replace(/-/g,' ');
+          const scored = allLinks.map(link => {
+            let score = 0;
+            const kw = (link.keywords||[]).join(' ').toLowerCase();
+            const cat = (link.category||'').toLowerCase();
+            if (cat && topicLower.includes(cat)) score += 5;
+            (link.keywords||[]).forEach(k => { if (topicLower.includes(k.toLowerCase())) score += 2; });
+            return { ...link, score };
+          }).sort((a,b) => b.score - a.score);
+          if (scored[0] && scored[0].score > 0) {
+            await db.from('submissions').update({ affiliate_url: scored[0].url }).eq('id', row.id);
+            rowIssues.push('missing_affiliate_url_repaired');
+          } else {
+            rowIssues.push('missing_affiliate_url');
+          }
+        } else {
+          rowIssues.push('missing_affiliate_url');
+        }
+      }
 
       // Check for missing hero image
       if (!row.hero_image) rowIssues.push('missing_hero_image');
@@ -6438,6 +6461,43 @@ app.get('/api/health/report', (_req, res) => {
 });
 
 // Manual trigger
+// Bulk add hero images to old pages missing them
+app.post('/api/health/repair-images', async (_req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+    const PEXELS_KEY = process.env.PEXELS_API_KEY;
+    if (!PEXELS_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not set' });
+
+    const { data } = await db.from('submissions')
+      .select('id,slug,niche,hero_image')
+      .is('hero_image', null)
+      .limit(20);
+
+    if (!data || data.length === 0) return res.json({ message: 'No pages need hero images', repaired: 0 });
+
+    let repaired = 0;
+    for (const row of data) {
+      try {
+        const query = (row.niche || row.slug.replace(/-[a-z0-9]{6}$/,'').replace(/-/g,' ')).slice(0,30);
+        const pexUrl = 'https://api.pexels.com/v1/search?query=' + encodeURIComponent(query) + '&per_page=1&orientation=landscape';
+        const pexRes = await fetch(pexUrl, { headers: { Authorization: PEXELS_KEY } });
+        const pexData = await pexRes.json();
+        const heroImage = pexData.photos?.[0]?.src?.large2x || pexData.photos?.[0]?.src?.large || '';
+        if (heroImage) {
+          await db.from('submissions').update({ hero_image: heroImage }).eq('id', row.id);
+          repaired++;
+        }
+        await new Promise(r => setTimeout(r, 300)); // rate limit
+      } catch(e) { console.warn('Hero repair error:', e.message); }
+    }
+
+    res.json({ repaired, total: data.length, message: 'Added hero images to ' + repaired + ' pages' });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/health/repair', async (_req, res) => {
   await runHealthCheck();
   res.json(healthReport);
