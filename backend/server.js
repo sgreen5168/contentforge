@@ -6224,15 +6224,23 @@ app.get('/api/buffer/channels', async (req, res) => {
   const BUFFER_KEY = process.env.BUFFER_API_KEY;
   if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set' });
   try {
-    // Try Buffer GraphQL API — query channels
+    // Get account first to find organization id
+    const acctData = await bufferGQL(`
+      query { account { id name currentOrganization { id name } } }
+    `, {}, BUFFER_KEY);
+    if (acctData.errors) return res.status(400).json({ error: acctData.errors[0]?.message });
+    const orgId = acctData.data?.account?.currentOrganization?.id;
+    if (!orgId) return res.status(400).json({ error: 'No organization found', raw: acctData });
+
+    // Now get channels for this org
     const data = await bufferGQL(`
       query GetChannels($input: ChannelsInput!) {
         channels(input: $input) { id name service serviceId timezone }
       }
-    `, { input: {} }, BUFFER_KEY);
+    `, { input: { organizationId: orgId } }, BUFFER_KEY);
     if (data.errors) return res.status(400).json({ error: data.errors[0]?.message, raw: data.errors });
     const channels = data.data?.channels || [];
-    res.json({ connected: channels.length, channels });
+    res.json({ connected: channels.length, channels, orgId });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -6248,8 +6256,15 @@ app.post('/api/buffer/publish', async (req, res) => {
     // Get channels if not specified
     let ids = channelIds;
     if (!ids || ids.length === 0) {
-      const chData = await bufferGQL(`query { channels { id service } }`, {}, BUFFER_KEY);
-      ids = (chData.data?.channels || []).map(c => c.id);
+      const acct = await bufferGQL('query { account { currentOrganization { id } } }', {}, BUFFER_KEY);
+      const orgId = acct.data?.account?.currentOrganization?.id;
+      if (orgId) {
+        const chData = await bufferGQL(
+          'query GetChannels($input: ChannelsInput!) { channels(input: $input) { id service } }',
+          { input: { organizationId: orgId } }, BUFFER_KEY
+        );
+        ids = (chData.data?.channels || []).map(c => c.id);
+      }
     }
     if (!ids || ids.length === 0) return res.status(400).json({ error: 'No channels connected in Buffer' });
 
