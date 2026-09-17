@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import MsAdsBuilder from './MsAdsBuilder.jsx';
+import BuyerIntentEngine from './BuyerIntentEngine.jsx';
 import PinAdsBuilder from './PinAdsBuilder.jsx';
 
 const BG   = '#0B1829';
@@ -19,6 +20,7 @@ const TABS = [
   { id:'multiply',  label:'✨ Content Multiplier',  icon:'✨' },
   { id:'pinterest', label:'📌 Pinterest Queue',     icon:'📌' },
   { id:'youtube',   label:'▶ YouTube Optimizer',   icon:'▶'  },
+  { id:'buyer',     label:'🎯 Buyer Intent',          icon:'🎯' },
   { id:'msads',     label:'🔍 Microsoft Ads',        icon:'🔍' },
   { id:'pinads',    label:'📌 Pinterest Ads',         icon:'📌' },
 ];
@@ -998,6 +1000,7 @@ export default function TrafficEngine({ onNavigate }) {
         {activeTab === 'multiply'  && <ContentMultiplier />}
         {activeTab === 'pinterest' && <PinterestQueue />}
         {activeTab === 'youtube'   && <YouTubeOptimizer />}
+      {activeTab === 'buyer'    && <BuyerIntentEngine />}
       {activeTab === 'msads'    && <MsAdsBuilder />}
       {activeTab === 'pinads'   && <PinAdsBuilder />}
 
