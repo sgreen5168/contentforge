@@ -6309,6 +6309,65 @@ app.post('/api/buffer/publish', async (req, res) => {
   }
 });
 
+
+// ── Reddit Search — no API key needed, uses public JSON ───────────────────────
+app.get('/api/reddit/search', async (req, res) => {
+  const { subreddit, niche, topic } = req.query;
+  if (!subreddit) return res.status(400).json({ error: 'subreddit required' });
+
+  try {
+    // Search subreddit for relevant posts using Reddit public JSON API
+    const searchQuery = encodeURIComponent(topic || niche || '');
+    const urls = [
+      `https://www.reddit.com/r/${subreddit}/search.json?q=${searchQuery}&restrict_sr=1&sort=relevance&t=month&limit=15`,
+      `https://www.reddit.com/r/${subreddit}/hot.json?limit=25`,
+    ];
+
+    let posts = [];
+
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, {
+          headers: { 'User-Agent': 'ContentForge/1.0 (affiliate content research tool)' }
+        });
+        if (!r.ok) continue;
+        const data = await r.json();
+        const children = data?.data?.children || [];
+        const found = children
+          .map(c => c.data)
+          .filter(p => p && !p.stickied && p.score > 0)
+          .map(p => ({
+            id: p.id,
+            title: p.title,
+            selftext: (p.selftext || '').slice(0, 300),
+            score: p.score,
+            num_comments: p.num_comments,
+            permalink: p.permalink,
+            subreddit: p.subreddit,
+            created_utc: p.created_utc,
+            url: p.url,
+          }));
+        posts = [...posts, ...found];
+        if (posts.length >= 10) break;
+      } catch(e) {
+        console.warn('Reddit fetch error:', e.message);
+      }
+    }
+
+    // Deduplicate and sort by score
+    const seen = new Set();
+    const unique = posts.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).sort((a,b) => b.score - a.score).slice(0, 12);
+
+    res.json({ posts: unique, subreddit, count: unique.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   // Auto-run scheduler every 5 minutes
   const now = Date.now();
