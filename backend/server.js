@@ -4561,7 +4561,7 @@ ${(postContent||'').slice(0,500)}` }],
     }
 
     // Build the final page URL first so we can replace the placeholder
-    const tempUrl = 'https://nichroute.com/content.html?slug=' + slug;
+    const tempUrl = 'https://nichroute.com/page/' + slug;
     const plainBody = landingBody
       .replace('[LANDING_PAGE_URL]', tempUrl)
       .replace('[landing page url]', tempUrl);
@@ -4586,7 +4586,7 @@ ${(postContent||'').slice(0,500)}` }],
       });
     }
 
-    const pageUrl = 'https://nichroute.com/content.html?slug=' + (data?.slug || slug);
+    const pageUrl = 'https://nichroute.com/page/' + (data?.slug || slug);
     console.log('✅ Landing page created:', pageUrl);
     res.json({ url: pageUrl, slug: data?.slug || slug, id: data?.id });
 
@@ -4611,7 +4611,7 @@ ${(postContent||'').slice(0,500)}` }],
         const sha = getD.sha;
 
         // Add new URL if not already present
-        const newUrl = `https://nichroute.com/content.html?slug=${finalSlug}`;
+        const newUrl = `https://nichroute.com/page/${finalSlug}`;
         if (current.includes(finalSlug)) return; // already in sitemap
 
         const newEntry = `  <url>\n    <loc>${newUrl}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n</urlset>`;
@@ -4969,7 +4969,7 @@ app.get('/api/index/sitemap', async (_req, res) => {
     const { data } = await db.from('submissions').select('slug, created_at').eq('content_type', 'landing_page').order('created_at', { ascending: false });
 
     const urls = (data || []).map(row => ({
-      url: 'https://nichroute.com/content.html?slug=' + row.slug,
+      url: 'https://nichroute.com/page/' + row.slug,
       lastmod: row.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
     }));
 
@@ -5020,10 +5020,10 @@ app.get('/api/prerender', async (req, res) => {
 <title>${title} — NichRoute</title>
 <meta name="description" content="${body.slice(0,160)}">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://nichroute.com/content.html?slug=${slug}">
+<link rel="canonical" href="https://nichroute.com/page/${slug}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${body.slice(0,200)}">
-<meta property="og:url" content="https://nichroute.com/content.html?slug=${slug}">
+<meta property="og:url" content="https://nichroute.com/page/${slug}">
 ${heroImage ? '<meta property="og:image" content="'+heroImage+'">' : ''}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -5489,7 +5489,7 @@ app.get('/api/traffic/dashboard', async (req, res) => {
         slug: s.slug,
         title: (s.title || s.slug).replace(/\*\*/g, '').slice(0, 60),
         niche: s.niche || '',
-        url: 'https://nichroute.com/content.html?slug=' + s.slug,
+        url: 'https://nichroute.com/page/' + s.slug,
         created_at: s.created_at,
         clicks: stats.total,
         affiliateClicks: stats.affiliate,
@@ -6157,7 +6157,7 @@ app.get('/api/page/:slug', async (req, res) => {
       '<meta name="description" content="' + subline.replace(/"/g,"'") + '">' +
       '<meta property="og:title" content="' + title + '">' +
       ogTag +
-      '<link rel="canonical" href="https://nichroute.com/content.html?slug=' + slug + '">' +
+      '<link rel="canonical" href="https://nichroute.com/page/' + slug + '">' +
       '<style>' + css + '</style></head><body>' +
 
       siteHeader +
@@ -6366,6 +6366,81 @@ app.get('/api/reddit/search', async (req, res) => {
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+
+// ── Self-Healing Health Monitor ───────────────────────────────────────────────
+// Runs every hour — checks all submissions for broken links and missing data
+let healthReport = { lastRun: null, issues: [], healthy: 0, total: 0 };
+
+async function runHealthCheck() {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return;
+    const { data } = await db.from('submissions').select('id,slug,affiliate_url,hero_image,body,niche').limit(200);
+    if (!data) return;
+
+    const issues = [];
+    let healthy = 0;
+
+    for (const row of data) {
+      const rowIssues = [];
+
+      // Check for broken vendor domains
+      if (row.body && row.body.match(/wsl\.[a-z0-9]+\.[a-z]+/i)) {
+        rowIssues.push('broken_vendor_url');
+        // Auto-repair: remove broken URLs from body
+        const cleanBody = row.body.replace(/https?:\/\/wsl\.[^\s)>"\]]+/g, '');
+        await db.from('submissions').update({ body: cleanBody }).eq('id', row.id);
+      }
+
+      // Check for missing affiliate URL
+      if (!row.affiliate_url) rowIssues.push('missing_affiliate_url');
+
+      // Check for missing hero image
+      if (!row.hero_image) rowIssues.push('missing_hero_image');
+
+      // Check for empty body
+      if (!row.body || row.body.length < 100) rowIssues.push('empty_body');
+
+      if (rowIssues.length > 0) {
+        issues.push({ slug: row.slug, issues: rowIssues });
+      } else {
+        healthy++;
+      }
+    }
+
+    healthReport = {
+      lastRun: new Date().toISOString(),
+      issues,
+      healthy,
+      total: data.length,
+      autoRepaired: issues.filter(i => i.issues.includes('broken_vendor_url')).length,
+    };
+
+    if (issues.length > 0) {
+      console.log(`⚠️  Health check: ${issues.length} issues found, ${healthReport.autoRepaired} auto-repaired`);
+    } else {
+      console.log(`✅ Health check: all ${healthy} pages healthy`);
+    }
+  } catch(e) {
+    console.error('Health check error:', e.message);
+  }
+}
+
+// Run on startup and every hour
+setTimeout(runHealthCheck, 30000);
+setInterval(runHealthCheck, 60 * 60 * 1000);
+
+// Health report endpoint
+app.get('/api/health/report', (_req, res) => {
+  res.json(healthReport);
+});
+
+// Manual trigger
+app.post('/api/health/repair', async (_req, res) => {
+  await runHealthCheck();
+  res.json(healthReport);
 });
 
 app.get('/health', async (_req, res) => {
