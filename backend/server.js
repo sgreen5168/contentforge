@@ -6471,7 +6471,7 @@ app.post('/api/health/repair-images', async (_req, res) => {
 
     const { data } = await db.from('submissions')
       .select('id,slug,niche,hero_image')
-      .is('hero_image', null)
+      .or('hero_image.is.null,hero_image.eq.')
       .limit(20);
 
     if (!data || data.length === 0) return res.json({ message: 'No pages need hero images', repaired: 0 });
