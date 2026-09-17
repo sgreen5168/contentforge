@@ -6204,6 +6204,77 @@ app.post('/api/campaign/generate', async (req, res) => {
   }
 });
 
+
+// ── Buffer Publishing Integration ─────────────────────────────────────────────
+app.post('/api/buffer/publish', async (req, res) => {
+  const { text, imageUrl, videoUrl, scheduleAt } = req.body;
+  const BUFFER_KEY = process.env.BUFFER_API_KEY;
+  if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set in Railway' });
+
+  try {
+    // Get all connected channels
+    const channelsRes = await fetch('https://api.bufferapp.com/1/profiles.json?access_token=' + BUFFER_KEY);
+    const channels = await channelsRes.json();
+    if (!Array.isArray(channels) || channels.length === 0) {
+      return res.status(400).json({ error: 'No Buffer channels connected' });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const channel of channels) {
+      try {
+        const body = new URLSearchParams();
+        body.append('access_token', BUFFER_KEY);
+        body.append('profile_ids[]', channel.id);
+        body.append('text', text || '');
+        if (scheduleAt) body.append('scheduled_at', scheduleAt);
+        if (imageUrl) body.append('media[photo]', imageUrl);
+        if (videoUrl) body.append('media[video]', videoUrl);
+
+        const postRes = await fetch('https://api.bufferapp.com/1/updates/create.json', {
+          method: 'POST',
+          body,
+        });
+        const postData = await postRes.json();
+        if (postData.success) {
+          results.push({ channel: channel.service, id: channel.id, status: 'queued' });
+        } else {
+          errors.push({ channel: channel.service, error: postData.message || 'Unknown error' });
+        }
+      } catch(e) {
+        errors.push({ channel: channel.service, error: e.message });
+      }
+    }
+
+    res.json({ success: results.length > 0, queued: results, errors, total: channels.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Buffer Channel Status ──────────────────────────────────────────────────────
+app.get('/api/buffer/channels', async (req, res) => {
+  const BUFFER_KEY = process.env.BUFFER_API_KEY;
+  if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set' });
+  try {
+    const r = await fetch('https://api.bufferapp.com/1/profiles.json?access_token=' + BUFFER_KEY);
+    const channels = await r.json();
+    if (!Array.isArray(channels)) return res.status(400).json({ error: 'Invalid response from Buffer', raw: channels });
+    res.json({
+      connected: channels.length,
+      channels: channels.map(c => ({
+        id: c.id,
+        service: c.service,
+        name: c.service_username,
+        timezone: c.timezone,
+      }))
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   // Auto-run scheduler every 5 minutes
   const now = Date.now();
