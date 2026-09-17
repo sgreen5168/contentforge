@@ -148,12 +148,47 @@ Return ONLY a JSON object:
     setSelectedPost(null);
     setReplyDraft('');
     try {
-      const url = `${API}/api/reddit/search?subreddit=${sub}&niche=${niche}&topic=${encodeURIComponent(topicLabel)}`;
-      const r = await fetch(url);
-      const d = await r.json();
-      setRedditPosts(d.posts || []);
+      // Use Reddit's public JSON API directly from browser — no API key needed
+      const query = encodeURIComponent(topicLabel.split(' ').slice(0,4).join(' '));
+      const searchUrl = `https://www.reddit.com/r/${sub}/search.json?q=${query}&restrict_sr=1&sort=relevance&t=month&limit=15&raw_json=1`;
+      const hotUrl = `https://www.reddit.com/r/${sub}/hot.json?limit=25&raw_json=1`;
+
+      let posts = [];
+
+      // Try search first
+      try {
+        const r1 = await fetch(searchUrl, { headers:{ 'Accept':'application/json' } });
+        if (r1.ok) {
+          const d1 = await r1.json();
+          posts = (d1?.data?.children || []).map(c => c.data).filter(p => p && !p.stickied);
+        }
+      } catch(e) { console.warn('Reddit search failed:', e.message); }
+
+      // Fall back to hot posts if search returned nothing
+      if (posts.length === 0) {
+        try {
+          const r2 = await fetch(hotUrl, { headers:{ 'Accept':'application/json' } });
+          if (r2.ok) {
+            const d2 = await r2.json();
+            posts = (d2?.data?.children || []).map(c => c.data).filter(p => p && !p.stickied);
+          }
+        } catch(e) { console.warn('Reddit hot failed:', e.message); }
+      }
+
+      const formatted = posts.slice(0,12).map(p => ({
+        id: p.id,
+        title: p.title,
+        selftext: (p.selftext || '').slice(0,300),
+        score: p.score,
+        num_comments: p.num_comments,
+        permalink: p.permalink,
+        subreddit: p.subreddit,
+        created_utc: p.created_utc,
+      }));
+
+      setRedditPosts(formatted);
     } catch(e) {
-      console.error(e);
+      console.error('Reddit error:', e);
       setRedditPosts([]);
     }
     setRedditLoading(false);
