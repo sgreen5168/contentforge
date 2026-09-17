@@ -6224,9 +6224,12 @@ app.get('/api/buffer/channels', async (req, res) => {
   const BUFFER_KEY = process.env.BUFFER_API_KEY;
   if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set' });
   try {
+    // Try Buffer GraphQL API — query channels
     const data = await bufferGQL(`
-      query { channels { id name service serviceId timezone } }
-    `, {}, BUFFER_KEY);
+      query GetChannels($input: ChannelsInput!) {
+        channels(input: $input) { id name service serviceId timezone }
+      }
+    `, { input: {} }, BUFFER_KEY);
     if (data.errors) return res.status(400).json({ error: data.errors[0]?.message, raw: data.errors });
     const channels = data.data?.channels || [];
     res.json({ connected: channels.length, channels });
