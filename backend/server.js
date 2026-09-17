@@ -6205,71 +6205,87 @@ app.post('/api/campaign/generate', async (req, res) => {
 });
 
 
-// ── Buffer Publishing Integration ─────────────────────────────────────────────
-app.post('/api/buffer/publish', async (req, res) => {
-  const { text, imageUrl, videoUrl, scheduleAt } = req.body;
+// ── Buffer Publishing Integration (GraphQL API) ───────────────────────────────
+const BUFFER_GQL = 'https://api.buffer.com/graphql';
+
+async function bufferGQL(query, variables, apiKey) {
+  const r = await fetch(BUFFER_GQL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  return r.json();
+}
+
+app.get('/api/buffer/channels', async (req, res) => {
   const BUFFER_KEY = process.env.BUFFER_API_KEY;
-  if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set in Railway' });
-
+  if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set' });
   try {
-    // Get all connected channels
-    const channelsRes = await fetch('https://api.bufferapp.com/1/profiles.json?access_token=' + BUFFER_KEY);
-    const channels = await channelsRes.json();
-    if (!Array.isArray(channels) || channels.length === 0) {
-      return res.status(400).json({ error: 'No Buffer channels connected' });
-    }
-
-    const results = [];
-    const errors = [];
-
-    for (const channel of channels) {
-      try {
-        const body = new URLSearchParams();
-        body.append('access_token', BUFFER_KEY);
-        body.append('profile_ids[]', channel.id);
-        body.append('text', text || '');
-        if (scheduleAt) body.append('scheduled_at', scheduleAt);
-        if (imageUrl) body.append('media[photo]', imageUrl);
-        if (videoUrl) body.append('media[video]', videoUrl);
-
-        const postRes = await fetch('https://api.bufferapp.com/1/updates/create.json', {
-          method: 'POST',
-          body,
-        });
-        const postData = await postRes.json();
-        if (postData.success) {
-          results.push({ channel: channel.service, id: channel.id, status: 'queued' });
-        } else {
-          errors.push({ channel: channel.service, error: postData.message || 'Unknown error' });
-        }
-      } catch(e) {
-        errors.push({ channel: channel.service, error: e.message });
-      }
-    }
-
-    res.json({ success: results.length > 0, queued: results, errors, total: channels.length });
+    const data = await bufferGQL(`
+      query { channels { id name service serviceId timezone } }
+    `, {}, BUFFER_KEY);
+    if (data.errors) return res.status(400).json({ error: data.errors[0]?.message, raw: data.errors });
+    const channels = data.data?.channels || [];
+    res.json({ connected: channels.length, channels });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// ── Buffer Channel Status ──────────────────────────────────────────────────────
-app.get('/api/buffer/channels', async (req, res) => {
+app.post('/api/buffer/publish', async (req, res) => {
+  const { text, imageUrl, scheduleAt, channelIds } = req.body;
   const BUFFER_KEY = process.env.BUFFER_API_KEY;
   if (!BUFFER_KEY) return res.status(500).json({ error: 'BUFFER_API_KEY not set' });
+  if (!text) return res.status(400).json({ error: 'text required' });
+
   try {
-    const r = await fetch('https://api.bufferapp.com/1/profiles.json?access_token=' + BUFFER_KEY);
-    const channels = await r.json();
-    if (!Array.isArray(channels)) return res.status(400).json({ error: 'Invalid response from Buffer', raw: channels });
-    res.json({
-      connected: channels.length,
-      channels: channels.map(c => ({
-        id: c.id,
-        service: c.service,
-        name: c.service_username,
-        timezone: c.timezone,
-      }))
-    });
+    // Get channels if not specified
+    let ids = channelIds;
+    if (!ids || ids.length === 0) {
+      const chData = await bufferGQL(`query { channels { id service } }`, {}, BUFFER_KEY);
+      ids = (chData.data?.channels || []).map(c => c.id);
+    }
+    if (!ids || ids.length === 0) return res.status(400).json({ error: 'No channels connected in Buffer' });
+
+    const results = [];
+    const errors = [];
+
+    for (const channelId of ids) {
+      try {
+        const mutation = `
+          mutation CreatePost($input: CreatePostInput!) {
+            createPost(input: $input) {
+              post { id status scheduledAt }
+              errors { message }
+            }
+          }
+        `;
+        const variables = {
+          input: {
+            channelId,
+            content: {
+              contentItems: [{ annotation: text }],
+              ...(imageUrl ? { media: [{ url: imageUrl, mediaType: 'IMAGE' }] } : {}),
+            },
+            ...(scheduleAt ? { scheduledAt: scheduleAt } : {}),
+          }
+        };
+        const result = await bufferGQL(mutation, variables, BUFFER_KEY);
+        if (result.data?.createPost?.post) {
+          results.push({ channelId, status: result.data.createPost.post.status, postId: result.data.createPost.post.id });
+        } else {
+          const errMsg = result.data?.createPost?.errors?.[0]?.message || result.errors?.[0]?.message || 'Unknown error';
+          errors.push({ channelId, error: errMsg });
+        }
+      } catch(e) {
+        errors.push({ channelId, error: e.message });
+      }
+    }
+
+    res.json({ success: results.length > 0, queued: results, errors });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
