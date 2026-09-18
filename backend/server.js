@@ -6007,6 +6007,12 @@ app.get('/api/page/:slug', async (req, res) => {
       !p.toLowerCase().includes('check it out') &&
       !p.toLowerCase().includes('worth a look') &&
       !p.toLowerCase().includes('linked below') &&
+      !p.toLowerCase().includes('worth exploring') &&
+      !p.toLowerCase().includes('explore this further') &&
+      !p.toLowerCase().includes('going deeper') &&
+      !p.toLowerCase().includes('want to go deeper') &&
+      !p.toLowerCase().includes('click the link') &&
+      !p.toLowerCase().includes('click here') &&
       p.length > 30
     );
 
