@@ -6066,28 +6066,26 @@ app.get('/api/page/:slug', async (req, res) => {
 
 
     const ttsBar =
-      '<div id="tts-bar" style="position:fixed;bottom:0;left:0;right:0;background:#0F2419;padding:11px 20px;display:flex;align-items:center;gap:14px;z-index:999;box-shadow:0 -2px 16px rgba(0,0,0,.3)">' +
-      '<button id="tts-btn" onclick="toggleTTS()" style="background:#059669;color:#fff;border:none;border-radius:50px;padding:10px 24px;font-family:system-ui,sans-serif;font-size:15px;font-weight:700;cursor:pointer;min-width:100px">&#9654; Listen</button>' +
-      '<div style="display:flex;gap:6px;align-items:center">' +
-      '<span style="font-family:system-ui,sans-serif;font-size:12px;color:rgba(255,255,255,.4)">Speed:</span>' +
-      '<button onclick="setSpeed(0.85)" id="sp085" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Slow</button>' +
-      '<button onclick="setSpeed(1)" id="sp10" class="spd-btn" style="background:rgba(5,150,105,.4);border:1px solid #059669;border-radius:4px;color:#fff;font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Normal</button>' +
-      '<button onclick="setSpeed(1.2)" id="sp12" class="spd-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:rgba(255,255,255,.7);font-size:12px;padding:4px 10px;cursor:pointer;font-family:system-ui,sans-serif">Fast</button>' +
+      '<div id="tts-bar" style="position:fixed;bottom:16px;right:16px;z-index:999;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;letter-spacing:.05em;text-transform:uppercase">Page reader</div>' +
+      '<button id="tts-btn" onclick="toggleTTS()" style="width:100%;background:#059669;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:system-ui,sans-serif;margin-bottom:10px">&#9654; Listen</button>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Speed</div>' +
+      '<div style="display:flex;gap:5px">' +
+      '<button onclick="setSpeed(0.85)" id="sp085" class="spd-btn" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.6);font-size:11px;padding:5px 0;cursor:pointer;font-family:system-ui,sans-serif">Slow</button>' +
+      '<button onclick="setSpeed(1)" id="sp10" class="spd-btn" style="flex:1;background:rgba(5,150,105,.4);border:1px solid #059669;border-radius:6px;color:#fff;font-size:11px;padding:5px 0;cursor:pointer;font-family:system-ui,sans-serif">Normal</button>' +
+      '<button onclick="setSpeed(1.2)" id="sp12" class="spd-btn" style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.6);font-size:11px;padding:5px 0;cursor:pointer;font-family:system-ui,sans-serif">Fast</button>' +
       '</div>' +
-      '<button id="tts-close" style="margin-left:auto;background:transparent;border:none;color:rgba(255,255,255,.4);font-size:24px;cursor:pointer;line-height:1;padding:2px 8px">&times;</button>' +
+      '<button id="tts-close" onclick="document.getElementById(\'tts-bar\').style.display=\'none\';window.speechSynthesis.cancel();" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:rgba(255,255,255,.3);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px">&times;</button>' +
       '</div>' +
-      '<script>' +
-      'var _u=null,_p=false,_rate=1,_voices=[];' +
+      '<script>var _u=null,_p=false,_rate=1,_voices=[];' +
       'function loadVoices(){_voices=window.speechSynthesis.getVoices();}' +
-      'loadVoices();' +
-      'if(speechSynthesis.onvoiceschanged!==undefined){speechSynthesis.onvoiceschanged=loadVoices;}' +
+      'loadVoices();if(speechSynthesis.onvoiceschanged!==undefined){speechSynthesis.onvoiceschanged=loadVoices;}' +
       'function getBestVoice(){' +
-      'var want=["Google US English","Microsoft Aria Online (Natural) - English (United States)","Microsoft Aria","Microsoft Jenny Online (Natural) - English (United States)","Microsoft Jenny","Samantha","Karen","Moira","Victoria"];' +
+      'var want=["Google US English","Microsoft Aria Online (Natural) - English (United States)","Microsoft Aria","Microsoft Jenny Online (Natural) - English (United States)","Samantha","Karen"];' +
       'for(var i=0;i<want.length;i++){var v=_voices.find(function(x){return x.name===want[i];});if(v)return v;}' +
-      'return _voices.find(function(v){return v.lang.startsWith("en")&&v.localService===false;})||' +
-      '_voices.find(function(v){return v.lang.startsWith("en");})||null;}' +
+      'return _voices.find(function(v){return v.lang.startsWith("en")&&v.localService===false;})||_voices.find(function(v){return v.lang.startsWith("en");})||null;}' +
       'function setSpeed(r){_rate=r;' +
-      'document.querySelectorAll(".spd-btn").forEach(function(b){b.style.background="rgba(255,255,255,.1)";b.style.borderColor="rgba(255,255,255,.2)";b.style.color="rgba(255,255,255,.7)";});' +
+      'document.querySelectorAll(".spd-btn").forEach(function(b){b.style.background="rgba(255,255,255,.08)";b.style.borderColor="rgba(255,255,255,.15)";b.style.color="rgba(255,255,255,.6)";});' +
       'var ids={"0.85":"sp085","1":"sp10","1.2":"sp12"};var a=document.getElementById(ids[String(r)]);' +
       'if(a){a.style.background="rgba(5,150,105,.4)";a.style.borderColor="#059669";a.style.color="#fff";}' +
       'if(_p){speechSynthesis.cancel();_p=false;setTimeout(toggleTTS,150);}}' +
@@ -6109,7 +6107,6 @@ app.get('/api/page/:slug', async (req, res) => {
       'var chunks=splitText(text,180);' +
       'speechSynthesis.cancel();' +
       'setTimeout(function(){_p=true;btn.innerHTML="&#9646;&#9646; Pause";speakChunks(chunks,0);},150);}' +
-      'document.getElementById("tts-close").onclick=function(){speechSynthesis.cancel();_p=false;document.getElementById("tts-bar").style.display="none";};' +
       '<\/script>';
 
 
@@ -6148,7 +6145,7 @@ app.get('/api/page/:slug', async (req, res) => {
 
     const css =
       '*{margin:0;padding:0;box-sizing:border-box}' +
-      'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:72px}' +
+      'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:20px}' +
       '.disc{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:13px;color:#2D4A36}' +
       '.content{max-width:720px;margin:0 auto;padding:52px 24px}' +
       'h2{font-size:22px;font-weight:600;font-family:system-ui,sans-serif;color:#0F2419;margin-bottom:14px}' +
