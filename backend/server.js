@@ -6003,18 +6003,25 @@ app.get('/api/page/:slug', async (req, res) => {
       .filter(l => l.length > 5 && !l.includes('http')).slice(0,5);
 
     // Body paragraphs
-    const bodyParas = paragraphs.slice(1).filter(p =>
-      !p.toLowerCase().includes('check it out') &&
-      !p.toLowerCase().includes('worth a look') &&
-      !p.toLowerCase().includes('linked below') &&
-      !p.toLowerCase().includes('worth exploring') &&
-      !p.toLowerCase().includes('explore this further') &&
-      !p.toLowerCase().includes('going deeper') &&
-      !p.toLowerCase().includes('want to go deeper') &&
-      !p.toLowerCase().includes('click the link') &&
-      !p.toLowerCase().includes('click here') &&
-      p.length > 30
-    );
+    const bodyParas = paragraphs.slice(1).filter(p => {
+      const pl = p.toLowerCase();
+      // Remove CTA phrases
+      if (pl.includes('check it out')) return false;
+      if (pl.includes('worth a look')) return false;
+      if (pl.includes('linked below')) return false;
+      if (pl.includes('worth exploring')) return false;
+      if (pl.includes('explore this further')) return false;
+      if (pl.includes('going deeper')) return false;
+      if (pl.includes('want to go deeper')) return false;
+      if (pl.includes('click the link')) return false;
+      if (pl.includes('click here')) return false;
+      // Remove paragraphs that are just bullet points joined with dashes
+      // (these appear in bullet section already)
+      if ((p.match(/ - /g) || []).length >= 2) return false;
+      if ((p.match(/✓/g) || []).length >= 2) return false;
+      if (p.length < 30) return false;
+      return true;
+    });
 
     const ogTag = heroImage ? '<meta property="og:image" content="' + heroImage + '">' : '';
 
