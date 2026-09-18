@@ -6015,10 +6015,14 @@ app.get('/api/page/:slug', async (req, res) => {
       if (pl.includes('want to go deeper')) return false;
       if (pl.includes('click the link')) return false;
       if (pl.includes('click here')) return false;
-      // Remove paragraphs that are just bullet points joined with dashes
+      // Remove paragraphs that are bullet points joined with dashes
       // (these appear in bullet section already)
-      if ((p.match(/ - /g) || []).length >= 2) return false;
+      if ((p.match(/ - /g) || []).length >= 1) return false;
+      if ((p.match(/-\s[A-Z]/g) || []).length >= 1) return false;
       if ((p.match(/✓/g) || []).length >= 2) return false;
+      // Remove lines that look like concatenated list items (3+ items joined)
+      const dashParts = p.split(' - ').filter(s => s.trim().length > 3);
+      if (dashParts.length >= 3) return false;
       if (p.length < 30) return false;
       return true;
     });
