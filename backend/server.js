@@ -6066,7 +6066,7 @@ app.get('/api/page/:slug', async (req, res) => {
 
 
     const ttsBar =
-      '<div id="tts-bar" style="position:fixed;bottom:16px;right:16px;z-index:999;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;max-width:200px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
+      '<div id="tts-bar" style="position:fixed;bottom:16px;right:16px;z-index:999;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;width:260px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
       '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:10px;letter-spacing:.05em;text-transform:uppercase">Page reader</div>' +
       '<button id="tts-btn" onclick="toggleTTS()" style="width:100%;background:#059669;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:500;cursor:pointer;font-family:system-ui,sans-serif;margin-bottom:10px">&#9654; Listen</button>' +
       '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:6px">Speed</div>' +
