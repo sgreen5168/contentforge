@@ -6145,12 +6145,7 @@ app.get('/api/page/:slug', async (req, res) => {
       '<h1 style="font-size:clamp(24px,4vw,38px);font-weight:400;color:#fff;line-height:1.15;font-family:Georgia,serif;margin-bottom:10px">' + title + '</h1>' +
       (subline ? '<p style="font-size:15px;color:rgba(255,255,255,.6);max-width:540px;margin:0 auto 24px;line-height:1.65;font-family:system-ui,sans-serif">' + subline + '</p>' : '') +
 
-      // Honest trust signals
-      '<div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap">' +
-      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">Affiliate disclosure included</span></div>' +
-      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">No personal data collected by this site</span></div>' +
-      '<div style="display:flex;align-items:center;gap:6px"><span style="color:#34D399;font-size:14px">&#10003;</span><span style="font-size:12px;color:rgba(255,255,255,.45);font-family:system-ui,sans-serif">AI-assisted research</span></div>' +
-      '</div>' +
+      // Trust signals removed per user preference
       '</div>' +
 
       // Niche tag strip
@@ -6163,7 +6158,7 @@ app.get('/api/page/:slug', async (req, res) => {
     const css =
       '*{margin:0;padding:0;box-sizing:border-box}' +
       'body{font-family:Georgia,serif;background:#fff;color:#0F2419;line-height:1.7;padding-bottom:20px}' +
-      '.disc{background:#F2FFF7;border-bottom:1px solid #C8E6D4;padding:9px 24px;text-align:center;font-family:system-ui,sans-serif;font-size:13px;color:#2D4A36}' +
+      '' +
       '.content{max-width:720px;margin:0 auto;padding:52px 24px}' +
       'h2{font-size:22px;font-weight:600;font-family:system-ui,sans-serif;color:#0F2419;margin-bottom:14px}' +
       '.foot{background:#0F2419;color:rgba(255,255,255,.5);padding:52px 24px 84px;text-align:center;font-family:system-ui,sans-serif;font-size:14px;line-height:1.8}' +
@@ -6184,7 +6179,7 @@ app.get('/api/page/:slug', async (req, res) => {
 
       siteHeader +
 
-      '<div class="disc">This page contains affiliate links. A small commission may be earned on qualifying purchases at no added cost to you.</div>' +
+      // Top disclosure bar removed
 
       '<section class="content" id="page-content">' +
       (bullets.length > 0 ? '<h2>Key points</h2>' + bulletsHtml : '') +
@@ -6194,7 +6189,7 @@ app.get('/api/page/:slug', async (req, res) => {
       '<footer class="foot">' +
       (affUrl ? '<h3>Ready to explore this further?</h3><p>Compare options and review details before deciding.</p>' + ctaBtn : '') +
       '<p><a href="https://nichroute.com">NichRoute</a> &nbsp;&middot;&nbsp; <a href="https://nichroute.com/privacy.html">Privacy Policy</a> &nbsp;&middot;&nbsp; &copy; ' + year + '</p>' +
-      '<p class="legal">This page contains affiliate links. When a purchase is made through a link on this page, a commission may be earned at no extra cost to you.</p>' +
+      // Bottom affiliate legal line removed
       '</footer>' +
 
       cookieBanner + ttsBar + '</body></html>';
