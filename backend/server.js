@@ -6700,6 +6700,98 @@ app.post('/api/pexels/video/attach', async (req, res) => {
   }
 });
 
+
+// ── Media Upload — PC file → R2 → Supabase ────────────────────────────────────
+const multer = (await import('multer')).default;
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/mov','video/quicktime'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
+
+app.post('/api/media/upload', mediaUpload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded or unsupported type' });
+
+  try {
+    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const client = new S3Client({
+      region: 'auto',
+      endpoint: 'https://' + process.env.R2_ACCOUNT_ID + '.r2.cloudflarestorage.com',
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    });
+
+    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const key = 'media/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
+    const isVideo = req.file.mimetype.startsWith('video/');
+
+    await client.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+      CacheControl: 'public, max-age=31536000',
+    }));
+
+    const publicUrl = 'https://pub-' + process.env.R2_ACCOUNT_ID + '.r2.dev/' + key;
+
+    res.json({
+      success: true,
+      url: publicUrl,
+      key,
+      type: isVideo ? 'video' : 'image',
+      size: req.file.size,
+      name: req.file.originalname,
+    });
+  } catch(e) {
+    console.error('Media upload error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Media Assign — attach uploaded URL to a page ──────────────────────────────
+app.post('/api/media/assign', async (req, res) => {
+  const { slug, url, field } = req.body;
+  if (!slug || !url || !field) return res.status(400).json({ error: 'slug, url and field required' });
+
+  const allowed = ['hero_image','inline_image','video_url'];
+  if (!allowed.includes(field)) return res.status(400).json({ error: 'field must be hero_image, inline_image or video_url' });
+
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    const { error } = await db.from('submissions').update({ [field]: url }).eq('slug', slug);
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true, slug, field, url });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Recent slugs for media picker ─────────────────────────────────────────────
+app.get('/api/media/slugs', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    const { data } = await db.from('submissions')
+      .select('slug, title, niche, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    res.json({ slugs: data || [] });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/health', async (_req, res) => {
   // Auto-run scheduler every 5 minutes
   const now = Date.now();
