@@ -6567,12 +6567,8 @@ app.get('/api/pexels/video', async (req, res) => {
 
   const queries = PEXELS_VIDEO_QUERIES[niche] || PEXELS_VIDEO_QUERIES.default;
 
-  // Add topic-specific query at the front if topic is provided
-  if (topic && topic.length > 3) {
-    const topicWords = topic.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ')
-      .filter(w => w.length > 3).slice(0,3).join(' ');
-    if (topicWords) queries.unshift(topicWords);
-  }
+  // Do NOT add raw topic words — they match unrelated content
+  // Only use the hand-picked category queries for reliability
 
   let bestVideo = null;
 
