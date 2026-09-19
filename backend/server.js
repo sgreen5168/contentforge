@@ -6701,20 +6701,17 @@ app.post('/api/pexels/video/attach', async (req, res) => {
 });
 
 
-// ── Media Upload — PC file → R2 → Supabase ────────────────────────────────────
-const multer = (await import('multer')).default;
-const mediaUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/mov','video/quicktime'];
-    cb(null, allowed.includes(file.mimetype));
+// ── Media Upload — base64 JSON from browser → R2 ─────────────────────────────
+// Frontend sends: { fileName, fileType, fileData (base64 string) } — no multer needed
+app.post('/api/media/upload', async (req, res) => {
+  const { fileName, fileType, fileData } = req.body;
+  if (!fileData || !fileName || !fileType) {
+    return res.status(400).json({ error: 'fileName, fileType and fileData required' });
   }
-});
-
-app.post('/api/media/upload', mediaUpload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded or unsupported type' });
-
+  const allowed = ['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','video/quicktime'];
+  if (!allowed.includes(fileType)) {
+    return res.status(400).json({ error: 'Unsupported file type: ' + fileType });
+  }
   try {
     const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
     const client = new S3Client({
@@ -6725,35 +6722,24 @@ app.post('/api/media/upload', mediaUpload.single('file'), async (req, res) => {
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
       },
     });
-
-    const ext = req.file.originalname.split('.').pop().toLowerCase();
+    const ext = fileName.split('.').pop().toLowerCase();
     const key = 'media/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
-    const isVideo = req.file.mimetype.startsWith('video/');
-
+    const buffer = Buffer.from(fileData, 'base64');
+    const isVideo = fileType.startsWith('video/');
     await client.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: key,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
+      Body: buffer,
+      ContentType: fileType,
       CacheControl: 'public, max-age=31536000',
     }));
-
     const publicUrl = 'https://pub-' + process.env.R2_ACCOUNT_ID + '.r2.dev/' + key;
-
-    res.json({
-      success: true,
-      url: publicUrl,
-      key,
-      type: isVideo ? 'video' : 'image',
-      size: req.file.size,
-      name: req.file.originalname,
-    });
+    res.json({ success: true, url: publicUrl, key, type: isVideo ? 'video' : 'image', name: fileName });
   } catch(e) {
     console.error('Media upload error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
-
 // ── Media Assign — attach uploaded URL to a page ──────────────────────────────
 app.post('/api/media/assign', async (req, res) => {
   const { slug, url, field } = req.body;
