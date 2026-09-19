@@ -4588,6 +4588,29 @@ ${(postContent||'').slice(0,500)}` }],
 
     const pageUrl = 'https://nichroute.com/page/' + (data?.slug || slug);
     console.log('✅ Landing page created:', pageUrl);
+
+    // Auto-fetch relevant Pexels video in background (non-blocking)
+    const finalSlugForVideo = data?.slug || slug;
+    setImmediate(async () => {
+      try {
+        const vidRes = await fetch(
+          'http://localhost:' + (process.env.PORT || 8080) +
+          '/api/pexels/video?niche=' + encodeURIComponent(category||'default') +
+          '&topic=' + encodeURIComponent(topic||'')
+        );
+        const vidData = await vidRes.json();
+        if (vidData && vidData.url) {
+          const db2 = await getNichrouteClient();
+          if (db2) {
+            await db2.from('submissions').update({ video_url: vidData.url }).eq('slug', finalSlugForVideo);
+            console.log('✅ Video attached:', finalSlugForVideo, '| query:', vidData.query);
+          }
+        }
+      } catch(e) {
+        console.warn('Video fetch (non-critical):', e.message);
+      }
+    });
+
     res.json({ url: pageUrl, slug: data?.slug || slug, id: data?.id });
 
     // Auto-update sitemap on GitHub after page creation
@@ -6518,6 +6541,103 @@ app.post('/api/health/repair-images', async (_req, res) => {
 app.post('/api/health/repair', async (_req, res) => {
   await runHealthCheck();
   res.json(healthReport);
+});
+
+
+// ── Pexels Video Search — topic-specific relevance ────────────────────────────
+const PEXELS_VIDEO_QUERIES = {
+  'coffee':         ['coffee brewing pour over','coffee grinder beans','espresso machine','barista making coffee'],
+  'health':         ['home workout resistance bands','woman exercising living room','fitness home workout','yoga exercise indoor'],
+  'meal-prep':      ['meal prep containers food','cooking healthy kitchen','food preparation vegetables','meal planning healthy'],
+  'finance':        ['budget planning notebook calculator','person budgeting finances','money saving planning','financial spreadsheet'],
+  'side-hustle':    ['person working laptop home office','freelancer working computer','online business entrepreneur','work from home desk'],
+  'mindset':        ['person reading book morning','meditation mindfulness','journaling writing notebook','motivation goals success'],
+  'remote-work':    ['home office desk working','person laptop coffee','video call remote work','productive workspace home'],
+  'cooking':        ['air fryer cooking kitchen','cooking pan stove meal','kitchen food preparation','chef cooking vegetables'],
+  'woodworking':    ['woodworking router carpentry','wood carving workshop tools','craftsman woodwork','wood cutting workshop'],
+  'outdoor-cooking':['bbq grill outdoor cooking','campfire cooking cast iron','grilling meat barbecue','camping cooking fire'],
+  'home-income':    ['person laptop home business','online earning computer','entrepreneur desk working','affiliate marketing online'],
+  'default':        ['productive person working','lifestyle modern living','person researching laptop'],
+};
+
+app.get('/api/pexels/video', async (req, res) => {
+  const { niche, topic } = req.query;
+  const PEXELS_KEY = process.env.PEXELS_API_KEY;
+  if (!PEXELS_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not set' });
+
+  const queries = PEXELS_VIDEO_QUERIES[niche] || PEXELS_VIDEO_QUERIES.default;
+
+  // Add topic-specific query at the front if topic is provided
+  if (topic && topic.length > 3) {
+    const topicWords = topic.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(' ')
+      .filter(w => w.length > 3).slice(0,3).join(' ');
+    if (topicWords) queries.unshift(topicWords);
+  }
+
+  let bestVideo = null;
+
+  for (const query of queries) {
+    try {
+      const r = await fetch(
+        'https://api.pexels.com/videos/search?query=' + encodeURIComponent(query) + '&per_page=5&orientation=landscape&size=medium',
+        { headers: { Authorization: PEXELS_KEY } }
+      );
+      const data = await r.json();
+      const videos = data.videos || [];
+
+      // Pick the video with the best file — prefer HD mp4
+      for (const video of videos) {
+        const files = video.video_files || [];
+        const hd = files.find(f => f.quality === 'hd' && f.file_type === 'video/mp4')
+               || files.find(f => f.file_type === 'video/mp4')
+               || files[0];
+        if (hd && hd.link) {
+          bestVideo = {
+            url: hd.link,
+            thumbnail: video.image,
+            duration: video.duration,
+            query,
+            pexelsId: video.id,
+            width: hd.width || 1280,
+            height: hd.height || 720,
+          };
+          break;
+        }
+      }
+      if (bestVideo) break;
+    } catch(e) {
+      console.warn('Pexels video search failed for query:', query, e.message);
+    }
+  }
+
+  if (!bestVideo) return res.status(404).json({ error: 'No video found for this topic' });
+  res.json(bestVideo);
+});
+
+// ── Auto-fetch and save Pexels video to submission ────────────────────────────
+app.post('/api/pexels/video/attach', async (req, res) => {
+  const { slug, niche, topic } = req.body;
+  if (!slug) return res.status(400).json({ error: 'slug required' });
+
+  try {
+    // Fetch best video
+    const videoRes = await fetch(
+      'http://localhost:' + (process.env.PORT || 8080) + '/api/pexels/video?niche=' +
+      encodeURIComponent(niche||'default') + '&topic=' + encodeURIComponent(topic||''),
+    );
+    const videoData = await videoRes.json();
+    if (!videoData.url) return res.status(404).json({ error: 'No video found' });
+
+    // Save to submission
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    await db.from('submissions').update({ video_url: videoData.url }).eq('slug', slug);
+
+    res.json({ success: true, slug, videoUrl: videoData.url, query: videoData.query, duration: videoData.duration });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/health', async (_req, res) => {
