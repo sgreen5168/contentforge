@@ -53,9 +53,18 @@ export default function MediaManager({ onClose }) {
     setUploading(true);
     setError('');
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const r = await fetch(API + '/api/media/upload', { method:'POST', body:form });
+      // Convert file to base64 for JSON upload — no multer needed on server
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const r = await fetch(API + '/api/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileData: base64 }),
+      });
       const d = await r.json();
       if (!d.url) throw new Error(d.error || 'Upload failed');
       setUploadedUrl(d.url);
