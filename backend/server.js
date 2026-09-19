@@ -6546,18 +6546,34 @@ app.post('/api/health/repair', async (_req, res) => {
 
 // ── Pexels Video Search — topic-specific relevance ────────────────────────────
 const PEXELS_VIDEO_QUERIES = {
-  'coffee':         ['coffee brewing pour over','coffee grinder beans','espresso machine','barista making coffee'],
-  'health':         ['home workout resistance bands','woman exercising living room','fitness home workout','yoga exercise indoor'],
-  'meal-prep':      ['meal prep containers food','cooking healthy kitchen','food preparation vegetables','meal planning healthy'],
-  'finance':        ['budget planning notebook calculator','person budgeting finances','money saving planning','financial spreadsheet'],
-  'side-hustle':    ['person working laptop home office','freelancer working computer','online business entrepreneur','work from home desk'],
-  'mindset':        ['person reading book morning','meditation mindfulness','journaling writing notebook','motivation goals success'],
-  'remote-work':    ['home office desk working','person laptop coffee','video call remote work','productive workspace home'],
-  'cooking':        ['air fryer cooking kitchen','cooking pan stove meal','kitchen food preparation','chef cooking vegetables'],
-  'woodworking':    ['woodworking router carpentry','wood carving workshop tools','craftsman woodwork','wood cutting workshop'],
-  'outdoor-cooking':['bbq grill outdoor cooking','campfire cooking cast iron','grilling meat barbecue','camping cooking fire'],
-  'home-income':    ['person laptop home business','online earning computer','entrepreneur desk working','affiliate marketing online'],
-  'default':        ['productive person working','lifestyle modern living','person researching laptop'],
+  'coffee':         ['barista pouring coffee latte art','coffee grinder grinding beans','pour over coffee brewing','espresso coffee machine'],
+  'health':         ['woman resistance bands home workout','fitness exercise home','yoga mat stretching indoor','bodyweight workout living room'],
+  'meal-prep':      ['meal prep containers lunch boxes','healthy food preparation kitchen','portioning food containers','vegetables chopping cooking'],
+  'finance':        ['budget planner notebook pen desk','calculator money budgeting','financial planning notepad','person writing budget home'],
+  'side-hustle':    ['person typing laptop home office','freelancer working desk coffee','entrepreneur computer working','home office productivity'],
+  'mindset':        ['person reading book morning light','meditation mindfulness peaceful','writing journal notebook desk','goal setting planning'],
+  'remote-work':    ['home office desk setup computer','person working laptop coffee shop','video conference laptop home','productivity workspace desk'],
+  'cooking':        ['air fryer kitchen appliance','cooking air fryer food','modern kitchen appliance cooking','healthy cooking kitchen'],
+  'woodworking':    ['woodworking router tool workshop','carpenter wood workshop tools','wood carving handcraft','craftsman woodworking bench'],
+  'outdoor-cooking':['bbq grill smoking meat outdoor','campfire cooking outdoor','grilling barbecue backyard','outdoor cooking fire pit'],
+  'home-income':    ['person laptop working home','online business home office','entrepreneur working computer','digital nomad laptop working'],
+  'bbq':            ['bbq grill smoking meat','grilling barbecue outdoor','smoker bbq backyard','meat grilling fire'],
+  'cafe':           ['cafe coffee shop interior','barista making espresso','coffee shop working laptop','cafe atmosphere cozy'],
+  'default':        ['person working laptop desk','productivity workspace modern','professional working computer'],
+};
+
+// Topic-level overrides for more specific matching
+const TOPIC_VIDEO_OVERRIDES = {
+  'air fryer':      ['air fryer kitchen cooking','air fryer food healthy','cooking air fryer appliance'],
+  'resistance band': ['resistance bands workout home','woman exercise resistance bands','fitness bands workout'],
+  'coffee grinder': ['coffee grinder beans grinding','manual coffee grinder','burr grinder coffee'],
+  'pour over':      ['pour over coffee brewing','hand pour coffee kettle','specialty coffee brewing'],
+  'wood router':    ['woodworking router tool','router carpentry workshop','wood router cutting'],
+  'meal prep':      ['meal prep containers weekly','food prep healthy meals','portioning meal containers'],
+  'budget':         ['budget planner notebook','financial planning desk','money budgeting calculator'],
+  'blender':        ['blender smoothie kitchen','portable blender protein shake','smoothie blending'],
+  'treadmill':      ['treadmill walking exercise','under desk treadmill office','walking pad treadmill'],
+  'standing desk':  ['standing desk office setup','adjustable desk working','ergonomic desk workspace'],
 };
 
 app.get('/api/pexels/video', async (req, res) => {
@@ -6565,10 +6581,17 @@ app.get('/api/pexels/video', async (req, res) => {
   const PEXELS_KEY = process.env.PEXELS_API_KEY;
   if (!PEXELS_KEY) return res.status(500).json({ error: 'PEXELS_API_KEY not set' });
 
-  const queries = PEXELS_VIDEO_QUERIES[niche] || PEXELS_VIDEO_QUERIES.default;
-
-  // Do NOT add raw topic words — they match unrelated content
-  // Only use the hand-picked category queries for reliability
+  // Check topic overrides first for most specific match
+  let queries = [...(PEXELS_VIDEO_QUERIES[niche] || PEXELS_VIDEO_QUERIES.default)];
+  if (topic) {
+    const topicLower = topic.toLowerCase();
+    for (const [keyword, overrideQueries] of Object.entries(TOPIC_VIDEO_OVERRIDES)) {
+      if (topicLower.includes(keyword)) {
+        queries = [...overrideQueries, ...queries];
+        break;
+      }
+    }
+  }
 
   let bestVideo = null;
 
