@@ -4468,9 +4468,9 @@ app.post('/api/nichroute/create-page', async (req, res) => {
 
         // videoBlock defined in /api/page/:slug endpoint
 
-    const postBlock = formattedPost
+    const postBlock = postContent
       ? `<div style="font-size:15px;line-height:1.9;color:#333;">
-          ${formattedPost.split('[INLINE_IMAGE]').map((part, i) =>
+          ${postContent.split('[INLINE_IMAGE]').map((part, i) =>
             (i === 1 ? inlineImgHtml : '') +
             '<p style="margin-bottom:16px;">' + part.split('\n\n').join('</p><p style="margin-bottom:16px;">') + '</p>'
           ).join('')}
