@@ -6594,7 +6594,9 @@ app.get('/api/pexels/video', async (req, res) => {
         const hd = sorted.find(f => f.width >= 1280)
                || sorted.find(f => f.width >= 960)
                || sorted[0];
-        if (hd && hd.link && (hd.width||0) >= 640) {
+        // Blocklist of known irrelevant Pexels videos
+        const BLOCKED_IDS = [2076486, 1093662, 855282, 2795186];
+        if (hd && hd.link && (hd.width||0) >= 640 && !BLOCKED_IDS.includes(video.id)) {
           bestVideo = {
             url: hd.link,
             thumbnail: video.image,
