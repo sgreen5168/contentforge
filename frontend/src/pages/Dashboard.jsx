@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import MediaManager from './MediaManager.jsx';
 
 const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 const VB_API = 'https://contentforge-production-c8d9.up.railway.app';
@@ -1756,6 +1757,10 @@ export default function Dashboard({ onNavigate }) {
                     style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(29,158,117,.4)', background:'rgba(29,158,117,.1)', color:'#1D9E75', fontSize:11, fontWeight:700, textDecoration:'none' }}>
                     🖼 View Styled Page
                   </a>
+                  <button onClick={() => setShowMediaUploader(true)}
+                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(245,158,11,.3)', background:'rgba(245,158,11,.1)', color:'#F59E0B', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                    📁 Media Manager
+                  </button>
                   <button onClick={()=>submitToSearchEngines(results.landingUrl || results?.link?.url || '')}
                     disabled={indexing || (!results?.landingUrl && !results?.link?.url && !(results?.post||'').includes('nichroute.com'))}
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:indexing?'rgba(16,185,129,.3)':'#059669', color:'white', fontSize:11, fontWeight:700, cursor:indexing?'default':'pointer', fontFamily:'inherit' }}>
