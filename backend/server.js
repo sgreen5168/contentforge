@@ -6581,13 +6581,17 @@ app.get('/api/pexels/video', async (req, res) => {
       const data = await r.json();
       const videos = data.videos || [];
 
-      // Pick the video with the best file — prefer HD mp4
+      // Pick the video with the best file — prefer HD mp4, minimum 1280px wide
       for (const video of videos) {
         const files = video.video_files || [];
-        const hd = files.find(f => f.quality === 'hd' && f.file_type === 'video/mp4')
-               || files.find(f => f.file_type === 'video/mp4')
-               || files[0];
-        if (hd && hd.link) {
+        // Sort by width descending to get highest quality first
+        const sorted = files.filter(f => f.file_type === 'video/mp4')
+          .sort((a,b) => (b.width||0) - (a.width||0));
+        // Prefer minimum 1280px wide
+        const hd = sorted.find(f => f.width >= 1280)
+               || sorted.find(f => f.width >= 960)
+               || sorted[0];
+        if (hd && hd.link && (hd.width||0) >= 640) {
           bestVideo = {
             url: hd.link,
             thumbnail: video.image,
