@@ -4436,6 +4436,22 @@ app.post('/api/nichroute/create-page', async (req, res) => {
     const suffix = Math.random().toString(36).slice(2, 8);
     const slug = slugBase + '-' + suffix;
 
+    // Fetch hero image from Pexels
+    let heroImageUrl = '';
+    let inlineImageUrl = '';
+    const PEXELS_KEY = process.env.PEXELS_API_KEY;
+    if (PEXELS_KEY) {
+      try {
+        const heroQuery = (category || topic).replace(/-/g,' ').slice(0,30);
+        const heroRes = await fetch(
+          'https://api.pexels.com/v1/search?query=' + encodeURIComponent(heroQuery) + '&per_page=1&orientation=landscape',
+          { headers: { Authorization: PEXELS_KEY } }
+        );
+        const heroData = await heroRes.json();
+        heroImageUrl = heroData.photos?.[0]?.src?.large2x || heroData.photos?.[0]?.src?.large || '';
+      } catch(e) { console.warn('Hero image fetch failed:', e.message); }
+    }
+
     // Build landing page HTML
     // Only use affiliate URL if it's a real hoplink, not a marketplace page
     // For Amazon /dp/ links, convert to search URL which is more reliable
@@ -4471,7 +4487,7 @@ app.post('/api/nichroute/create-page', async (req, res) => {
     const postBlock = postContent
       ? `<div style="font-size:15px;line-height:1.9;color:#333;">
           ${postContent.split('[INLINE_IMAGE]').map((part, i) =>
-            (i === 1 ? inlineImgHtml : '') +
+            '' +
             '<p style="margin-bottom:16px;">' + part.split('\n\n').join('</p><p style="margin-bottom:16px;">') + '</p>'
           ).join('')}
          </div>`
