@@ -6044,17 +6044,17 @@ app.get('/api/page/:slug', async (req, res) => {
     const ytSrc = isYT ? videoUrl.replace('watch?v=','embed/').replace('youtu.be/','youtube.com/embed/') + '?rel=0&modestbranding=1' : '';
     let videoBlock = '';
     if (videoUrl) {
-      const vWrap = 'margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);background:#000';
+      const vWrap = 'margin:20px 0;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.12);background:#000';
       const vInner = isYT
-        ? '<iframe width="100%" height="420" src="' + ytSrc + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
-        : '<video controls preload="metadata" style="width:100%;display:block;max-height:420px"><source src="' + videoUrl + '" type="video/mp4"></video>';
+        ? '<iframe width="100%" height="280" src="' + ytSrc + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
+        : '<video controls preload="metadata" style="width:100%;display:block;max-height:280px;object-fit:cover"><source src="' + videoUrl + '" type="video/mp4"></video>';
       videoBlock = '<div style="' + vWrap + '">' + vInner + '</div>';
     }
 
     // Inline image
     const inlineImgBlock = inlineImage
       ? '<div style="margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)">' +
-        '<img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;display:block" loading="lazy">' +
+        '<img src="' + inlineImage + '" alt="' + title + '" style="width:100%;height:auto;max-height:320px;object-fit:cover;display:block" loading="lazy">' +
         '</div>'
       : '';
 
@@ -6610,6 +6610,45 @@ app.get('/api/pexels/video', async (req, res) => {
       if (bestVideo) break;
     } catch(e) {
       console.warn('Pexels video search failed for query:', query, e.message);
+    }
+  }
+
+  // Fallback to Pixabay if Pexels found nothing
+  if (!bestVideo) {
+    const PIXABAY_KEY = process.env.PIXABAY_API_KEY;
+    if (PIXABAY_KEY) {
+      const pixQueries = queries.slice(0, 3);
+      for (const q of pixQueries) {
+        try {
+          const pixUrl = 'https://pixabay.com/api/videos/?key=' + PIXABAY_KEY +
+            '&q=' + encodeURIComponent(q) + '&per_page=5&video_type=film&orientation=horizontal';
+          const pixRes = await fetch(pixUrl);
+          const pixData = await pixRes.json();
+          const pixHits = pixData.hits || [];
+          for (const hit of pixHits) {
+            const vids = hit.videos || {};
+            const best = vids.large || vids.medium || vids.small;
+            if (best && best.url && (best.width || 0) >= 1280) {
+              bestVideo = {
+                url: best.url,
+                thumbnail: hit.picture_id
+                  ? 'https://i.vimeocdn.com/video/' + hit.picture_id + '_640x360.jpg'
+                  : '',
+                duration: hit.duration,
+                query: q + ' (pixabay)',
+                pexelsId: hit.id,
+                width: best.width || 1280,
+                height: best.height || 720,
+                source: 'pixabay',
+              };
+              break;
+            }
+          }
+          if (bestVideo) break;
+        } catch(e) {
+          console.warn('Pixabay video search failed:', e.message);
+        }
+      }
     }
   }
 
