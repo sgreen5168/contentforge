@@ -4565,6 +4565,24 @@ ${(postContent||'').slice(0,500)}` }],
     const plainBody = landingBody
       .replace('[LANDING_PAGE_URL]', tempUrl)
       .replace('[landing page url]', tempUrl);
+
+    // Fetch relevant Pexels video before saving to DB
+    let videoUrlForPage = '';
+    try {
+      const vidRes = await fetch(
+        'http://localhost:' + (process.env.PORT || 8080) +
+        '/api/pexels/video?niche=' + encodeURIComponent(category||'default') +
+        '&topic=' + encodeURIComponent(topic||'')
+      );
+      const vidData = await vidRes.json();
+      if (vidData && vidData.url) {
+        videoUrlForPage = vidData.url;
+        console.log('✅ Video queued for page:', vidData.query, '|', vidData.width + 'x' + vidData.height);
+      }
+    } catch(e) {
+      console.warn('Pexels video (non-critical):', e.message);
+    }
+
     const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
@@ -4574,6 +4592,7 @@ ${(postContent||'').slice(0,500)}` }],
       content_type: 'landing_page',
       hero_image: heroImageUrl || '',
       inline_image: inlineImageUrl || '',
+      video_url: videoUrlForPage || '',
       created_at: new Date().toISOString(),
     }]).select('id, slug').single();
 
