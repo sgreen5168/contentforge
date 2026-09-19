@@ -6090,6 +6090,18 @@ app.get('/api/page/:slug', async (req, res) => {
         ) + '</div>'
       : '';
 
+    // Video embed block
+    const isYT = videoUrl && (videoUrl.includes('youtube') || videoUrl.includes('youtu.be'));
+    const ytSrc = isYT ? videoUrl.replace('watch?v=','embed/').replace('youtu.be/','youtube.com/embed/') + '?rel=0&modestbranding=1' : '';
+    let videoBlock = '';
+    if (videoUrl) {
+      const vWrap = 'margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);background:#000';
+      const vInner = isYT
+        ? '<iframe width="100%" height="420" src="' + ytSrc + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
+        : '<video controls preload="metadata" style="width:100%;display:block;max-height:420px"><source src="' + videoUrl + '" type="video/mp4"></video>';
+      videoBlock = '<div style="' + vWrap + '">' + vInner + '</div>';
+    }
+
     // Inline image
     const inlineImgBlock = inlineImage
       ? '<div style="margin:28px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)">' +
