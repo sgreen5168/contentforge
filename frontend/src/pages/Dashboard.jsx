@@ -1527,7 +1527,7 @@ export default function Dashboard({ onNavigate }) {
                       style={{ padding:'5px 12px', borderRadius:6, border:'1px solid rgba(139,92,246,.3)', background:'transparent', color:'#A78BFA', fontSize:10, cursor:'pointer', fontFamily:'inherit' }}>
                       {copied==='landing'?'✓ Copied!':'📋 Copy URL'}
                     </button>
-                    <a href={results.landingUrl} target="_blank" rel="noreferrer"
+                    <a href={results.landingUrl||results.landing||'#'} target="_blank" rel="noreferrer"
                       style={{ padding:'5px 14px', borderRadius:6, border:'none', background:'#8B5CF6', color:'white', fontSize:10, fontWeight:700, textDecoration:'none' }}>
                       ↗ View Page
                     </a>
@@ -1738,7 +1738,7 @@ export default function Dashboard({ onNavigate }) {
                   This is your live NichRoute page. Share it in Facebook groups, put it in your bio link, or post it in NichRoute communities. It has your affiliate CTA button already embedded.
                 </div>
                 <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                  <button onClick={()=>copy(results.landingUrl,'landingfinal')}
+                  <button onClick={()=>copy(results.landingUrl||results.landing||'','landingfinal')}
                     style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(139,92,246,.3)', background:'transparent', color:'#A78BFA', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
                     {copied==='landingfinal'?'✓ Copied!':'📋 Copy Landing Page URL'}
                   </button>
