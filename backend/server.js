@@ -4466,51 +4466,7 @@ app.post('/api/nichroute/create-page', async (req, res) => {
            <p style="font-size:11px;color:#999;margin-top:12px;">#ad — This page contains affiliate links. I may earn a small commission at no extra cost to you.</p>
          </div>` : '';
 
-    const videoBlock = videoUrl
-      ? `<div style="text-align:center;margin:24px 0">
-           <a href="${videoUrl}" target="_blank"
-             style="display:inline-block;padding:12px 28px;background:#EF4444;color:#fff;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">
-             ▶ Watch the video
-           </a>
-         </div>` : '';
-
-    // Fetch a Pexels image for the landing page
-    let heroImageUrl = '';
-    let inlineImageUrl = '';
-    if (process.env.PEXELS_API_KEY) {
-      try {
-        const pexelsFetch = (await import('node-fetch')).default;
-        const searchTerm = (topic || '').slice(0, 40);
-        // Hero image - landscape
-        const heroRes = await pexelsFetch(
-          'https://api.pexels.com/v1/search?query=' + encodeURIComponent(searchTerm) + '&per_page=2&orientation=landscape',
-          { headers: { Authorization: process.env.PEXELS_API_KEY } }
-        );
-        if (heroRes.ok) {
-          const heroData = await heroRes.json();
-          heroImageUrl = heroData.photos?.[0]?.src?.large2x || heroData.photos?.[0]?.src?.large || '';
-          inlineImageUrl = heroData.photos?.[1]?.src?.medium || heroData.photos?.[0]?.src?.medium || '';
-        }
-      } catch(e) { console.warn('Pexels image fetch error:', e.message); }
-    }
-
-    // Format post content with inline image embedded after first paragraph
-    let formattedPost = '';
-    if (postContent) {
-      const paragraphs = postContent.slice(0, 1500).split('\n').filter(p => p.trim());
-      const firstPara = paragraphs[0] || '';
-      const restParas = paragraphs.slice(1).join('\n\n');
-      formattedPost = firstPara +
-        (inlineImageUrl ? `\n\n[INLINE_IMAGE]` : '') +
-        (restParas ? '\n\n' + restParas : '');
-    }
-
-    const inlineImgHtml = inlineImageUrl
-      ? `<div style="margin:24px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);">
-           <img src="${inlineImageUrl}" alt="${topic}" style="width:100%;height:auto;display:block;" loading="lazy" />
-           <div style="padding:8px 12px;background:#f8f9fa;font-size:12px;color:#666;">📸 Related to: ${topic}</div>
-         </div>`
-      : '';
+        // videoBlock defined in /api/page/:slug endpoint
 
     const postBlock = formattedPost
       ? `<div style="font-size:15px;line-height:1.9;color:#333;">
@@ -6081,14 +6037,7 @@ app.get('/api/page/:slug', async (req, res) => {
         ).join('') + '</ul>'
       : '';
 
-    // Video embed
-    const videoBlock = videoUrl
-      ? '<div style="margin:32px 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)">' +
-        (videoUrl.includes('youtube') || videoUrl.includes('youtu.be')
-          ? '<iframe width="100%" height="380" src="' + videoUrl.replace('watch?v=','embed/').replace('youtu.be/','youtube.com/embed/') + '" frameborder="0" allowfullscreen style="display:block"></iframe>'
-          : '<video controls style="width:100%;display:block" preload="metadata"><source src="' + videoUrl + '" type="video/mp4"></video>'
-        ) + '</div>'
-      : '';
+    // videoBlock defined below
 
     // Video embed block
     const isYT = videoUrl && (videoUrl.includes('youtube') || videoUrl.includes('youtu.be'));
