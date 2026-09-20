@@ -1747,16 +1747,7 @@ export default function Dashboard({ onNavigate }) {
                     style={{ padding:'8px 14px', borderRadius:7, border:'none', background:'#8B5CF6', color:'white', fontSize:11, fontWeight:700, textDecoration:'none' }}>
                     ↗ View NichRoute Page
                   </a>
-                  <a href={(() => {
-                    const url = results?.landingUrl || '';
-                    if (url.includes('/page/')) return url.replace('https://nichroute.com/page/','https://contentforge-production-6e13.up.railway.app/api/page/');
-                    if (url.includes('content.html?slug=')) return url.replace('https://nichroute.com/content.html?slug=','https://contentforge-production-6e13.up.railway.app/api/page/');
-                    const slug = url.split('slug=')[1] || '';
-                    return slug ? 'https://contentforge-production-6e13.up.railway.app/api/page/' + slug : url;
-                  })()} target="_blank" rel="noreferrer"
-                    style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(29,158,117,.4)', background:'rgba(29,158,117,.1)', color:'#1D9E75', fontSize:11, fontWeight:700, textDecoration:'none' }}>
-                    🖼 View Styled Page
-                  </a>
+
                   <button onClick={() => setShowMediaUploader(true)}
                     style={{ padding:'8px 14px', borderRadius:7, border:'1px solid rgba(245,158,11,.3)', background:'rgba(245,158,11,.1)', color:'#F59E0B', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                     📁 Media Manager
@@ -1970,5 +1961,6 @@ export default function Dashboard({ onNavigate }) {
         @keyframes progress-bar { 0%{transform:translateX(-100%)} 100%{transform:translateX(300%)} }
       `}} />
     </div>
+      {showMediaUploader && <MediaManager onClose={() => setShowMediaUploader(false)} />}
   );
 }
