@@ -6739,7 +6739,7 @@ app.post('/api/media/upload', async (req, res) => {
       ContentType: fileType,
       CacheControl: 'public, max-age=31536000',
     }));
-    const publicUrl = 'https://pub-' + process.env.R2_ACCOUNT_ID + '.r2.dev/' + key;
+    const publicUrl = 'https://pub-0c764d3793044315b8d06ef5ebe99e6e.r2.dev/' + key;
     res.json({ success: true, url: publicUrl, key, type: isVideo ? 'video' : 'image', name: fileName });
   } catch(e) {
     console.error('Media upload error:', e.message);
