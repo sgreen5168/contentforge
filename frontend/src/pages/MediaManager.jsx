@@ -113,6 +113,27 @@ export default function MediaManager({ onClose }) {
           <button onClick={onClose} style={{ background:'transparent', border:'none', color:TXT3, fontSize:20, cursor:'pointer' }}>×</button>
         </div>
 
+        {/* How it works */}
+        <div style={{ ...card({ background:'rgba(29,158,117,.05)', border:'1px solid rgba(29,158,117,.15)', padding:'12px 14px' }) }}>
+          <div style={{ fontSize:11, fontWeight:700, color:GRN, marginBottom:8 }}>How to use</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {[
+              '1. Choose an image or video file from your PC below',
+              '2. Click Upload — your file goes to the CDN and gets a permanent URL',
+              '3. Pick which landing page to attach it to from the dropdown',
+              '4. Choose where it appears — hero image, inline image, or video',
+              '5. Click Assign — the page updates instantly on next load',
+            ].map((step,i) => (
+              <div key={i} style={{ fontSize:11, color:TXT2, lineHeight:1.6 }}>{step}</div>
+            ))}
+          </div>
+          <div style={{ marginTop:10, padding:'8px 10px', background:'rgba(0,0,0,.2)', borderRadius:7 }}>
+            <div style={{ fontSize:11, color:TXT3 }}>
+              Supported: JPG, PNG, WebP (images) · MP4, WebM (videos) · Max 100MB
+            </div>
+          </div>
+        </div>
+
         {/* Step 1 — Upload */}
         <div style={{ ...card() }}>
           <div style={{ fontSize:12, fontWeight:700, color:GRN, marginBottom:12 }}>Step 1 — Choose file</div>
