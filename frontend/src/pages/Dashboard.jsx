@@ -1960,7 +1960,7 @@ export default function Dashboard({ onNavigate }) {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes progress-bar { 0%{transform:translateX(-100%)} 100%{transform:translateX(300%)} }
       `}} />
-    </div>
       {showMediaUploader && <MediaManager onClose={() => setShowMediaUploader(false)} />}
+    </div>
   );
 }
