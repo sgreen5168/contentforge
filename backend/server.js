@@ -4555,6 +4555,12 @@ ${(postContent||'').slice(0,500)}` }],
       console.warn('Pexels video (non-critical):', e.message);
     }
 
+    // Remove older versions of same topic to prevent duplicates
+    try {
+      await db.from('submissions').delete().eq('title', topic)
+        .lt('created_at', new Date().toISOString());
+    } catch(e) { console.warn('Duplicate cleanup skipped:', e.message); }
+
     const { data, error } = await db.from('submissions').insert([{
       slug,
       title: topic,
