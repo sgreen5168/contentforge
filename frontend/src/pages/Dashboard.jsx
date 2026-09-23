@@ -255,6 +255,7 @@ export default function Dashboard({ onNavigate }) {
   const [editedScript, setEditedScript]   = useState('');
   const [reading, setReading]             = useState(null); // 'post' | 'script' | null
   const [readSpeed, setReadSpeed]         = useState(1.0);
+  const [topicFilter, setTopicFilter]     = useState('all');
   const speechRef                         = useRef(null);
   const [customTopic, setCustomTopic] = useState('');
   const [indexing, setIndexing] = useState(false);
