@@ -1143,6 +1143,24 @@ export default function Dashboard({ onNavigate }) {
       {/* Session History */}
       {!running && history.length > 0 && (
         <div style={{ marginBottom:16 }}>
+          {/* Category filter */}
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
+            {[
+              {id:'all', label:'All'},
+              {id:'health', label:'🥗 Health'},
+              {id:'side-hustle', label:'💰 Side Hustle'},
+              {id:'finance', label:'📊 Finance'},
+              {id:'coffee', label:'☕ Coffee'},
+              {id:'cooking', label:'🍳 Cooking'},
+              {id:'woodworking', label:'🪵 Wood'},
+              {id:'outdoor-cooking', label:'🔥 Outdoor'},
+            ].map(f => (
+              <button key={f.id} onClick={() => setTopicFilter(f.id)}
+                style={{ padding:'4px 10px', borderRadius:20, border:`1px solid ${topicFilter===f.id ? ACC : BORD}`, background:topicFilter===f.id ? 'rgba(99,179,237,.15)' : 'transparent', color:topicFilter===f.id ? ACCH : TXT3, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
           <div style={{ fontSize:11, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:8, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span>📋 Previous Sessions — click to retrieve</span>
             <button onClick={()=>{ setHistory([]); localStorage.removeItem('cf_cmd_history'); }}
@@ -1209,8 +1227,8 @@ export default function Dashboard({ onNavigate }) {
             <div style={{ fontSize:10, color:TXT3, marginTop:4 }}>Press Enter or click Use → then click ⚡ Generate Everything</div>
           </div>
           <div style={{ fontSize:11, fontWeight:700, color:TXT3, textTransform:'uppercase', letterSpacing:.5, marginBottom:10 }}>Or choose a preset topic</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:16 }}>
-            {TOPICS.map(t=>(
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, marginBottom:16, maxHeight:320, overflowY:'auto', paddingRight:4 }}>
+            {TOPICS.filter(t => topicFilter === 'all' || t.cat === topicFilter || (topicFilter === 'side-hustle' && t.cat === 'home-income')).map(t=>(
               <button key={t.id} onClick={()=>setTopic(t.id===selectedTopic?.id ? null : t)}
                 style={{ padding:'12px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border: selectedTopic?.id===t.id ? `2px solid ${ACC}` : `1px solid ${BORD}`, background: selectedTopic?.id===t.id ? 'rgba(29,158,117,.15)' : 'rgba(255,255,255,.03)', transition:'all .15s', boxShadow: selectedTopic?.id===t.id ? `0 0 14px rgba(29,158,117,.3)` : 'none' }}>
                 <div style={{ fontSize:22, marginBottom:5 }}>{t.icon}</div>
