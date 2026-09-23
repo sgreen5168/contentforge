@@ -6097,15 +6097,15 @@ app.get('/api/page/:slug', async (req, res) => {
 
     // TTS bar with speed controls
     // Option 3 cookie notice — dark green, bottom-left corner, dismisses once
+    const ckKey = 'nr_ck_' + slug;
     const cookieBanner =
-      '<div id="ck" style="position:fixed;bottom:16px;left:16px;z-index:998;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
+      '<div id="ck" style="position:fixed;bottom:16px;left:16px;z-index:998;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;width:260px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
       '<p style="font-size:12px;color:rgba(255,255,255,.8);line-height:1.65;margin:0 0 10px">This site does not set cookies. Affiliate links may direct you to retailers that set their own cookies. <a href="https://nichroute.com/privacy.html" target="_blank" rel="noopener" style="color:#34D399;text-decoration:underline">Privacy Policy</a></p>' +
       '<div style="display:flex;justify-content:flex-end">' +
-      '<button onclick="(function(){try{localStorage.setItem(\'nr_ck\',\'1\');}catch(e){}document.getElementById(\'ck\').style.display=\'none\';})()" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:500;cursor:pointer;font-family:system-ui,sans-serif">Got it</button>' +
+      '<button onclick="(function(){try{localStorage.setItem(\'nr_ck_' + slug + '\',\'1\');}catch(e){}document.getElementById(\'ck\').style.display=\'none\';})()" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:500;cursor:pointer;font-family:system-ui,sans-serif">Got it</button>' +
       '</div>' +
       '</div>' +
-      '<script>try{if(localStorage.getItem(\'nr_ck\')==\'1\'){var e=document.getElementById(\'ck\');if(e)e.style.display=\'none\';}}catch(e){}<\/script>';
-
+      '<script>try{if(localStorage.getItem(\'nr_ck_' + slug + '\')==\'1\'){var e=document.getElementById(\'ck\');if(e)e.style.display=\'none\';}}catch(e){}<\/script>'
 
     const ttsBar =
       '<div id="tts-bar" style="position:fixed;bottom:16px;right:16px;z-index:999;background:#0F2419;border:1px solid rgba(29,158,117,.3);border-radius:12px;padding:14px 16px;width:260px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-family:system-ui,sans-serif">' +
