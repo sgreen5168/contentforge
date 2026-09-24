@@ -3848,11 +3848,17 @@ app.put('/api/affiliate/links/:id', (req, res) => {
 // ── Auto-match links to a topic ───────────────────────────────────────────────
 app.post('/api/affiliate/match', async (req, res) => {
   try {
-    const { topic, category, platform, count = 3 } = req.body;
+    const { topic, category, platform, count = 3, affId } = req.body;
     if (!topic) return res.status(400).json({ error: 'topic required' });
 
     const allLinks = [...affiliateLinks.values()];
     if (allLinks.length === 0) return res.json({ links: [], message: 'No affiliate links saved yet — add some in the Affiliate Library' });
+
+    // If a specific affId is provided, return that link directly (Digistore24 topics)
+    if (affId) {
+      const specific = allLinks.find(l => l.id === affId);
+      if (specific) return res.json({ links: [specific], matched: 'direct' });
+    }
 
     // Score each link by relevance to topic
     const topicLower = (topic + ' ' + (category || '')).toLowerCase();
