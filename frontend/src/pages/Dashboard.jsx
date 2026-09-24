@@ -173,23 +173,23 @@ const TOPICS = [
     trendingTitles:['Dutch oven camping recipes for beginners','One pot campfire cooking that impresses everyone','Dutch oven over fire 3 easy meals'] },
 
   // ── Digistore24 Products ──────────────────────────────────────────────────
-  { id:'ai-marketers-club', cat:'side-hustle', label:'AI Tools That Actually Make Money Online', icon:'🤖',
+  { id:'ai-marketers-club', cat:'side-hustle', affId:'aff_aimarketers',, label:'AI Tools That Actually Make Money Online', icon:'🤖',
     hook:"Most people use AI for tasks. A small group figured out how to use it to generate income — here is the difference.",
     videoType:'educational', cbSearch:'ai marketing affiliate', amzSearch:'',
     trendingTitles:['AI tools that actually make money online','How to earn with AI marketing in 2026','The AI side hustle most people are missing'] },
-  { id:'ai-content-creator', cat:'side-hustle', label:'Turn Your Phone Into a Content Business', icon:'📱',
+  { id:'ai-content-creator', cat:'side-hustle', affId:'aff_cbprofitclub',, label:'Turn Your Phone Into a Content Business', icon:'📱',
     hook:"The gap between someone who posts casually and someone who earns from content is mostly just one system.",
     videoType:'educational', cbSearch:'content creator income online', amzSearch:'',
     trendingTitles:['How to turn content creation into income','Build a content business with your phone','What separates casual creators from paid ones'] },
-  { id:'budget-google-sheets', cat:'finance', label:'One Spreadsheet That Fixed the Spending Cycle', icon:'📊',
+  { id:'budget-google-sheets', cat:'finance', affId:'aff_budget_planner',, label:'One Spreadsheet That Fixed the Spending Cycle', icon:'📊',
     hook:"A single well-built budget spreadsheet does more for personal finances than any app that charges monthly.",
     videoType:'educational', cbSearch:'budget planner spreadsheet', amzSearch:'budget planner journal notebook',
     trendingTitles:['The free budget spreadsheet that actually works','How to track spending without a budgeting app','One Google Sheet that changed how money gets managed'] },
-  { id:'power-foods-guide', cat:'health', label:'Foods That Do More Than Just Fill You Up', icon:'🥦',
+  { id:'power-foods-guide', cat:'health', affId:'aff_power_foods',, label:'Foods That Do More Than Just Fill You Up', icon:'🥦',
     hook:"Certain foods consistently show up in research on energy, focus, and weight — most people have never heard of half of them.",
     videoType:'educational', cbSearch:'superfoods nutrition guide', amzSearch:'superfoods nutrition cookbook',
     trendingTitles:['The power foods most people ignore','What to eat for real energy that lasts all day','Foods that actually change how your body feels'] },
-  { id:'nutrition-energy', cat:'health', label:'Why You Are Tired After Eating Well', icon:'🌿',
+  { id:'nutrition-energy', cat:'health', affId:'aff_power_foods',, label:'Why You Are Tired After Eating Well', icon:'🌿',
     hook:"Eating healthy but still feeling sluggish is one of the most common and least discussed nutrition problems.",
     videoType:'educational', cbSearch:'nutrition energy foods', amzSearch:'nutrition guide healthy eating',
     trendingTitles:['Why healthy eating still leaves you tired','The missing piece in most nutrition plans','Foods that boost energy that most people overlook'] },
@@ -328,7 +328,7 @@ export default function Dashboard({ onNavigate }) {
     try {
       const r = await fetch(API + '/api/affiliate/match', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1 }),
+        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1, affId: topic.affId || null }),
       });
       const d = await r.json();
       out.link = d.links?.[0] || null;
