@@ -45,6 +45,26 @@ function getTopicAffiliate(topic) {
   return AFFILIATE_CATEGORIES.default.affId;
 }
 
+// Network badge helper
+const NETWORK_BADGE = {
+  amazon:      { label:'AMZ', color:'#FF9900', bg:'rgba(255,153,0,.12)' },
+  clickbank:   { label:'CB',  color:'#1DA462', bg:'rgba(29,164,98,.12)' },
+  digistore24: { label:'DS',  color:'#2563EB', bg:'rgba(37,99,235,.12)' },
+};
+
+function getNetworkBadge(topic) {
+  if (topic.affId) {
+    const amzIds = ['aff_airfryer','aff_portableblender','aff_walkingpad','aff_coffee_grinder','aff_pour_over','aff_milk_frother','aff_wood_carving','aff_orbital_sander','aff_wood_router','aff_cast_iron','aff_camp_stove','aff_smoker_box','aff_mealprep','aff_kitchenaid','aff_standingdesk','aff_resistance','aff_atomichabits','aff_budgetplanner','aff_ringlight'];
+    const ds24Ids = ['aff_aimarketers','aff_budget_planner','aff_power_foods'];
+    if (amzIds.includes(topic.affId)) return NETWORK_BADGE.amazon;
+    if (ds24Ids.includes(topic.affId)) return NETWORK_BADGE.digistore24;
+    return NETWORK_BADGE.clickbank;
+  }
+  const cat = AFFILIATE_CATEGORIES[topic.cat];
+  if (!cat) return NETWORK_BADGE.clickbank;
+  return NETWORK_BADGE[cat.network] || NETWORK_BADGE.clickbank;
+}
+
 const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 const VB_API = 'https://contentforge-production-c8d9.up.railway.app';
 
@@ -1276,8 +1296,9 @@ export default function Dashboard({ onNavigate }) {
             {TOPICS.filter(t => topicFilter === 'all' || t.cat === topicFilter || (topicFilter === 'side-hustle' && t.cat === 'home-income')).map(t=>(
               <button key={t.id} onClick={()=>setTopic(t.id===selectedTopic?.id ? null : t)}
                 style={{ padding:'12px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border: selectedTopic?.id===t.id ? `2px solid ${ACC}` : `1px solid ${BORD}`, background: selectedTopic?.id===t.id ? 'rgba(29,158,117,.15)' : 'rgba(255,255,255,.03)', transition:'all .15s', boxShadow: selectedTopic?.id===t.id ? `0 0 14px rgba(29,158,117,.3)` : 'none' }}>
-                <div style={{ fontSize:22, marginBottom:5 }}>{t.icon}</div>
-                <div style={{ fontSize:10, fontWeight:700, color: selectedTopic?.id===t.id ? ACCH : TXT2, lineHeight:1.3 }}>{t.label}</div>
+                <div style={{ fontSize:22, marginBottom:4 }}>{t.icon}</div>
+                <div style={{ fontSize:10, fontWeight:700, color: selectedTopic?.id===t.id ? ACCH : TXT2, lineHeight:1.3, marginBottom:4 }}>{t.label}</div>
+                {(()=>{const b=getNetworkBadge(t);return <span style={{fontSize:9,fontWeight:700,color:b.color,background:b.bg,borderRadius:4,padding:'1px 5px'}}>{b.label}</span>})()}
               </button>
             ))}
           </div>
@@ -1287,7 +1308,10 @@ export default function Dashboard({ onNavigate }) {
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
                 <span style={{ fontSize:28 }}>{selectedTopic.icon}</span>
                 <div>
-                  <div style={{ fontSize:14, fontWeight:700, color:TXT }}>{selectedTopic.label}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:TXT }}>{selectedTopic.label}</div>
+                    {(()=>{ const b=getNetworkBadge(selectedTopic); const cat=AFFILIATE_CATEGORIES[selectedTopic.cat]; return <span style={{fontSize:10,fontWeight:700,color:b.color,background:b.bg,borderRadius:5,padding:'2px 8px'}}>{b.label}{cat?' · '+cat.name:''}</span>; })()}
+                  </div>
                   <div style={{ fontSize:11, color:TXT3, fontStyle:'italic' }}>"{selectedTopic.hook}"</div>
                 </div>
               </div>
