@@ -1,6 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
 import MediaManager from './MediaManager.jsx';
 
+// ── Affiliate Category Map ─────────────────────────────────────────────────────
+// Single source of truth — maps every category to its default affiliate
+// Used as fallback when a topic has no hardcoded affId
+// Network: 'amazon' | 'clickbank' | 'digistore24'
+const AFFILIATE_CATEGORIES = {
+  // ── Amazon physical products ──────────────────────────────────────
+  'cooking':         { affId:'aff_airfryer',        network:'amazon',      name:'Air Fryer Dual Basket' },
+  'coffee':          { affId:'aff_coffee_grinder',  network:'amazon',      name:'Burr Coffee Grinder' },
+  'cafe':            { affId:'aff_milk_frother',    network:'amazon',      name:'Electric Milk Frother' },
+  'health':          { affId:'aff_resistance',      network:'amazon',      name:'Resistance Bands Set' },
+  'meal-prep':       { affId:'aff_mealprep',        network:'amazon',      name:'Meal Prep Containers' },
+  'baking':          { affId:'aff_kitchenaid',      network:'amazon',      name:'KitchenAid Stand Mixer' },
+  'woodworking':     { affId:'aff_wood_router',     network:'amazon',      name:'Compact Wood Router Kit' },
+  'outdoor-cooking': { affId:'aff_smoker_box',      network:'amazon',      name:'BBQ Smoker Box' },
+  'remote-work':     { affId:'aff_standingdesk',    network:'amazon',      name:'Standing Desk Converter' },
+  'live-commerce':   { affId:'aff_ringlight',       network:'amazon',      name:'Ring Light with Tripod' },
+  'finance':         { affId:'aff_budgetplanner',   network:'amazon',      name:'Budget Planner Journal' },
+  'mindset':         { affId:'aff_atomichabits',    network:'amazon',      name:'Atomic Habits Book' },
+  'amazon':          { affId:'aff_mealprep',        network:'amazon',      name:'Meal Prep Containers' },
+
+  // ── ClickBank digital products ────────────────────────────────────
+  'side-hustle':     { affId:'aff_cbprofitclub',    network:'clickbank',   name:'CB Profit Club' },
+  'home-income':     { affId:'aff_selfhelp',        network:'clickbank',   name:'Home Business Success' },
+  'entrepreneur':    { affId:'aff_mtf0azs0',        network:'clickbank',   name:'InstaDoodle' },
+  'niche':           { affId:'aff_cbprofitclub',    network:'clickbank',   name:'CB Profit Club' },
+  'cooking-biz':     { affId:'aff_selfhelp',        network:'clickbank',   name:'Home Business Success' },
+
+  // ── Digistore24 digital products ─────────────────────────────────
+  'ai-marketing':    { affId:'aff_aimarketers',     network:'digistore24', name:'AI Marketers Club' },
+  'power-foods':     { affId:'aff_power_foods',     network:'digistore24', name:'Encyclopedia of Power Foods' },
+  'budget-sheets':   { affId:'aff_budget_planner',  network:'digistore24', name:'Ultimate Dynamic Personal Budget' },
+
+  // ── Default fallback ──────────────────────────────────────────────
+  'default':         { affId:'aff_cbprofitclub',    network:'clickbank',   name:'CB Profit Club' },
+};
+
+// Helper: get affiliate for a topic (affId takes priority over category)
+function getTopicAffiliate(topic) {
+  if (topic.affId) return topic.affId;
+  const cat = AFFILIATE_CATEGORIES[topic.cat];
+  if (cat) return cat.affId;
+  return AFFILIATE_CATEGORIES.default.affId;
+}
+
 const API = (typeof window !== 'undefined' && window.__CF_API__) || 'https://contentforge-production-6e13.up.railway.app';
 const VB_API = 'https://contentforge-production-c8d9.up.railway.app';
 
@@ -328,7 +372,7 @@ export default function Dashboard({ onNavigate }) {
     try {
       const r = await fetch(API + '/api/affiliate/match', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1, affId: topic.affId || null }),
+        body: JSON.stringify({ topic: topic.label, category: topic.cat, count:1, affId: getTopicAffiliate(topic) }),
       });
       const d = await r.json();
       out.link = d.links?.[0] || null;
