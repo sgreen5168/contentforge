@@ -82,7 +82,7 @@ Generate a complete ad brief as JSON with these exact fields:
   "body_short": "1 sentence ad copy under 80 chars with CTA",
   "body_medium": "2-3 sentence ad copy under 150 chars with emotional hook and CTA",
   "body_long": "3-4 sentence ad copy under 220 chars with problem/solution/CTA",
-  "heygen_script": "60-second talking head UGC video script in first person casual tone, mentions the product naturally, ends with 'link in bio' or 'link below', around 120-150 words",
+  "heygen_script": "60-second talking head UGC video script. STRICT RULES: (1) NEVER use I, me, my, mine — write in second person YOU or product-focused third person. (2) Hook must start with a bold problem statement or surprising fact in first 5 words. (3) Name the product within the first 10 words. (4) Call out the target audience in the first sentence. (5) Focus on what the PRODUCT does, not personal experience. (6) End with clear CTA: 'Link in bio' or 'Link below to grab yours'. (7) 120-150 words. Example hook: 'Busy weeknights just got easier — the Air Fryer Dual Basket cooks two meals at once in under 30 minutes.'",
   "pinterest_title": "Pin title under 50 chars optimized for Pinterest search",
   "pinterest_description": "Pin description 2-3 sentences with keywords and call to action",
   "pinterest_hashtags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5"],
