@@ -24,6 +24,7 @@ const TABS = [
   { id:'buyer',     label:'🎯 Buyer Intent',          icon:'🎯' },
   { id:'msads',     label:'🔍 Microsoft Ads',        icon:'🔍' },
   { id:'pinads',    label:'📌 Pinterest Ads',         icon:'📌' },
+  { id:'adbrief',   label:'📢 Ad Brief',              icon:'📢' },
 ];
 
 function card(extra) {
@@ -1004,6 +1005,7 @@ export default function TrafficEngine({ onNavigate }) {
       {activeTab === 'buyer'    && <BuyerIntentEngine />}
       {activeTab === 'msads'    && <MsAdsBuilder />}
       {activeTab === 'pinads'   && <PinAdsBuilder />}
+      {activeTab === 'adbrief'   && <AdBriefGenerator />}
 
       </div>
     </div>
