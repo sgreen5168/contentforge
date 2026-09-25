@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import MsAdsBuilder from './MsAdsBuilder.jsx';
 import BuyerIntentEngine from './BuyerIntentEngine.jsx';
 import PinAdsBuilder from './PinAdsBuilder.jsx';
+import AdBriefGenerator from './AdBriefGenerator.jsx';
 
 const BG   = '#0B1829';
 const BG2  = '#0F2035';
