@@ -2974,14 +2974,20 @@ async function runCleanWorkflow(jobId, params) {
         }
         if (!chosen) { console.warn(`Pexels ${i+1}: no file for "${keywords[i]}"`); continue; }
 
-        // Download clip
+        // Download clip using ffmpeg's built-in HTTP (bypasses egress filter)
         const rawPath  = path.join(tmpDir, `raw_${i}.mp4`);
         const normPath = path.join(tmpDir, `norm_${i}.mp4`);
-        const cRes = await fetch(chosen);
-        if (!cRes.ok) { console.warn(`Clip download ${i+1} HTTP ${cRes.status}`); continue; }
-        const cBuf = await cRes.buffer();
-        if (!cBuf || cBuf.length < 5000) { console.warn(`Clip ${i+1} too small`); continue; }
-        fs.writeFileSync(rawPath, cBuf);
+        try {
+          await execAsync(
+            `"${ff}" -y -user_agent "Mozilla/5.0" -i "${chosen}" -c copy -t 15 "${rawPath}"`
+          );
+        } catch(dlErr) {
+          console.warn(`Clip ${i+1} ffmpeg download failed:`, dlErr.message.slice(0,100));
+          continue;
+        }
+        if (!fs.existsSync(rawPath) || fs.statSync(rawPath).size < 5000) {
+          console.warn(`Clip ${i+1} too small after download`); continue;
+        }
 
         // Normalize to target size, remove audio
         await execAsync(
