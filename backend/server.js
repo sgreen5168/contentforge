@@ -307,6 +307,18 @@ async function generateClip(prompt, duration, aspectRatio) {
     'earn money home':    ['person receiving package doorstep', 'woman shopping online success', 'entrepreneur excited phone', 'small business owner proud'],
     'make money home':    ['side hustle products display', 'woman baking selling goods', 'lawn care business tools', 'person crafting handmade items'],
     'income home':        ['home business products shelf', 'woman counting receipts kitchen', 'small business owner smiling', 'entrepreneur planning whiteboard'],
+    // Air fryer and cooking appliances
+    'air fryer':          ['air fryer cooking kitchen', 'healthy cooking appliance home', 'crispy food air fryer basket', 'modern kitchen cooking'],
+    'dual basket':        ['cooking two dishes simultaneously', 'kitchen meal prep containers', 'healthy meal cooking home', 'air fryer food cooking'],
+    'basket':             ['food cooking kitchen appliance', 'meal preparation home cook', 'healthy cooking method kitchen'],
+    'crispy':             ['crispy fried food plate', 'golden brown food cooking', 'healthy cooked food serving'],
+    'weeknight':          ['family dinner table home', 'quick meal preparation kitchen', 'busy parent cooking home'],
+    'meal prep':          ['meal prep containers food', 'weekly cooking preparation', 'healthy food containers fridge'],
+    'salmon':             ['salmon fillet cooking pan', 'healthy fish meal plate', 'seafood cooking kitchen'],
+    'chicken':            ['chicken cooking pan kitchen', 'healthy protein meal', 'chicken thighs food cooking'],
+    'vegetables':         ['fresh vegetables cutting board', 'roasted vegetables pan', 'colorful vegetables cooking'],
+    'brussels sprouts':   ['roasted vegetables pan oven', 'healthy green vegetables cooking', 'brussels sprouts food'],
+    'voiceover':          ['person speaking camera confident', 'lifestyle content creator talking', 'product review talking camera'],
     'side hustle':        ['person baking tray goods', 'lawn mower yard work', 'craftsperson making jewelry', 'woman packaging products home', 'man repairing appliance'],
     'baking home':        ['woman baking bread kitchen', 'homemade cookies tray', 'person decorating cake', 'baked goods display table', 'baker kneading dough'],
     'lawn care':          ['person mowing lawn', 'garden tools yard', 'landscaping outdoor work', 'man trimming hedges', 'lawn maintenance equipment'],
@@ -6943,7 +6955,7 @@ const OPENING_SCENE_MAP = {
   'home-business': ['person working from home laptop', 'home office entrepreneur morning', 'woman planning home business'],
   'healthy-eating': ['fresh vegetables colorful kitchen', 'healthy meal preparation kitchen', 'person smiling healthy food'],
   'fitness':        ['person starting morning workout', 'fitness motivation athlete starting', 'gym workout beginning'],
-  'cooking':        ['fresh ingredients kitchen counter', 'home cook starting recipe', 'kitchen preparation ingredients'],
+  'cooking':        ['air fryer kitchen appliance', 'home cook food preparation', 'fresh vegetables cutting board kitchen', 'cooking healthy food home'],
   'default':        ['person getting started motivation', 'beginning new journey lifestyle'],
 };
 
@@ -6978,24 +6990,29 @@ async function extractKeywordForPhrase(phrase, opts = {}) {
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 40,
-      system: `You are a video scene selector. Extract a 2-5 word Pexels stock footage search phrase that visually matches this sentence.
+      system: `You are a video scene selector. Extract a 2-5 word Pexels stock footage search phrase that EXACTLY matches what is visually shown in this sentence.
 
-Rules:
-- Be SPECIFIC to the exact action/object mentioned, not the general topic
-- Include the SETTING (kitchen, home office, outdoor, gym etc)
-- Include the ACTION (baking, typing, cooking, running etc)
-- Match ethnically/demographically diverse scenes when possible
-- NEVER use abstract words — only concrete visual nouns and actions
+${nicheContext}
 
-Good examples:
-"She bakes cookies at home" → "woman baking cookies home kitchen"
-"Selling templates online" → "person laptop creating digital design"
-"No experience needed" → "beginner learning new skill home"
-"First sale notification" → "person excited phone notification"
-"Explaining to family" → "family dinner conversation home"
-"Testing ideas that flop" → "frustrated person computer home"
+STRICT RULES:
+- Be HYPER-SPECIFIC to the exact object/appliance/food mentioned
+- If sentence mentions air fryer → use "air fryer cooking kitchen"
+- If sentence mentions dual basket → use "cooking two dishes kitchen"  
+- If sentence mentions chicken → use "chicken cooking pan kitchen"
+- If sentence mentions vegetables → use "fresh vegetables cooking"
+- Include the SETTING (kitchen, home, outdoor, gym)
+- Include the ACTION (cooking, preparing, eating, serving)
+- NEVER use abstract words — only concrete visual objects and actions
+- Topic niche must influence every keyword choice
 
-Reply with ONLY the search phrase, nothing else.`,
+Perfect examples:
+"Air fryer dual basket cooks two meals" → "air fryer cooking kitchen appliance"
+"Crispy chicken in 18 minutes" → "crispy chicken cooking pan home"
+"Preheat your air fryer first" → "kitchen appliance heating food"
+"Family dinner is ready" → "family eating healthy dinner table"
+"Link below to see the setup" → "person showing product kitchen"
+
+Reply with ONLY the 2-5 word search phrase, nothing else.`,
       messages: [{ role: 'user', content: `Topic: "${topic}". Niche: ${niche}. Sentence: "${phrase}"` }],
     });
     const kw = (msg.content[0]?.text || '').trim().toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
