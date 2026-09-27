@@ -986,7 +986,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         title: filename.slice(0, 70),
         shortDescription: 'Everything you need to know about ' + filename + '. Follow for more. 🔗 Link in description.',
         longDescription: 'In this video we cover ' + filename + ' with practical tips and recommendations. Watch until the end for our top pick and where to get it.\n\n',
-        tags: [filename.toLowerCase(), (filename.split(' ')[0]||'video').toLowerCase(), 'how to', 'review', '2026', 'lifestyle', 'best', 'tutorial']
+        tags: [filename.toLowerCase(), (filename.split(' ')[0]||'video').toLowerCase(), 'how to', 'review', '2026', 'lifestyle', 'best', 'tutorial'],
         category: 'People & Blogs',
         isShort: true,
       };
