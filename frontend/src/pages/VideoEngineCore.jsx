@@ -973,8 +973,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         const affD = await affR.json();
         const bestLink = affD.links?.[0];
         if (bestLink) {
-          meta.longDescription = (meta.longDescription || '') + '\n\n🔗 Recommended: ' + bestLink.name + '\n' + bestLink.url + '\n\n#ad #affiliate';
-          meta.shortDescription = (meta.shortDescription || '') + ' 🔗 Link in description. #ad';
+          meta.longDescription = (meta.longDescription || '') + '\n\n🔗 ' + bestLink.name + '\n' + bestLink.url + '\n\n#ad';
+          meta.shortDescription = (meta.shortDescription || '') + ' | ' + bestLink.url;
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
@@ -984,9 +984,9 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
       const filename = ytFile.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
       const fallback = {
         title: filename.slice(0, 70),
-        shortDescription: 'Watch this video for practical tips on building income from home. Follow for more content like this.',
-        longDescription: `In this video you will discover practical strategies for creating income opportunities from home.\n\nWhat you will learn:\n• Real strategies that work in today\'s economy\n• How to get started without experience\n• Tips for staying consistent\n\nFollow for weekly content on home business, side hustles, and financial freedom.\n\n#homebusiness #sidehustle #workfromhome #earnfromhome #entrepreneur`,
-        tags: ['home business','work from home','side hustle','earn from home','entrepreneur','passive income','financial freedom','make money online','home income','remote work'],
+        shortDescription: 'Everything you need to know about ' + filename + '. Follow for more. 🔗 Link in description.',
+        longDescription: 'In this video we cover ' + filename + ' with practical tips and recommendations. Watch until the end for our top pick and where to get it.\n\n',
+        tags: [filename.toLowerCase(), (filename.split(' ')[0]||'video').toLowerCase(), 'how to', 'review', '2026', 'lifestyle', 'best', 'tutorial']
         category: 'People & Blogs',
         isShort: true,
       };
