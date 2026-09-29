@@ -929,7 +929,23 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
           duration: isShort ? '30s' : '60s',
           platforms: ['youtube'],
           videoType: 'ugc-persona',
-          editedScript: `Generate YouTube metadata for a video titled: "${filename}".${scriptCtx ? ' Script context: ' + scriptCtx.slice(0, 300) : ''} Return ONLY a JSON object with fields: title (under 70 chars, compelling), shortDescription (under 200 chars), longDescription (150-250 words with hashtags), tags (array of 10 strings), category ("People & Blogs"), isShort (${isShort}). No explanation, no markdown, just JSON.`,
+          editedScript: `You are a YouTube SEO expert. Generate metadata for a video titled: "${filename}".
+${scriptCtx ? 'Video script: ' + scriptCtx.slice(0, 400) : ''}
+
+The video is about: ${filename}
+Extract the TOPIC from the title — if it mentions air fryer, use cooking/air fryer tags. If coffee, use coffee tags. If fitness, use workout tags. Match EXACTLY to the video subject.
+
+Return ONLY a valid JSON object with these fields:
+{
+  "title": "compelling title under 70 chars related to ${filename}",
+  "shortDescription": "2 sentences about the video topic with emoji, under 150 chars",
+  "longDescription": "3-4 paragraphs about ${filename} with relevant tips and benefits, end with hashtags matching the topic",
+  "tags": ["10 tags DIRECTLY related to the video topic — NO generic home business or side hustle tags unless the video IS about that"],
+  "category": "People & Blogs",
+  "isShort": ${isShort}
+}
+
+No explanation, no markdown fences, just the JSON object.`,
         }),
       });
       const data = await res.json();
@@ -953,8 +969,8 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
         meta = {
           title: hook.slice(0, 70),
           shortDescription: hook + ' Follow for more tips like this. 🔗 Link in bio. #shorts',
-          longDescription: fullScript.slice(0, 500) + '\n\n' + hashtags + '\n\n#homebusiness #sidehustle #workfromhome #entrepreneur',
-          tags: ['home business', 'work from home', 'side hustle', filename.toLowerCase(), 'entrepreneur', 'earn from home', 'passive income', 'catering business', 'home income', 'business tips'],
+          longDescription: fullScript.slice(0, 500) + '\n\n' + hashtags + '\n\n#' + filename.toLowerCase().replace(/\s+/g,'').slice(0,20) + ' #tips #howto #review #2026',
+          tags: [filename.toLowerCase(), ...filename.toLowerCase().split(' ').slice(0,3).filter(w=>w.length>2), 'how to', 'review', '2026', 'tips', 'best'],
           category: 'People & Blogs',
           isShort,
         };
