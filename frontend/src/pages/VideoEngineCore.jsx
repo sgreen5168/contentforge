@@ -989,14 +989,13 @@ No explanation, no markdown fences, just the JSON object.`,
         const affD = await affR.json();
         const bestLink = affD.links?.[0];
         if (bestLink) {
-          // Build natural affiliate section — ASCII safe for YouTube
-          const affSection = '\n\n--------------------' +
-            '\n>> GET IT HERE: ' + bestLink.url +
-            '\n(' + bestLink.name + ')' +
-            '\n--------------------' +
-            '\n\n* Affiliate link — clicking this supports the channel at no extra cost to you.';
+          // Affiliate section - URL on its own line so YouTube makes it clickable
+          const affSection = '\n\nSHOP THE PRODUCT:\n' +
+            bestLink.url + '\n' +
+            '(' + bestLink.name + ')' +
+            '\n\nThis video contains affiliate links. Clicking them supports this channel at no extra cost to you.';
           meta.longDescription = (meta.longDescription || '') + affSection;
-          meta.shortDescription = 'Get it here: ' + bestLink.url + '\n\n' + (meta.shortDescription || '');
+          meta.shortDescription = 'Shop here: ' + bestLink.url + '\n' + (meta.shortDescription || '');
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
