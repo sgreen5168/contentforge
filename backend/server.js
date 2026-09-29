@@ -3663,20 +3663,24 @@ app.post('/api/youtube/upload-from-file', async (req, res) => {
     }
 
     const title       = (fields.title || 'My Video').slice(0, 100);
-    const description = (fields.description || '')
-      .replace(/[\u2014\u2013]/g, '-')   // em/en dash to hyphen
-      .replace(/[\u2018\u2019]/g, "'")   // smart quotes to straight
-      .replace(/[\u201C\u201D]/g, '"')   // smart double quotes
-      .replace(/[\u2192]/g, '->')          // arrow
-      .replace(/[\u2501-\u254B]/g, '-')   // box drawing chars (━)
-      .replace(/[^\x00-\x7F\n\r]/g, function(c) {  // keep basic emoji safe
-        const cp = c.codePointAt(0);
-        // Allow common emoji ranges
-        if (cp >= 0x1F300 && cp <= 0x1FAFF) return c;
-        if (cp >= 0x2600 && cp <= 0x27BF) return c;
-        return '';
-      })
-      .slice(0, 5000);
+    // Full sanitization — strip all non-ASCII that YouTube misrenders
+    function sanitizeForYT(text) {
+      return (text || '')
+        .replace(/\u2014|\u2013/g, ' - ')    // em/en dash
+        .replace(/\u2018|\u2019/g, "'")       // curly single quotes
+        .replace(/\u201C|\u201D/g, '"')       // curly double quotes
+        .replace(/\u2026/g, '...')             // ellipsis
+        .replace(/\u2192/g, '->')              // right arrow
+        .replace(/\u00E2[\u0080-\u009F]/g, '') // catch â€" style mojibake
+        .replace(/[\u0080-\u00BF]/g, '')      // Latin-1 supplement garbage
+        .replace(/[\u2000-\u206F]/g, ' ')     // general punctuation
+        .replace(/[\u2500-\u257F]/g, '-')     // box drawing
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, '') // strip all emoji for YouTube safety
+        .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '') // keep only printable ASCII + tabs/newlines
+        .replace(/[ \t]{2,}/g, ' ')            // collapse multiple spaces
+        .trim();
+    }
+    const description = sanitizeForYT(fields.description || '').slice(0, 5000);
     const privacy     = fields.privacy || 'public';
     const category    = fields.category || '22';
     const tagsRaw     = fields.tags || '[]';
