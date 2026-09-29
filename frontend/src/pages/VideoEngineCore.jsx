@@ -989,14 +989,14 @@ No explanation, no markdown fences, just the JSON object.`,
         const affD = await affR.json();
         const bestLink = affD.links?.[0];
         if (bestLink) {
-          // Build natural affiliate section
-          const affSection = '\n\n━━━━━━━━━━━━━━━━━━━━━━' +
-            '\n🛒 GET IT HERE → ' + bestLink.url +
+          // Build natural affiliate section — ASCII safe for YouTube
+          const affSection = '\n\n--------------------' +
+            '\n>> GET IT HERE: ' + bestLink.url +
             '\n(' + bestLink.name + ')' +
-            '\n━━━━━━━━━━━━━━━━━━━━━━' +
-            '\n\n⚠️ Affiliate link — I may earn a small commission at no extra cost to you.';
+            '\n--------------------' +
+            '\n\n* Affiliate link — clicking this supports the channel at no extra cost to you.';
           meta.longDescription = (meta.longDescription || '') + affSection;
-          meta.shortDescription = '🛒 ' + bestLink.name + ' → ' + bestLink.url + '\n\n' + (meta.shortDescription || '');
+          meta.shortDescription = 'Get it here: ' + bestLink.url + '\n\n' + (meta.shortDescription || '');
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
