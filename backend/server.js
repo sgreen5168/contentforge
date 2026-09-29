@@ -3663,7 +3663,20 @@ app.post('/api/youtube/upload-from-file', async (req, res) => {
     }
 
     const title       = (fields.title || 'My Video').slice(0, 100);
-    const description = (fields.description || '').slice(0, 5000);
+    const description = (fields.description || '')
+      .replace(/[\u2014\u2013]/g, '-')   // em/en dash to hyphen
+      .replace(/[\u2018\u2019]/g, "'")   // smart quotes to straight
+      .replace(/[\u201C\u201D]/g, '"')   // smart double quotes
+      .replace(/[\u2192]/g, '->')          // arrow
+      .replace(/[\u2501-\u254B]/g, '-')   // box drawing chars (━)
+      .replace(/[^\x00-\x7F\n\r]/g, function(c) {  // keep basic emoji safe
+        const cp = c.codePointAt(0);
+        // Allow common emoji ranges
+        if (cp >= 0x1F300 && cp <= 0x1FAFF) return c;
+        if (cp >= 0x2600 && cp <= 0x27BF) return c;
+        return '';
+      })
+      .slice(0, 5000);
     const privacy     = fields.privacy || 'public';
     const category    = fields.category || '22';
     const tagsRaw     = fields.tags || '[]';
