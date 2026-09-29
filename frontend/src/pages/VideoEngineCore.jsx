@@ -989,8 +989,14 @@ No explanation, no markdown fences, just the JSON object.`,
         const affD = await affR.json();
         const bestLink = affD.links?.[0];
         if (bestLink) {
-          meta.longDescription = (meta.longDescription || '') + '\n\n🔗 ' + bestLink.name + '\n' + bestLink.url + '\n\n#ad';
-          meta.shortDescription = (meta.shortDescription || '') + ' | ' + bestLink.url;
+          // Build natural affiliate section
+          const affSection = '\n\n━━━━━━━━━━━━━━━━━━━━━━' +
+            '\n🛒 GET IT HERE → ' + bestLink.url +
+            '\n(' + bestLink.name + ')' +
+            '\n━━━━━━━━━━━━━━━━━━━━━━' +
+            '\n\n⚠️ Affiliate link — I may earn a small commission at no extra cost to you.';
+          meta.longDescription = (meta.longDescription || '') + affSection;
+          meta.shortDescription = '🛒 ' + bestLink.name + ' → ' + bestLink.url + '\n\n' + (meta.shortDescription || '');
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
@@ -2947,7 +2953,7 @@ No explanation, no markdown fences, just the JSON object.`,
                       var field = ytDescMode === 'short' ? 'shortDescription' : 'longDescription';
                       setYtEditMeta(function(p) { return {...p, [field]: e.target.value}; });
                     }}
-                    rows={ytDescMode === 'short' ? 3 : 8}
+                    rows={ytDescMode === 'short' ? 4 : 12}
                     style={{ width: '100%', background: 'rgba(22,61,106,.5)', border: `1px solid ${BORD}`, borderRadius: 7, padding: '8px 10px', fontSize: 11, color: TXT2, fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
                   <div style={{ fontSize: 9, color: TXT3, marginTop: 3 }}>
                     {ytDescMode === 'short' ? 'Short description — used for YouTube Shorts under 60 seconds' : 'Long description — used for regular YouTube videos and search SEO'}
