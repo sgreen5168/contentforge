@@ -319,12 +319,15 @@ Return ONLY the JSON object, no other text.`,
         {[
           'Open HeyGen → Create Video → Talking Avatar',
           'Select your avatar (or use AI avatar)',
-          'Paste the script above into the text field',
+          'Paste the script above — ensure it says "link in pinned comment"',
           'Set voice to English US — natural tone',
           'Preview and adjust pacing if needed',
-          'Export as MP4 (1080×1920 for Stories/Reels, 1080×1080 for Feed)',
+          'Export as MP4 (1080×1920 for Shorts/Reels, 1080×1080 for Feed)',
+          'Upload to YouTube → paste title, description, tags from Ad Brief',
+          'After publishing → immediately post NichRoute URL as first comment',
+          'PIN that comment so it appears at the top for all viewers',
           'Upload to NichRoute via 📁 Media Manager in Command Center',
-          'Post on Facebook, Instagram Reels, YouTube Shorts',
+          'Cross-post to Facebook Reels and Instagram Reels',
         ].map((step,i) => (
           <div key={i} style={{ display:'flex', gap:10, padding:'6px 0', borderBottom:`1px solid ${BORD}` }}>
             <span style={{ color:GRN, flexShrink:0, fontSize:11 }}>{i+1}.</span>
