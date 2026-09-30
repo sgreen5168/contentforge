@@ -3767,7 +3767,69 @@ app.post('/api/youtube/upload-from-file', async (req, res) => {
       : 'https://studio.youtube.com';
 
     console.log('✅ YouTube upload complete:', videoId);
-    res.json({ success: true, videoId, youtubeUrl, title });
+
+    // Auto-add YouTube Card pointing to NichRoute landing page
+    let cardAdded = false;
+    const landingPageUrl = fields.landingPageUrl || '';
+    if (videoId && landingPageUrl) {
+      try {
+        // Get video duration first (needed for card timing)
+        const detailsRes = await fetch(
+          'https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=' + videoId,
+          { headers: { Authorization: 'Bearer ' + accessToken } }
+        );
+        const detailsData = await detailsRes.json();
+        const duration = detailsData.items?.[0]?.contentDetails?.duration || 'PT60S';
+        
+        // Parse duration to get midpoint offset (show card at 30% into video)
+        const dMatch = duration.match(/PT(?:(\d+)M)?(?:(\d+)S)?/);
+        const totalSecs = ((parseInt(dMatch?.[1])||0)*60) + (parseInt(dMatch?.[2])||0);
+        const offsetSecs = Math.max(1, Math.floor(totalSecs * 0.3));
+        const offsetMs = offsetSecs * 1000;
+
+        // Add card via YouTube API
+        const cardBody = {
+          snippet: {
+            videoId,
+            cards: [{
+              cardType: 'LINK',
+              linkDetails: {
+                externalUrl: landingPageUrl,
+                title: 'Get it here',
+                callToAction: 'Shop now',
+                teaser: 'See full review',
+              },
+              teaserDetails: {
+                startOffsetMs: offsetMs.toString(),
+              }
+            }]
+          }
+        };
+
+        const cardRes = await fetch(
+          'https://www.googleapis.com/youtube/v3/cards?part=snippet',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: 'Bearer ' + accessToken,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(cardBody),
+          }
+        );
+        if (cardRes.ok) {
+          cardAdded = true;
+          console.log('✅ YouTube Card added pointing to:', landingPageUrl);
+        } else {
+          const cardErr = await cardRes.text();
+          console.warn('⚠️ Card add failed:', cardErr.slice(0,150));
+        }
+      } catch(cardErr) {
+        console.warn('⚠️ Card API error:', cardErr.message);
+      }
+    }
+
+    res.json({ success: true, videoId, youtubeUrl, title, cardAdded });
 
   } catch(e) {
     console.error('YouTube upload error:', e.message);
