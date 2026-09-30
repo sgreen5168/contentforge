@@ -1051,6 +1051,10 @@ No explanation, no markdown fences, just the JSON object.`,
       formData.append('privacy', ytPrivacyMode);
       formData.append('category', ytEditMeta.category || 'People & Blogs');
       formData.append('isShort', ytEditMeta.isShort ? 'true' : 'false');
+      // Pass landing page URL for YouTube Card auto-creation
+      const savedSession = (() => { try { return JSON.parse(localStorage.getItem('cf_cc_results') || '{}'); } catch { return {}; } })();
+      const landingPageUrl = savedSession.landingUrl || savedSession.landing || '';
+      if (landingPageUrl) formData.append('landingPageUrl', landingPageUrl);
 
       const res = await fetch(API + '/api/youtube/upload-from-file', {
         method: 'POST',
