@@ -939,7 +939,7 @@ Return ONLY a valid JSON object with these fields:
 {
   "title": "compelling title under 70 chars related to ${filename}",
   "shortDescription": "2 sentences about the video topic with emoji, under 150 chars",
-  "longDescription": "3-4 paragraphs about ${filename} with relevant tips and benefits, end with hashtags matching the topic",
+  "longDescription": "3-4 paragraphs about ${filename} with relevant tips and benefits. End with: SHOP THE PRODUCT (link in pinned comment): [URL HERE] then add hashtags matching the topic",
   "tags": ["10 tags DIRECTLY related to the video topic — NO generic home business or side hustle tags unless the video IS about that"],
   "category": "People & Blogs",
   "isShort": ${isShort}
@@ -989,13 +989,15 @@ No explanation, no markdown fences, just the JSON object.`,
         const affD = await affR.json();
         const bestLink = affD.links?.[0];
         if (bestLink) {
-          // Affiliate section - URL on its own line so YouTube makes it clickable
-          const affSection = '\n\nSHOP THE PRODUCT:\n' +
-            bestLink.url + '\n' +
+          // Use NichRoute landing page URL — shorter, easier to type, affiliate link embedded
+          const nichrouteUrl = window.__CF_LANDING_URL__ || '';
+          const shopUrl = nichrouteUrl || bestLink.url;
+          const affSection = '\n\nSHOP THE PRODUCT (link in pinned comment):\n' +
+            shopUrl + '\n' +
             '(' + bestLink.name + ')' +
-            '\n\nThis video contains affiliate links. Clicking them supports this channel at no extra cost to you.';
+            '\n\nThis video contains affiliate links. Purchases support this channel at no extra cost to you.';
           meta.longDescription = (meta.longDescription || '') + affSection;
-          meta.shortDescription = 'Shop here: ' + bestLink.url + '\n' + (meta.shortDescription || '');
+          meta.shortDescription = 'Full review + link in pinned comment below.' + '\n' + (meta.shortDescription || '');
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
