@@ -464,31 +464,38 @@ export default function Dashboard({ onNavigate }) {
       const ytLandingUrl = out.landingUrl || out.landing || '';
       const ytAffLine = ytLink ? ('\n\n🔗 ' + (ytLink.name||'Product mentioned') + ': ' + (ytLink.url||'')) : '';
       const ytDisclosure = ytLink ? '\n(Affiliate link — I may earn a small commission at no extra cost to you)' : '';
+      // Build topic-specific hashtags from topic label
+      const ytTopicTag = '#' + (topic.label||topic.id||'video').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,20);
+      const ytCatTag = '#' + (topic.cat||'lifestyle').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const ytWordTags = (topic.label||'').toLowerCase().split(' ').slice(0,3)
+        .filter(w=>w.length>3).map(w=>'#'+w.replace(/[^a-z0-9]/g,'')).join(' ');
+
       out.youtubeDescription = [
         out.youtubeTitle || topic.label,
         '',
         (out.script || '').slice(0, 500),
-        ytAffLine + ytDisclosure,
         '',
-        '━━━━━━━━━━━━━━━━━━━━',
-        ytLandingUrl ? ('📌 Full details: ' + ytLandingUrl) : '',
-        '━━━━━━━━━━━━━━━━━━━━',
-        '#' + (topic.id||'content').replace(/-/g,'') + ' #homebusiness #sidehustle #contentcreator',
+        'SHOP THE PRODUCT (link in pinned comment below):',
+        ytLandingUrl || '',
+        ytLink ? ('(' + (ytLink.name||'') + ')') : '',
+        ytLink ? 'Affiliate link — purchases support this channel at no extra cost to you.' : '',
         '',
-        '✅ Subscribe for weekly tips on home business, meal prep, health and lifestyle.',
+        [ytTopicTag, ytCatTag, ytWordTags, '#tips #howto #review #2026'].filter(Boolean).join(' '),
+        '',
+        'Subscribe for more reviews and buying guides.',
       ].filter(Boolean).join('\n');
 
       // Auto-build YouTube tags
       const topicWords = (topic.label||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').split(' ').filter(function(w){ return w.length>2; });
-      out.youtubeTags = [...topicWords, 'home business', 'side hustle', 'how to', topic.cat||'lifestyle'].join(', ');
+      out.youtubeTags = [...topicWords.slice(0,5), topic.cat||'lifestyle', 'how to', 'review', 'tips', '2026'].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', ');
 
       // Build platform captions — set on out so they're available immediately
       out.tikTokCaption = (out.hook || (out.script||'').slice(0,100)) +
         '\n\nFull details link in bio 👆\n\n' +
-        '#' + (topic.id||'content').replace(/-/g,'') + ' #fyp #sidehustle #homebusiness #contentcreator';
+        '#' + (topic.id||'content').replace(/-/g,'').slice(0,20) + ' #fyp #' + (topic.cat||'lifestyle') + ' #tips #howto';
       out.igCaption = (out.post||'').slice(0,200) +
         '\n\nLink in bio 👆\n\n' +
-        '#' + (topic.id||'content').replace(/-/g,'') + ' #reels #homebusiness #sidehustle #contentcreator #lifestyle';
+        '#' + (topic.id||'content').replace(/-/g,'').slice(0,20) + ' #reels #' + (topic.cat||'lifestyle') + ' #tips #howto #review';
       updateStep('script', { status:'done', data: script });
     } catch(e) {
       updateStep('script', { status:'error', error: e.message });
