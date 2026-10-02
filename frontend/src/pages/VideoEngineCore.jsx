@@ -205,7 +205,7 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [ytUploadErr, setYtUpErr]     = useState('');
   const [ytEditMeta, setYtEditMeta]   = useState(null); // editable copy
   const [ytPrivacyMode, setYtPrivMode]= useState('public');
-  const [ytDescMode, setYtDescMode]   = useState('short'); // 'short' | 'long'
+  const [ytDescMode, setYtDescMode]   = useState('long'); // 'short' | 'long'
   const ytFileRef                     = React.useRef(null);
   const [vbYtPrivacy, setVbYtPriv]  = useState('public');
   const [vbHistory, setVbHistory]   = useState([]);
@@ -990,14 +990,16 @@ No explanation, no markdown fences, just the JSON object.`,
         const bestLink = affD.links?.[0];
         if (bestLink) {
           // Use NichRoute landing page URL — shorter, easier to type, affiliate link embedded
-          const nichrouteUrl = window.__CF_LANDING_URL__ || '';
+          // Get NichRoute URL from last Command Center session
+          const cfSession = (() => { try { return JSON.parse(localStorage.getItem('cf_cc_results') || '{}'); } catch { return {}; } })();
+          const nichrouteUrl = cfSession.landingUrl || cfSession.landing || '';
           const shopUrl = nichrouteUrl || bestLink.url;
           const affSection = '\n\nSHOP THE PRODUCT (link in pinned comment):\n' +
             shopUrl + '\n' +
             '(' + bestLink.name + ')' +
             '\n\nThis video contains affiliate links. Purchases support this channel at no extra cost to you.';
           meta.longDescription = (meta.longDescription || '') + affSection;
-          meta.shortDescription = 'Full review + link in pinned comment below.' + '\n' + (meta.shortDescription || '');
+          meta.shortDescription = (meta.shortDescription || filename) + '\n\nSHOP: ' + shopUrl + '\n\nFull review + affiliate link in pinned comment.';
         }
       } catch(e) { console.warn('Affiliate match skipped:', e.message); }
       setYtMeta(meta);
