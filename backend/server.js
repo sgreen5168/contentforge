@@ -6373,7 +6373,8 @@ app.get('/api/health/check-links', async (req, res) => {
         // Use GET for Amazon (blocks HEAD), HEAD for others
         const isAmazon = link.url.includes('amazon.com') || link.url.includes('amzn.to');
         const isClickBank = link.url.includes('hop.clickbank.net');
-        const method = isAmazon ? 'GET' : 'HEAD';
+        const isDigistore = link.url.includes('digistore24.com') || link.url.includes('checkout-ds24.com');
+        const method = (isAmazon || isDigistore) ? 'GET' : 'HEAD';
         const r = await fetch(link.url, {
           method,
           redirect: 'follow',
@@ -6382,9 +6383,27 @@ app.get('/api/health/check-links', async (req, res) => {
         });
         // 405 = method not allowed (not dead), 403 = forbidden (check manually)
         // Consider dead only if 404, 410, 500, 503 or network error
-        const ok = r.status < 400 || r.status === 405;
+        // 405 = HEAD not allowed, 403 = forbidden by platform — both mean link exists
+        const ok = r.status < 400 || r.status === 405 || r.status === 403;
         results.push({ id: link.id, name: link.name, status: r.status, ok });
-        if (!ok) dead.push({ id: link.id, name: link.name, url: link.url, status: r.status });
+        if (!ok) {
+          dead.push({ id: link.id, name: link.name, url: link.url, status: r.status });
+          // Auto-repair: replace truly dead links (404/410/500) with Amazon search fallback
+          const trulyDead = [404, 410, 500, 503].includes(r.status);
+          if (trulyDead) {
+            try {
+              // Build a safe fallback Amazon search URL using the product name
+              const searchTerm = encodeURIComponent(link.name || 'product');
+              const fallbackUrl = 'https://www.amazon.com/s?k=' + searchTerm + '&tag=nichroute-20';
+              await db.from('affiliate_links').update({ url: fallbackUrl }).eq('id', link.id);
+              console.log('🔧 Auto-repaired dead link:', link.id, '→', fallbackUrl);
+              dead[dead.length-1].autoRepaired = true;
+              dead[dead.length-1].newUrl = fallbackUrl;
+            } catch(repairErr) {
+              console.warn('Repair failed for', link.id, repairErr.message);
+            }
+          }
+        }
       } catch(e) {
         dead.push({ id: link.id, name: link.name, url: link.url, error: e.message.slice(0,50) });
       }
