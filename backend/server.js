@@ -6273,7 +6273,6 @@ app.get('/api/page/:slug', async (req, res) => {
       '<div style="width:26px;height:26px;background:#059669;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px">&#127807;</div>' +
       '<span style="color:#fff;font-size:15px;font-weight:500;font-family:Georgia,serif">NichRoute</span>' +
       '</div>' +
-      '<div style="font-family:system-ui,sans-serif;font-size:12px;color:rgba(255,255,255,.35)">Affiliate disclosure included on every page</div>' +
       '</div>' +
 
       // Branded masthead
@@ -6337,6 +6336,130 @@ app.get('/api/page/:slug', async (req, res) => {
   } catch(e){ res.status(500).send('Error: '+e.message); }
 });
 
+
+// ── Self-Healing Monitor Improvements ──────────────────────────────────
+
+// 1. Keepalive ping — prevents Railway cold starts
+app.get('/api/health/ping', (req, res) => {
+  res.json({ ok: true, ts: Date.now(), uptime: process.uptime().toFixed(0) + 's' });
+});
+
+// Auto-keepalive — ping self every 4 minutes to stay warm
+setInterval(async () => {
+  try {
+    const http = await import('http');
+    http.get('http://localhost:8080/api/health/ping', (r) => {
+      r.resume();
+      console.log('🏓 Keepalive ping — server warm');
+    }).on('error', () => {});
+  } catch(e) {}
+}, 4 * 60 * 1000);
+
+// 2. Dead link checker — verifies all affiliate URLs weekly
+app.get('/api/health/check-links', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    const { data: links } = await db.from('affiliate_links').select('id,name,url');
+    if (!links?.length) return res.json({ checked: 0, dead: [] });
+
+    const fetch = (await import('node-fetch')).default;
+    const results = [];
+    const dead = [];
+
+    for (const link of links) {
+      try {
+        const r = await fetch(link.url, {
+          method: 'HEAD',
+          redirect: 'follow',
+          timeout: 8000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentForge/1.0)' },
+        });
+        const ok = r.status < 400;
+        results.push({ id: link.id, name: link.name, status: r.status, ok });
+        if (!ok) dead.push({ id: link.id, name: link.name, url: link.url, status: r.status });
+      } catch(e) {
+        dead.push({ id: link.id, name: link.name, url: link.url, error: e.message.slice(0,50) });
+      }
+      await new Promise(r => setTimeout(r, 500)); // rate limit
+    }
+
+    console.log(`🔗 Link check: ${results.length} checked, ${dead.length} dead`);
+    res.json({ checked: results.length, dead, healthy: results.length - dead.length });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// 3. Page load monitor — checks response time for every slug
+app.get('/api/health/check-pages', async (req, res) => {
+  try {
+    const db = await getNichrouteClient();
+    if (!db) return res.status(500).json({ error: 'DB not configured' });
+
+    const { data: pages } = await db.from('submissions').select('slug,title').limit(30);
+    if (!pages?.length) return res.json({ checked: 0, slow: [], failed: [] });
+
+    const fetch = (await import('node-fetch')).default;
+    const slow = [];
+    const failed = [];
+    const results = [];
+
+    for (const page of pages) {
+      const start = Date.now();
+      try {
+        const r = await fetch(`http://localhost:8080/api/page/${page.slug}`, {
+          timeout: 5000,
+        });
+        const ms = Date.now() - start;
+        const ok = r.status === 200;
+        results.push({ slug: page.slug, title: page.title?.slice(0,30), ms, ok });
+        if (!ok) failed.push({ slug: page.slug, title: page.title?.slice(0,30), status: r.status });
+        else if (ms > 3000) slow.push({ slug: page.slug, title: page.title?.slice(0,30), ms });
+      } catch(e) {
+        failed.push({ slug: page.slug, title: page.title?.slice(0,30), error: e.message.slice(0,50) });
+      }
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    const avgMs = results.filter(r=>r.ok).reduce((s,r)=>s+r.ms,0) / (results.filter(r=>r.ok).length||1);
+    console.log(`📊 Page check: ${results.length} checked, ${slow.length} slow, ${failed.length} failed, avg ${avgMs.toFixed(0)}ms`);
+    res.json({
+      checked: results.length,
+      healthy: results.filter(r=>r.ok && r.ms<=3000).length,
+      slow, failed,
+      avgMs: Math.round(avgMs),
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Run full health suite hourly (existing) + link check weekly
+let weeklyLinkCheckTs = 0;
+setInterval(async () => {
+  const now = Date.now();
+  // Weekly link check (7 days)
+  if (now - weeklyLinkCheckTs > 7 * 24 * 60 * 60 * 1000) {
+    weeklyLinkCheckTs = now;
+    try {
+      const http = await import('http');
+      http.get('http://localhost:8080/api/health/check-links', (r) => {
+        let d = '';
+        r.on('data', c => d += c);
+        r.on('end', () => {
+          const result = JSON.parse(d);
+          if (result.dead?.length > 0) {
+            console.warn('⚠️ Dead affiliate links found:', result.dead.map(l=>l.name).join(', '));
+          } else {
+            console.log(`✅ Weekly link check: all ${result.checked} links healthy`);
+          }
+        });
+      }).on('error', () => {});
+    } catch(e) {}
+  }
+}, 60 * 60 * 1000);
 
 // ── Campaign Generator — accepts raw prompt, returns Claude response ──────────
 app.post('/api/campaign/generate', async (req, res) => {
