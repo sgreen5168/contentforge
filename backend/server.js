@@ -6370,13 +6370,19 @@ app.get('/api/health/check-links', async (req, res) => {
 
     for (const link of links) {
       try {
+        // Use GET for Amazon (blocks HEAD), HEAD for others
+        const isAmazon = link.url.includes('amazon.com') || link.url.includes('amzn.to');
+        const isClickBank = link.url.includes('hop.clickbank.net');
+        const method = isAmazon ? 'GET' : 'HEAD';
         const r = await fetch(link.url, {
-          method: 'HEAD',
+          method,
           redirect: 'follow',
           timeout: 8000,
           headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentForge/1.0)' },
         });
-        const ok = r.status < 400;
+        // 405 = method not allowed (not dead), 403 = forbidden (check manually)
+        // Consider dead only if 404, 410, 500, 503 or network error
+        const ok = r.status < 400 || r.status === 405;
         results.push({ id: link.id, name: link.name, status: r.status, ok });
         if (!ok) dead.push({ id: link.id, name: link.name, url: link.url, status: r.status });
       } catch(e) {
