@@ -2986,20 +2986,49 @@ async function runCleanWorkflow(jobId, params) {
         }
         if (!chosen) { console.warn(`Pexels ${i+1}: no file for "${keywords[i]}"`); continue; }
 
-        // Download clip using ffmpeg's built-in HTTP (bypasses egress filter)
+        // Download clip — videos.pexels.com is publicly accessible, no auth needed
         const rawPath  = path.join(tmpDir, `raw_${i}.mp4`);
         const normPath = path.join(tmpDir, `norm_${i}.mp4`);
+        let dlSuccess = false;
+
+        // Method 1: node-fetch (no auth header — videos.pexels.com is public)
         try {
-          await execAsync(
-            `"${ff}" -y -user_agent "Mozilla/5.0" -i "${chosen}" -c copy -t 15 "${rawPath}"`
-          );
-        } catch(dlErr) {
-          console.warn(`Clip ${i+1} ffmpeg download failed:`, dlErr.message.slice(0,100));
-          continue;
+          const fetchMod = await import('node-fetch');
+          const fetchFn = fetchMod.default || fetchMod;
+          const dlRes = await fetchFn(chosen, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentForge/1.0)' },
+            timeout: 30000,
+          });
+          if (dlRes.ok) {
+            const buf = await dlRes.buffer();
+            if (buf && buf.length > 10000) {
+              fs.writeFileSync(rawPath, buf);
+              dlSuccess = true;
+              console.log(`✅ Clip ${i+1} downloaded: ${(buf.length/1024).toFixed(0)}KB`);
+            }
+          } else {
+            console.warn(`Clip ${i+1} fetch status: ${dlRes.status}`);
+          }
+        } catch(fetchErr) {
+          console.warn(`Clip ${i+1} fetch failed:`, fetchErr.message.slice(0,80));
         }
-        if (!fs.existsSync(rawPath) || fs.statSync(rawPath).size < 5000) {
-          console.warn(`Clip ${i+1} too small after download`); continue;
+
+        // Method 2: ffmpeg as fallback
+        if (!dlSuccess) {
+          try {
+            await execAsync(
+              `"${ff}" -y -user_agent "Mozilla/5.0" -i "${chosen}" -c copy -t 15 "${rawPath}"`
+            );
+            if (fs.existsSync(rawPath) && fs.statSync(rawPath).size > 10000) {
+              dlSuccess = true;
+              console.log(`✅ Clip ${i+1} downloaded via ffmpeg`);
+            }
+          } catch(ffErr) {
+            console.warn(`Clip ${i+1} ffmpeg failed:`, ffErr.message.slice(0,80));
+          }
         }
+
+        if (!dlSuccess) { console.warn(`Clip ${i+1} all methods failed — skipping`); continue; }
 
         // Normalize to target size, remove audio
         await execAsync(
