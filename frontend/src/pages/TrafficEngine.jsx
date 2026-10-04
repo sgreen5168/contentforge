@@ -987,7 +987,17 @@ export default function TrafficEngine({ onNavigate }) {
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:20 }}>
           {TABS.map(function(t){
             return (
-              <button key={t.id} onClick={function(){ setActiveTab(t.id); }}
+              <button key={t.id} onClick={function(){
+            setActiveTab(t.id);
+            if (t.id === 'youtube') {
+              try {
+                const saved = JSON.parse(localStorage.getItem('cf_cc_results') || 'null');
+                if (saved?.youtubeTitle) setYtTitle(saved.youtubeTitle);
+                if (saved?.youtubeDescription) setYtDesc(saved.youtubeDescription);
+                if (saved?.youtubeTags) setYtTags(saved.youtubeTags);
+              } catch(e) {}
+            }
+          }}
                 style={{ padding:'7px 14px', borderRadius:8, border:`1px solid ${activeTab===t.id?'rgba(29,158,117,.5)':BORD}`, background:activeTab===t.id?'rgba(29,158,117,.15)':'transparent', color:activeTab===t.id?GRN:TXT3, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
                 {t.label}
               </button>
