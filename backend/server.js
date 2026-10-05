@@ -7200,19 +7200,27 @@ Reply with ONLY the 3-5 word phrase. No punctuation, no quotes, no explanation.`
 // ── Extract a Pexels-searchable keyword from a script phrase ─────────────────
 // Context map for closing scene — when the last sentence is a CTA or wrap-up
 const CLOSING_SCENE_MAP = {
-  'home-business': ['person celebrating home success', 'entrepreneur smiling confident outdoor', 'woman looking forward bright future', 'person thumbs up home office'],
-  'healthy-eating': ['woman eating healthy meal smiling', 'person enjoying nutritious food', 'healthy lifestyle happy person'],
-  'fitness':        ['person celebrating workout success', 'athlete confident outdoors', 'fitness success achievement'],
-  'cooking':        ['person enjoying delicious home meal', 'satisfied cook with finished dish', 'family enjoying home cooked food'],
-  'default':        ['person smiling success achievement', 'confident person looking forward', 'happy entrepreneur home'],
+  'home-business':  ['person celebrating success home office', 'entrepreneur excited phone notification', 'woman happy laptop achievement'],
+  'healthy-eating': ['person eating healthy meal satisfied', 'family enjoying healthy dinner', 'healthy food display colorful'],
+  'fitness':        ['person finishing workout satisfied', 'athlete celebrating fitness goal', 'woman after workout energized'],
+  'cooking':        ['finished meal plated beautifully', 'family eating dinner together home', 'person serving cooked food pleased'],
+  'lifestyle':      ['person satisfied daily routine', 'woman happy lifestyle accomplishment', 'content creator signing off camera'],
+  'outdoor-cooking':['finished bbq food serving friends', 'outdoor meal gathering friends', 'campfire cooking success'],
+  'woodworking':    ['finished wood project display proud', 'craftsperson admiring completed work', 'handmade wooden item showcase'],
+  'coffee':         ['perfect cup coffee morning satisfaction', 'person enjoying coffee contentedly', 'coffee shop ambiance morning'],
+  'default':        ['person satisfied achievement smile', 'success lifestyle accomplishment', 'happy person daily goal'],
 };
 
 const OPENING_SCENE_MAP = {
-  'home-business': ['person working from home laptop', 'home office entrepreneur morning', 'woman planning home business'],
-  'healthy-eating': ['fresh vegetables colorful kitchen', 'healthy meal preparation kitchen', 'person smiling healthy food'],
-  'fitness':        ['person starting morning workout', 'fitness motivation athlete starting', 'gym workout beginning'],
-  'cooking':        ['air fryer kitchen appliance', 'home cook food preparation', 'fresh vegetables cutting board kitchen', 'cooking healthy food home'],
-  'default':        ['person getting started motivation', 'beginning new journey lifestyle'],
+  'home-business':  ['person working laptop home office', 'entrepreneur morning coffee desk', 'woman planning business whiteboard'],
+  'healthy-eating': ['fresh vegetables colorful kitchen', 'healthy meal preparation kitchen', 'person smiling healthy food bowl'],
+  'fitness':        ['person starting morning workout', 'athlete stretching gym beginning', 'woman morning exercise routine'],
+  'cooking':        ['air fryer kitchen countertop', 'home cook preparing ingredients', 'fresh food kitchen preparation', 'cooking healthy meal home kitchen'],
+  'lifestyle':      ['person morning routine home', 'woman organizing home space', 'lifestyle content creator talking'],
+  'outdoor-cooking':['backyard grill barbecue setup', 'outdoor cooking fire pit', 'camping cooking nature'],
+  'woodworking':    ['woodworking tools workshop bench', 'carpenter cutting wood project', 'craftsperson woodworking shop'],
+  'coffee':         ['pour over coffee setup kitchen', 'coffee brewing morning routine', 'fresh coffee beans grinder'],
+  'default':        ['person getting started motivation', 'beginning new journey lifestyle', 'content creator talking camera'],
 };
 
 async function extractKeywordForPhrase(phrase, opts = {}) {
