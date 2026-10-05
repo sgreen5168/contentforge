@@ -164,10 +164,25 @@ export default function VideoEngineCore({ jumpToTab, loadJob, quickStart } = {})
   const [cropStyle, setCropStyle]     = useState('center');
   const [autoAssemble, setAutoAssemble] = useState(false);
   // ── Full Auto Workflow state ──────────────────────────────────────────────
-  const [wfTopic, setWfTopic]         = useState('');
-  const [wfAffUrl, setWfAffUrl]       = useState('');
+  const [wfTopic, setWfTopic]         = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cf_cc_topic') || '{}').label || ''; } catch { return ''; }
+  });
+  const [wfAffUrl, setWfAffUrl]       = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cf_cc_results') || '{}').link?.url || ''; } catch { return ''; }
+  });
   const [wfAffText, setWfAffText]     = useState('');
-  const [wfNiche, setWfNiche]         = useState('home-business');
+  const [wfNiche, setWfNiche]         = useState(() => {
+    try {
+      const t = JSON.parse(localStorage.getItem('cf_cc_topic') || '{}');
+      const catMap = {
+        'cooking':'cooking','meal-prep':'cooking','coffee':'cooking','baking':'cooking',
+        'health':'healthy-eating','fitness':'fitness','outdoor-cooking':'cooking',
+        'woodworking':'lifestyle','mindset':'lifestyle','finance':'lifestyle',
+        'home-income':'home-business','side-hustle':'home-business','entrepreneur':'home-business',
+      };
+      return catMap[t.cat] || 'cooking';
+    } catch { return 'cooking'; }
+  });
   const [wfRatio, setWfRatio]         = useState('9:16');
   const [wfLayout, setWfLayout]       = useState('presenter');
   const [wfVoice, setWfVoice]         = useState('nova');
