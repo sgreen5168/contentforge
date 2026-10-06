@@ -35,6 +35,10 @@ const AFFILIATE_CATEGORIES = {
 
   // ── Default fallback ──────────────────────────────────────────────
   'default':         { affId:'aff_cbprofitclub',    network:'clickbank',   name:'CB Profit Club' },
+
+  // ── Creator Connections ───────────────────────────────────────────────────
+  'digital-calendar':{ affId:'aff_digital_calendar', network:'amazon',      name:'Linkdaze Digital Calendar (25%)' },
+  'workout-sets':    { affId:'aff_workout_sets',      network:'amazon',      name:'ECUPPER Workout Sets (15%)' },
 };
 
 // Helper: get affiliate for a topic (affId takes priority over category)
@@ -257,6 +261,14 @@ const TOPICS = [
     hook:"Eating healthy but still feeling sluggish is one of the most common and least discussed nutrition problems.",
     videoType:'educational', cbSearch:'nutrition energy foods', amzSearch:'nutrition guide healthy eating',
     trendingTitles:['Why healthy eating still leaves you tired','The missing piece in most nutrition plans','Foods that boost energy that most people overlook'] },
+  { id:'digital-calendar', cat:'finance', affId:'aff_digital_calendar', label:'Best Digital Family Calendar 2026', icon:'\U0001f4c5',
+    hook:'Paper calendars are gone — families managing busy schedules are switching to smart digital displays that sync everything automatically.',
+    videoType:'educational', cbSearch:'', amzSearch:'digital calendar wall family smart display',
+    trendingTitles:['The digital calendar every busy family needs','Stop missing appointments with this wall calendar','Best family organizer display 2026'] },
+  { id:'workout-sets', cat:'health', affId:'aff_workout_sets', label:"Best Women's Workout Sets Under $40", icon:'\U0001f3cb',
+    hook:'Finding workout clothes that actually stay in place during a full session without spending $80 is harder than it sounds.',
+    videoType:'product', cbSearch:'', amzSearch:'women workout sets biker shorts scrunch',
+    trendingTitles:['Workout sets that actually hold up','Best affordable gym outfits for women','Scrunch biker shorts honest review'] },
 ];
 
 // High-view video strategies built into each topic type
