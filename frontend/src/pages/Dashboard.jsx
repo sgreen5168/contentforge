@@ -58,7 +58,7 @@ const NETWORK_BADGE = {
 
 function getNetworkBadge(topic) {
   if (topic.affId) {
-    const amzIds = ['aff_airfryer','aff_portableblender','aff_walkingpad','aff_coffee_grinder','aff_pour_over','aff_milk_frother','aff_wood_carving','aff_orbital_sander','aff_wood_router','aff_cast_iron','aff_camp_stove','aff_smoker_box','aff_mealprep','aff_kitchenaid','aff_standingdesk','aff_resistance','aff_atomichabits','aff_budgetplanner','aff_ringlight'];
+    const amzIds = ['aff_airfryer','aff_portableblender','aff_walkingpad','aff_coffee_grinder','aff_pour_over','aff_milk_frother','aff_wood_carving','aff_orbital_sander','aff_wood_router','aff_cast_iron','aff_camp_stove','aff_smoker_box','aff_mealprep','aff_kitchenaid','aff_standingdesk','aff_resistance','aff_atomichabits','aff_budgetplanner','aff_ringlight','aff_digital_calendar','aff_workout_sets'];
     const ds24Ids = ['aff_aimarketers','aff_budget_planner','aff_power_foods'];
     if (amzIds.includes(topic.affId)) return NETWORK_BADGE.amazon;
     if (ds24Ids.includes(topic.affId)) return NETWORK_BADGE.digistore24;
@@ -261,11 +261,11 @@ const TOPICS = [
     hook:"Eating healthy but still feeling sluggish is one of the most common and least discussed nutrition problems.",
     videoType:'educational', cbSearch:'nutrition energy foods', amzSearch:'nutrition guide healthy eating',
     trendingTitles:['Why healthy eating still leaves you tired','The missing piece in most nutrition plans','Foods that boost energy that most people overlook'] },
-  { id:'digital-calendar', cat:'finance', affId:'aff_digital_calendar', label:'Best Digital Family Calendar 2026', icon:'\U0001f4c5',
+  { id:'digital-calendar', cat:'finance', affId:'aff_digital_calendar', label:'Best Digital Family Calendar 2026', icon:'📅',
     hook:'Paper calendars are gone — families managing busy schedules are switching to smart digital displays that sync everything automatically.',
     videoType:'educational', cbSearch:'', amzSearch:'digital calendar wall family smart display',
     trendingTitles:['The digital calendar every busy family needs','Stop missing appointments with this wall calendar','Best family organizer display 2026'] },
-  { id:'workout-sets', cat:'health', affId:'aff_workout_sets', label:"Best Women's Workout Sets Under $40", icon:'\U0001f3cb',
+  { id:'workout-sets', cat:'health', affId:'aff_workout_sets', label:"Best Women's Workout Sets Under $40", icon:'🏋️',
     hook:'Finding workout clothes that actually stay in place during a full session without spending $80 is harder than it sounds.',
     videoType:'product', cbSearch:'', amzSearch:'women workout sets biker shorts scrunch',
     trendingTitles:['Workout sets that actually hold up','Best affordable gym outfits for women','Scrunch biker shorts honest review'] },
