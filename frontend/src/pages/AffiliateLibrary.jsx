@@ -125,10 +125,15 @@ export default function AffiliateLibrary() {
     const urls = [...new Set(allMatches)].filter(function(u) {
       return u.includes('hop.clickbank.net') || u.includes('amzn.to') ||
              (u.includes('amazon.com') && (u.includes('tag=') || u.includes('/dp/'))) ||
-             u.includes('awin1.com') || u.includes('shareasale.com');
+             u.includes('awin1.com') || u.includes('shareasale.com') ||
+             u.includes('digistore24.com') || u.includes('checkout-ds24.com') ||
+             u.includes('joinaimarketers') ||
+             (u.includes('aff=') && u.length > 20) ||
+             u.includes('hop.') || u.includes('/affiliate/') ||
+             u.includes('jvzoo.com') || u.includes('warriorplus.com');
     });
     if (urls.length === 0) {
-      setBulkResult('❌ No affiliate links found — paste ClickBank hoplinks, Amazon amzn.to, or Awin links');
+      setBulkResult('❌ No affiliate links found — paste ClickBank, Amazon, Digistore24, JVZoo, WarriorPlus, or Awin links');
       setBulkSaving(false); return;
     }
     let saved = 0;
@@ -147,7 +152,10 @@ export default function AffiliateLibrary() {
       else if (ecommKw.some(function(k){return context.includes(k);})) category = 'side-hustle';
       const platform = url.includes('hop.clickbank.net') ? 'clickbank' :
                        (url.includes('amzn.to') || url.includes('amazon.com')) ? 'amazon' :
-                       url.includes('awin1.com') ? 'awin' : 'other';
+                       url.includes('awin1.com') ? 'awin' :
+                       (url.includes('digistore24.com') || url.includes('checkout-ds24.com') || url.includes('joinaimarketers')) ? 'digistore24' :
+                       (url.includes('jvzoo.com')) ? 'jvzoo' :
+                       (url.includes('warriorplus.com')) ? 'warriorplus' : 'other';
       const name = platform === 'amazon' ? 'Amazon Product ' + (saved+1) :
                    platform === 'clickbank' ? 'ClickBank Product ' + (saved+1) : 'Affiliate Link ' + (saved+1);
       try {
