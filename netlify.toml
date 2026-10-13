@@ -2,3 +2,8 @@
   base = "frontend"
   publish = "dist"
   command = "npm install && npm run build"
+  [[redirects]]
+from = "/page/*"
+to = "https://contentforge-production-6e13.up.railway.app/api/page/:splat"
+status = 200
+force = true
